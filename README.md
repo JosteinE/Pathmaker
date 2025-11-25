@@ -1,2 +1,4 @@
-# Example
-An example greeter plugin
+# Pathmaker
+
+Draw lines between marked tiles.
+

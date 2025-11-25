@@ -1,4 +1,4 @@
-package com.example;
+package com.Pathmaker;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -14,15 +14,15 @@ import net.runelite.client.plugins.PluginDescriptor;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Example"
+	name = "Pathmaker"
 )
-public class ExamplePlugin extends Plugin
+public class PathmakerPlugin extends Plugin
 {
 	@Inject
 	private Client client;
 
 	@Inject
-	private ExampleConfig config;
+	private PathmakerConfig config;
 
 	@Override
 	protected void startUp() throws Exception
@@ -46,8 +46,8 @@ public class ExamplePlugin extends Plugin
 	}
 
 	@Provides
-	ExampleConfig provideConfig(ConfigManager configManager)
+    PathmakerConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(ExampleConfig.class);
+		return configManager.getConfig(PathmakerConfig.class);
 	}
 }
