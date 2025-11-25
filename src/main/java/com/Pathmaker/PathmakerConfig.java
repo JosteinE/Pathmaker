@@ -7,16 +7,13 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 
-@ConfigGroup("Pathmaker")
+@ConfigGroup(PathmakerConfig.GROUND_MARKER_CONFIG_GROUP)
 public interface PathmakerConfig extends Config
 {
-	@ConfigSection(
-		name = "Welcome Greeting",
-		description = "The message to show to the user when they login",
-        position = 0
-	)
-    String welcomeGreeting = "welcomeGreeting";
+    String GROUND_MARKER_CONFIG_GROUP = "pathmaker";
+    String SHOW_MAP_ORB_MENU_OPTIONS = "showMapOrbMenuOptions";
 
+    // CURRENT TILE
     @ConfigSection(
             name = "Current tile",
             description = "Current tile configuration.",
@@ -74,6 +71,7 @@ public interface PathmakerConfig extends Config
         return 2;
     }
 
+    // HOVERED TILE
     @ConfigSection(
             name = "Hovered tile",
             description = "Hovered tile configuration.",
@@ -131,6 +129,7 @@ public interface PathmakerConfig extends Config
         return 2;
     }
 
+    // PATH LINE
     @ConfigSection(
             name = "Path line",
             description = "Path line configuration.",
@@ -150,6 +149,18 @@ public interface PathmakerConfig extends Config
         return true;
     }
 
+    @ConfigItem(
+            keyName = "pathWidth",
+            name = "Path width",
+            description = "Width of the path line.",
+            position = 2,
+            section = pathLine
+    )
+    default double pathLineWidth()
+    {
+        return 2;
+    }
+
     @Alpha
     @ConfigItem(
             keyName = "pathLineColor",
@@ -163,8 +174,35 @@ public interface PathmakerConfig extends Config
         return new Color(0, 255, 0, 255);
     }
 
-	default String greeting()
-	{
-		return "Hello";
-	}
+    // PATH SECTION
+    @ConfigSection(
+            name = "Path Section",
+            description = "Hovered tile configuration.",
+            position = 4
+    )
+    String pathSection = "pathSection";
+
+    @ConfigItem(
+            keyName = SHOW_MAP_ORB_MENU_OPTIONS,
+            name = "Show map orb menu options",
+            description = "Adds import/export/clear options to the world map orb.",
+            position = 1,
+            section = pathSection
+    )
+    default boolean showMapOrbMenuOptions()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+            keyName = "infoPanel",
+            name = "Info panel",
+            description = "Render info panel",
+            position = 2,
+            section = pathSection
+    )
+    default boolean infoPanel()
+    {
+        return true;
+    }
 }
