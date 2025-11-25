@@ -12,10 +12,15 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
+import net.runelite.client.ui.overlay.OverlayManager;
+
 @Slf4j
 @PluginDescriptor(
-	name = "Pathmaker"
+	name = "Pathmaker",
+    description = "Draw lines between marked tiles.",
+    tags = {"object,path,line,draw,tile,indicator,navigation"}
 )
+
 public class PathmakerPlugin extends Plugin
 {
 	@Inject
@@ -24,16 +29,29 @@ public class PathmakerPlugin extends Plugin
 	@Inject
 	private PathmakerConfig config;
 
+
+    @Inject
+    private OverlayManager overlayManager;
+
+    @Inject
+    private PathmakerOverlay overlay;
+
+    boolean drawTiles;
+
+
+
 	@Override
 	protected void startUp() throws Exception
 	{
 		log.debug("Example started!");
+        overlayManager.add(overlay);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
 		log.debug("Example stopped!");
+        overlayManager.remove(overlay);
 	}
 
 	@Subscribe
