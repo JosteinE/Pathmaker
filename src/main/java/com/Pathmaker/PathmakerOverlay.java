@@ -115,6 +115,7 @@ public class PathmakerOverlay extends Overlay
         OverlayUtil.renderPolygon(graphics, poly, color, fillColor, new BasicStroke((float) borderWidth));
     }
 
+    // Draw a line between the provided start and end points
     private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, final Color color, float lineWidth){ //, int counter) {
         if (startPoint == null || endPoint == null) {
             return;

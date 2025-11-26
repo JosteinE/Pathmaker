@@ -15,4 +15,9 @@ public class PathPoint
     private Color color;
     @Nullable
     private String label;
+
+    int getRegionId()
+    {
+        return regionId;
+    }
 }
