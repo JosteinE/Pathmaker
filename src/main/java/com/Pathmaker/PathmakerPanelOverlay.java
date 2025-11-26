@@ -16,9 +16,9 @@ public class PathmakerPanelOverlay extends OverlayPanel
     private final PathmakerConfig config;
     private final Client client;
 
+    // Move Speed - Add config toggle for move speed!
     private final String speedLabelPrefix = "Tiles pr/tick: ";
     WorldPoint lastPos = null;
-
     float moveSpeed = 0;
 
     @Inject
@@ -37,21 +37,22 @@ public class PathmakerPanelOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        // Info panel
-        if (config.infoPanel())
+        // InfoBox
+        if (config.infoBoxEnabled())
         {
-//            calculateCurrentSpeed(startPoint, playerPosLocal);
-//            // pathmakerPanelOverlay.render(graphics); Renders on its own
-//            log.debug("moveSpeed: {}", pathmakerPanelOverlay.moveSpeed);
+            if (config.infoBoxSpeed())
+            {
+                this.panelComponent.getChildren().add(TitleComponent.builder().text(getSpeedLabelString(moveSpeed)).color(Color.WHITE).build());
+            }
 
-            //calculateCurrentSpeed();
-            this.panelComponent.getChildren().add(TitleComponent.builder().text(speedLabelPrefix + String.format("%.2f", moveSpeed)).color(Color.WHITE).build());
+            // Render infobox
             this.panelComponent.setPreferredSize(new Dimension(20,0));
             return super.render(graphics);
         }
         return null;
     }
 
+    // Called by PathmakerPlugin.onGameTick()
     public void calculateCurrentSpeed()
     {
         WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
@@ -64,5 +65,10 @@ public class PathmakerPanelOverlay extends OverlayPanel
             //}
         }
         lastPos = playerPos;
+    }
+
+    public String getSpeedLabelString(float speed)
+    {
+        return speedLabelPrefix + String.format("%.2f", moveSpeed);
     }
 }

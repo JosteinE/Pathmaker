@@ -6,6 +6,7 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 
 @ConfigGroup(PathmakerConfig.GROUND_MARKER_CONFIG_GROUP)
 public interface PathmakerConfig extends Config
@@ -13,7 +14,9 @@ public interface PathmakerConfig extends Config
     String GROUND_MARKER_CONFIG_GROUP = "pathmaker";
     String SHOW_MAP_ORB_MENU_OPTIONS = "showMapOrbMenuOptions";
 
-    // CURRENT TILE
+    //------------------------------------------------------------//
+    // Current Tile Section
+    //------------------------------------------------------------//
     @ConfigSection(
             name = "Current tile",
             description = "Current tile configuration.",
@@ -66,12 +69,15 @@ public interface PathmakerConfig extends Config
             position = 4,
             section = currentTile
     )
-    default double currentTileBorderWidth()
+    @Range(max = 10)
+    default int currentTileBorderWidth()
     {
         return 2;
     }
 
-    // HOVERED TILE
+    //------------------------------------------------------------//
+    // Hovered Tile Section
+    //------------------------------------------------------------//
     @ConfigSection(
             name = "Hovered tile",
             description = "Hovered tile configuration.",
@@ -124,12 +130,48 @@ public interface PathmakerConfig extends Config
             position = 4,
             section = hoveredTile
     )
-    default double hoveredTileBorderWidth()
+    @Range(max = 10)
+    default int hoveredTileBorderWidth()
     {
         return 2;
     }
 
-    // PATH LINE
+    enum hoveredTileLabelMode
+    {
+        NONE,
+        TILE_REGION,
+        TILE_LOCATION,
+        DISTANCE,
+        ALL,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileLabelModeSelect",
+            name = "Hovered tile label mode",
+            description = "Label to be placed on the hovered tile.",
+            position = 5,
+            section = hoveredTile
+    )
+    default hoveredTileLabelMode hoveredTileLabelModeSelect()
+    {
+        return hoveredTileLabelMode.NONE;
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "hoveredTileLabelColor",
+            name = "Hovered tile label color",
+            description = "Configures the fill color of hovered tile label.",
+            position = 6,
+            section = hoveredTile
+    )
+    default Color hoveredTileLabelColor()
+    {
+        return new Color(255, 255, 0, 255);
+    }
+
+    //------------------------------------------------------------//
+    // Path Line Section
+    //------------------------------------------------------------//
     @ConfigSection(
             name = "Path line",
             description = "Path line configuration.",
@@ -156,7 +198,8 @@ public interface PathmakerConfig extends Config
             position = 2,
             section = pathLine
     )
-    default double pathLineWidth()
+    @Range(max = 10)
+    default int pathLineWidth()
     {
         return 2;
     }
@@ -174,20 +217,22 @@ public interface PathmakerConfig extends Config
         return new Color(0, 255, 0, 255);
     }
 
-    // PATH SECTION
+    //------------------------------------------------------------//
+    // Path Container Section
+    //------------------------------------------------------------//
     @ConfigSection(
-            name = "Path Section",
-            description = "Hovered tile configuration.",
+            name = "Path Container",
+            description = "Contains all paths.",
             position = 4
     )
-    String pathSection = "pathSection";
+    String pathContainer = "pathContainer";
 
     @ConfigItem(
             keyName = SHOW_MAP_ORB_MENU_OPTIONS,
             name = "Show map orb menu options",
             description = "Adds import/export/clear options to the world map orb.",
             position = 1,
-            section = pathSection
+            section = pathContainer
     )
     default boolean showMapOrbMenuOptions()
     {
@@ -195,14 +240,60 @@ public interface PathmakerConfig extends Config
     }
 
     @ConfigItem(
-            keyName = "infoPanel",
-            name = "Info panel",
-            description = "Render info panel",
+            keyName = "activePath",
+            name = "Active path",
+            description = "The currently selected path to add points to.",
             position = 2,
-            section = pathSection
+            section = pathContainer
     )
-    default boolean infoPanel()
+    default String activePath()
+    {
+        return "Unnamed";
+    }
+
+    @ConfigItem(
+            keyName = "storedPaths",
+            name = "Stored paths",
+            description = "A list of all of the stored paths.",
+            position = 3,
+            section = pathContainer
+    )
+    default String storedPaths()
+    {
+        return "";
+    }
+
+    //------------------------------------------------------------//
+    // Info Box Section
+    //------------------------------------------------------------//
+    @ConfigSection(
+            name = "Info Box",
+            description = "Info Box configuration.",
+            position = 5
+    )
+    String infoBox = "infoBox";
+
+    @ConfigItem(
+            keyName = "infoBoxEnabled",
+            name = "Enabled",
+            description = "Render info box",
+            position = 1,
+            section = infoBox
+    )
+    default boolean infoBoxEnabled()
     {
         return true;
+    }
+
+    @ConfigItem(
+            keyName = "infoBoxSpeed",
+            name = "Show Speed",
+            description = "Print how many tiles the player moved since last tick.",
+            position = 2,
+            section = infoBox
+    )
+    default boolean infoBoxSpeed()
+    {
+        return false;
     }
 }

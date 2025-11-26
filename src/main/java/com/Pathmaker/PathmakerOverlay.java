@@ -6,22 +6,26 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import javax.inject.Inject;
-import net.runelite.api.Client;
-import net.runelite.api.Perspective;                        // For perspective of tile
-import net.runelite.api.Tile;                               // for game tiles
-import net.runelite.api.WorldView;                          // For camera orientation and mouse pick-up
+
+import com.google.protobuf.EnumValue;
+import com.google.protobuf.StringValue;
+import com.sun.jna.platform.win32.Advapi32Util;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;                  // For player position
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.*;
 
 import java.awt.geom.Line2D;
-import net.runelite.api.Point;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
+
+import static com.Pathmaker.PathmakerConfig.hoveredTileLabelMode;
 
 @Slf4j
 public class PathmakerOverlay extends Overlay
 {
+    private static final int MAX_DRAW_DISTANCE = 32;
+
     private final Client client;
     private final PathmakerConfig config;
 
@@ -29,8 +33,6 @@ public class PathmakerOverlay extends Overlay
 
     private LocalPoint startPoint;
     private LocalPoint endPoint;
-    private String endLabel;
-    private Color endLabelColor = Color.YELLOW;
 
 
     // For ref: net.runelite.client.ui.overlay.OverlayRenderer
@@ -52,37 +54,7 @@ public class PathmakerOverlay extends Overlay
     {
         // Fetch player position
         final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation(); // doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
-        LocalPoint playerPosLocal = null;
-        if (playerPos != null)
-        {
-            playerPosLocal = LocalPoint.fromWorld(client, playerPos);
-        }
-
-        // Hovered tile
-        if (config.highlightHoveredTile())
-        {
-            WorldView wv = client.getLocalPlayer().getWorldView();
-            Tile tile = wv.getSelectedSceneTile();
-            // If we have tile "selected" render it
-            if (tile != null)
-            {
-                endPoint = tile.getLocalLocation();
-                renderTile(graphics, tile.getLocalLocation(), config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
-
-                // Add label
-                endLabel = "W( " + tile.getWorldLocation().getX() + ", " + tile.getWorldLocation().getY() + " )";
-                if (startPoint != null)
-                {
-                    endLabel += ", Dist: " + (int) ((startPoint.distanceTo(endPoint)/tileSize));
-                }
-                Point canvasTextLocation = Perspective.getCanvasTextLocation(client, graphics, endPoint, endLabel, 0);
-
-                if (canvasTextLocation != null)
-                {
-                    OverlayUtil.renderTextLocation(graphics, canvasTextLocation, endLabel, endLabelColor);
-                }
-            }
-        }
+        LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(client, playerPos);
 
         // Current tile
         if (config.highlightCurrentTile() && playerPosLocal != null)
@@ -91,10 +63,36 @@ public class PathmakerOverlay extends Overlay
             renderTile(graphics, playerPosLocal, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
         }
 
+        // Fetch hovered tile and if successful, assign it to endPoint
+        WorldView wv = client.getLocalPlayer().getWorldView();
+        Tile tile = wv.getSelectedSceneTile();
+        endPoint = tile == null ? endPoint : tile.getLocalLocation();
+
+        // Return here if the distance to hovered tile exceeds the user interactable area.
+        // If endPoint height = 0, it likely means it's out of bounds
+        if(startPoint.distanceTo(endPoint) / tileSize >= MAX_DRAW_DISTANCE)
+        {
+            return null;
+        }
+
+        // Hovered tile
+        if (config.highlightHoveredTile() && tile != null)
+        {
+            endPoint = tile.getLocalLocation();
+            renderTile(graphics, tile.getLocalLocation(), config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+
+            // Add label
+            hoveredTileLabelMode labelMode = config.hoveredTileLabelModeSelect();
+            if (labelMode != hoveredTileLabelMode.NONE) {
+                String endLabel = constructHoveredTileString(labelMode, tile);
+                addLabel(graphics, endPoint, 0, endLabel, config.hoveredTileLabelColor());
+            }
+        }
+
         // Line
         if (config.drawPathLine())
         {
-            drawLine(graphics, startPoint, endPoint, config.pathLineColor());
+            drawLine(graphics, startPoint, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
         }
 
         return null;
@@ -117,12 +115,12 @@ public class PathmakerOverlay extends Overlay
         OverlayUtil.renderPolygon(graphics, poly, color, fillColor, new BasicStroke((float) borderWidth));
     }
 
-    private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, final Color color){ //, int counter) {
+    private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, final Color color, float lineWidth){ //, int counter) {
         if (startPoint == null || endPoint == null) {
             return;
         }
 
-        final int z = client.getLocalPlayer().getWorldView().getPlane();
+        int z = client.getLocalPlayer().getWorldView().getPlane();
 
         final int startHeight = Perspective.getTileHeight(client, startPoint, z);
         final int endHeight = Perspective.getTileHeight(client, endPoint, z);
@@ -130,14 +128,15 @@ public class PathmakerOverlay extends Overlay
         Point p1 = Perspective.localToCanvas(client, startPoint.getX(), startPoint.getY(), startHeight);
         Point p2 = Perspective.localToCanvas(client, endPoint.getX(), endPoint.getY(), endHeight);
 
-        if (p1 == null || p2 == null) {
+        if (p1 == null || p2 == null)
+        {
             return;
         }
 
         Line2D.Double line = new Line2D.Double(p1.getX(), p1.getY(), p2.getX(), p2.getY());
 
         graphics.setColor(color);
-        graphics.setStroke(new BasicStroke((float) config.pathLineWidth()));
+        graphics.setStroke(new BasicStroke(lineWidth));
         graphics.draw(line);
 
 //        if (counter == 1) {
@@ -146,8 +145,43 @@ public class PathmakerOverlay extends Overlay
 //        drawCounter(graphics, p2.getX(), p2.getY(), counter);
     }
 
-    public LocalPoint getCurrentPlayerPosition()
+    String constructHoveredTileString(hoveredTileLabelMode labelMode, Tile tile)
     {
-        return startPoint;
+        String returnString = "";
+        switch (labelMode)
+        {
+            case TILE_REGION: returnString = getTileRegionString(tile); break;
+            case TILE_LOCATION: returnString = getTileLocationString(tile); break;
+            case DISTANCE: returnString = getTileDistanceString(startPoint, endPoint); break;
+            case ALL: returnString = "R: " + getTileRegionString(tile) +
+                    ", L: " + getTileLocationString(tile) +
+                    ", D: " + getTileDistanceString(startPoint, endPoint); break;
+        }
+        return returnString;
+    }
+
+    String getTileLocationString(Tile tile)
+    {
+        return "( " + tile.getWorldLocation().getX() + ", " + tile.getWorldLocation().getY() + " )";
+    }
+
+    String getTileDistanceString(LocalPoint from,  LocalPoint to)
+    {
+        return from == null ? "" : String.valueOf((int) (from.distanceTo(to) / tileSize));
+    }
+
+    String getTileRegionString(Tile tile)
+    {
+        return String.valueOf(tile.getWorldLocation().getRegionID());
+    }
+
+    void addLabel(Graphics2D graphics, LocalPoint tileLoc, int zOffset, String labelText, Color color)
+    {
+        Point canvasTextLocation = Perspective.getCanvasTextLocation(client, graphics, tileLoc, labelText, zOffset);
+
+        if (canvasTextLocation != null)
+        {
+            OverlayUtil.renderTextLocation(graphics, canvasTextLocation, labelText, color);
+        }
     }
 }
