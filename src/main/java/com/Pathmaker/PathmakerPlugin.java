@@ -7,7 +7,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
-//import net.runelite.api.events.GameTick;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -79,10 +79,11 @@ public class PathmakerPlugin extends Plugin
         //points.clear();
 	}
 
-//    @Subscribe
-//    public void onGameTick(GameTick gameTick)
-//    {
-//    }
+    @Subscribe
+    public void onGameTick(GameTick gameTick)
+    {
+        panelOverlay.calculateCurrentSpeed();
+    }
 
     @Subscribe
     public void onConfigChanged(ConfigChanged event)

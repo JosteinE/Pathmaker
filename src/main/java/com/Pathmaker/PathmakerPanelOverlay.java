@@ -44,7 +44,7 @@ public class PathmakerPanelOverlay extends OverlayPanel
 //            // pathmakerPanelOverlay.render(graphics); Renders on its own
 //            log.debug("moveSpeed: {}", pathmakerPanelOverlay.moveSpeed);
 
-            calculateCurrentSpeed();
+            //calculateCurrentSpeed();
             this.panelComponent.getChildren().add(TitleComponent.builder().text(speedLabelPrefix + String.format("%.2f", moveSpeed)).color(Color.WHITE).build());
             this.panelComponent.setPreferredSize(new Dimension(20,0));
             return super.render(graphics);
@@ -59,11 +59,9 @@ public class PathmakerPanelOverlay extends OverlayPanel
         if (lastPos != null)
         {
             float distance = lastPos.distanceTo(playerPos);
-            if (distance != 0) {
-                // float tileSize = 128;
-                moveSpeed = distance;// / tileSize;
-                lastPos = playerPos;
-            }
+            //if (distance != 0) {
+            moveSpeed = distance;
+            //}
         }
         lastPos = playerPos;
     }
