@@ -1,25 +1,26 @@
 package com.Pathmaker;
 
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 
 // Collection of path points
 public class PathmakerPath
 {
-    private final String pathName;
-
     // Map with RegionIDs for keys with an ArrayList<PathPoint> for the specified region.
-    private Map<Integer, ArrayList<PathPoint>> pathPoints;
+    private final HashMap<Integer, ArrayList<PathPoint>> pathPoints = new HashMap<>();
 
-    PathmakerPath(String name)
+    PathmakerPath(PathPoint initialPathPoint)
     {
-        pathName = name;
+        addPathPoint(initialPathPoint);
     }
 
+    // Add point to existing path
     void addPathPoint(PathPoint pathPoint)
     {
         int regionID = pathPoint.getRegionId();
+
+        // Add the tile's regionID as key for the belonging tile(s) if it doesn't already exist.
         if (!pathPoints.containsKey(regionID))
         {
             pathPoints.put(regionID, new ArrayList<PathPoint>());
@@ -39,11 +40,6 @@ public class PathmakerPath
         {
             pathPoints.remove(regionID);
         }
-    }
-
-    String getPathName()
-    {
-        return pathName;
     }
 
     // Return the relevant region IDs for this path

@@ -16,6 +16,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.*;
 
 import java.awt.geom.Line2D;
+import java.util.*;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
 
@@ -25,6 +26,9 @@ import static com.Pathmaker.PathmakerConfig.hoveredTileLabelMode;
 public class PathmakerOverlay extends Overlay
 {
     private static final int MAX_DRAW_DISTANCE = 32;
+
+    // The integer represents RegionID
+    private final ArrayList<PathPoint> tilesToHighlight = new ArrayList<>();
 
     private final Client client;
     private final PathmakerConfig config;
@@ -60,7 +64,7 @@ public class PathmakerOverlay extends Overlay
         if (config.highlightCurrentTile() && playerPosLocal != null)
         {
             startPoint = playerPosLocal;
-            renderTile(graphics, playerPosLocal, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
+            highlightTile(graphics, playerPosLocal, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
         }
 
         // Fetch hovered tile and if successful, assign it to endPoint
@@ -79,7 +83,7 @@ public class PathmakerOverlay extends Overlay
         if (config.highlightHoveredTile() && tile != null)
         {
             endPoint = tile.getLocalLocation();
-            renderTile(graphics, tile.getLocalLocation(), config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+            highlightTile(graphics, tile.getLocalLocation(), config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
 
             // Add label
             hoveredTileLabelMode labelMode = config.hoveredTileLabelModeSelect();
@@ -95,20 +99,42 @@ public class PathmakerOverlay extends Overlay
             drawLine(graphics, startPoint, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
         }
 
+        // Highlight tiles marked by the right-click menu
+        LocalPoint lastLocalP = null;
+        for (Iterator<PathPoint> pointIt = tilesToHighlight.iterator(); pointIt.hasNext();)
+        {
+            PathPoint point = pointIt.next();
+            LocalPoint localP = pathPointToLocal(wv, point);
+            highlightTile(graphics, localP, point.getColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
+
+            drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+
+            lastLocalP = localP;
+        }
+
         return null;
     }
 
-    private void renderTile(final Graphics2D graphics, final LocalPoint dest, final Color color, final double borderWidth, final Color fillColor)
+    // Convert PathPoint (region point) to local
+    LocalPoint pathPointToLocal(WorldView wv, PathPoint point)
     {
-        if (dest == null)
+        WorldPoint wp = WorldPoint.fromRegion(point.getRegionId(), point.getX(), point.getY(), point.getZ());
+        return LocalPoint.fromWorld(wv, wp);
+    }
+
+    void highlightTile(final Graphics2D graphics, final LocalPoint tile, final Color color, final double borderWidth, final Color fillColor)
+    {
+        if (tile == null)
         {
+            log.debug("Failed to highlight tile, TILE is null.");
             return;
         }
 
-        final Polygon poly = Perspective.getCanvasTilePoly(client, dest);
+        final Polygon poly = Perspective.getCanvasTilePoly(client, tile);
 
         if (poly == null)
         {
+            log.debug("Failed to highlight tile, POLY is null. LocalPoint wv: {}, x: {}, y: {}", tile.getWorldView(), tile.getX(),  tile.getY());
             return;
         }
 
@@ -125,7 +151,7 @@ public class PathmakerOverlay extends Overlay
 
         final int startHeight = Perspective.getTileHeight(client, startPoint, z);
         final int endHeight = Perspective.getTileHeight(client, endPoint, z);
-
+        
         Point p1 = Perspective.localToCanvas(client, startPoint.getX(), startPoint.getY(), startHeight);
         Point p2 = Perspective.localToCanvas(client, endPoint.getX(), endPoint.getY(), endHeight);
 
@@ -184,5 +210,19 @@ public class PathmakerOverlay extends Overlay
         {
             OverlayUtil.renderTextLocation(graphics, canvasTextLocation, labelText, color);
         }
+    }
+
+    void importTilesToHighlight(Collection<PathPoint> pathPoints)
+    {
+        tilesToHighlight.clear();
+        for (PathPoint point : pathPoints)
+        {
+            if(!tilesToHighlight.contains(point))
+            {
+                tilesToHighlight.add(point);
+            }
+        }
+        //log.debug("Number of tiles to highlight: {}", tilesToHighlight.size());
+        //tilesToHighlight.addAll(pathPoints);
     }
 }
