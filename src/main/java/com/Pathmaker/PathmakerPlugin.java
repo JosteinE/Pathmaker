@@ -185,8 +185,7 @@ public class PathmakerPlugin extends Plugin
                                 worldPoint.getRegionID(),
                                 worldPoint.getRegionX(),
                                 worldPoint.getRegionY(),
-                                worldPoint.getPlane(),
-                                config.pathLineColor())));
+                                worldPoint.getPlane())));
             }
             else // Add remove function for existing tiles!
             {

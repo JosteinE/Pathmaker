@@ -17,13 +17,13 @@ public class PathPoint
     @Nullable
     private String label;
 
-    PathPoint(int regID, int regX, int regY, int plane, @Nullable Color color)
+    PathPoint(int regID, int regX, int regY, int plane)//, @Nullable Color color)
     {
         this.regionId = regID;
         this.regionX = regX;
         this.regionY = regY;
         this.z = plane;
-        this.color = color;
+        //this.color = color;
         //this.label = label; should just be the point index in the path
     }
 

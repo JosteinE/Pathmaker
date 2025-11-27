@@ -169,6 +169,24 @@ public interface PathmakerConfig extends Config
         return new Color(255, 255, 0, 255);
     }
 
+    enum hoveredTileLineMode
+    {
+        NONE,
+        TRUE_TILE,
+        PATH_END,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileLineModeSelect",
+            name = "Hovered tile line mode",
+            description = "Draw line to the hovered tile.",
+            position = 7,
+            section = hoveredTile
+    )
+    default hoveredTileLineMode hoveredTileLineModeSelect()
+    {
+        return hoveredTileLineMode.NONE;
+    }
+
     //------------------------------------------------------------//
     // Path Line Section
     //------------------------------------------------------------//
@@ -192,10 +210,22 @@ public interface PathmakerConfig extends Config
     }
 
     @ConfigItem(
+            keyName = "drawPathLinePoints",
+            name = "Draw point tiles",
+            description = "Highlight path point tiles.",
+            position = 2,
+            section = pathLine
+    )
+    default boolean drawPathLinePoints()
+    {
+        return true;
+    }
+
+    @ConfigItem(
             keyName = "pathWidth",
             name = "Path width",
             description = "Width of the path line.",
-            position = 2,
+            position = 3,
             section = pathLine
     )
     @Range(max = 10)
@@ -209,12 +239,63 @@ public interface PathmakerConfig extends Config
             keyName = "pathLineColor",
             name = "Line color",
             description = "Configures the path line color.",
-            position = 3,
+            position = 4,
             section = pathLine
     )
     default Color pathLineColor()
     {
         return new Color(0, 255, 0, 255);
+    }
+
+    @ConfigItem(
+            keyName = "loopPath",
+            name = "Loop path",
+            description = "Draw from the end point to the start point.",
+            position = 5,
+            section = pathLine
+    )
+    default boolean loopPath()
+    {
+        return true;
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "pathLinePointColor",
+            name = "Line point tile color",
+            description = "Configures the path line point tile color.",
+            position = 6,
+            section = pathLine
+    )
+    default Color pathLinePointColor()
+    {
+        return new Color(0, 255, 0, 255);
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "pathLinePointFillColor",
+            name = "Line point tile fill color",
+            description = "Configures the path line point tile fill color.",
+            position = 7,
+            section = pathLine
+    )
+    default Color pathLinePointFillColor()
+    {
+        return new Color(0, 255, 0, 50);
+    }
+
+    @ConfigItem(
+            keyName = "pathLinePointWidth",
+            name = "Border width",
+            description = "Width of the path line tile border.",
+            position = 8,
+            section = pathLine
+    )
+    @Range(max = 10)
+    default int pathLinePointWidth()
+    {
+        return 2;
     }
 
     //------------------------------------------------------------//

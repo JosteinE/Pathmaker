@@ -13,14 +13,16 @@ import com.sun.jna.platform.win32.Advapi32Util;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;                  // For player position
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.client.ui.overlay.*;
 
 import java.awt.geom.Line2D;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
-
-import static com.Pathmaker.PathmakerConfig.hoveredTileLabelMode;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
+import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.OverlayUtil;
 
 @Slf4j
 public class PathmakerOverlay extends Overlay
@@ -59,16 +61,21 @@ public class PathmakerOverlay extends Overlay
         // Fetch player position
         final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation(); // doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
         LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(client, playerPos);
+        startPoint = playerPosLocal == null ? startPoint : playerPosLocal;
 
         // Current tile
-        if (config.highlightCurrentTile() && playerPosLocal != null)
+        if (config.highlightCurrentTile())
         {
-            startPoint = playerPosLocal;
-            highlightTile(graphics, playerPosLocal, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
+            highlightTile(graphics, startPoint, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
         }
 
         // Fetch hovered tile and if successful, assign it to endPoint
         WorldView wv = client.getLocalPlayer().getWorldView();
+
+        // Highlight tiles marked by the right-click menu and draw lines between them
+        drawPath(graphics, wv);
+
+        // Fetch hovered tile and if successful, assign it to endPoint
         Tile tile = wv.getSelectedSceneTile();
         endPoint = tile == null ? endPoint : tile.getLocalLocation();
 
@@ -84,35 +91,75 @@ public class PathmakerOverlay extends Overlay
         {
             endPoint = tile.getLocalLocation();
             highlightTile(graphics, tile.getLocalLocation(), config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+        }
 
-            // Add label
-            hoveredTileLabelMode labelMode = config.hoveredTileLabelModeSelect();
-            if (labelMode != hoveredTileLabelMode.NONE) {
-                String endLabel = constructHoveredTileString(labelMode, tile);
-                addLabel(graphics, endPoint, 0, endLabel, config.hoveredTileLabelColor());
+        // Add label to hovered tile
+        if (tile != null)
+        {
+            String endLabel = constructHoveredTileString(tile);
+            addLabel(graphics, endPoint, 0, endLabel, config.hoveredTileLabelColor());
+        }
+
+        // Draw line to hovered line
+        switch (config.hoveredTileLineModeSelect())
+        {
+            case PATH_END:
+            {
+                if (tilesToHighlight.isEmpty()){ break; }
+                LocalPoint lastP = pathPointToLocal(wv, tilesToHighlight.get(tilesToHighlight.size() - 1));
+                drawLine(graphics, lastP, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
+                break;
             }
-        }
-
-        // Line
-        if (config.drawPathLine())
-        {
-            drawLine(graphics, startPoint, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
-        }
-
-        // Highlight tiles marked by the right-click menu
-        LocalPoint lastLocalP = null;
-        for (Iterator<PathPoint> pointIt = tilesToHighlight.iterator(); pointIt.hasNext();)
-        {
-            PathPoint point = pointIt.next();
-            LocalPoint localP = pathPointToLocal(wv, point);
-            highlightTile(graphics, localP, point.getColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
-
-            drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
-
-            lastLocalP = localP;
+            case TRUE_TILE:
+            {
+                drawLine(graphics, startPoint, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
+                break;
+            }
+            default: break;
         }
 
         return null;
+    }
+
+    // Highlight tiles marked by the right-click menu and draw lines between them
+    void drawPath(Graphics2D graphics, WorldView wv)
+    {
+        if(config.drawPathLine() && config.drawPathLinePoints())
+        {
+            LocalPoint lastLocalP = null;
+            for (PathPoint point : tilesToHighlight)
+            {
+                LocalPoint localP = pathPointToLocal(wv, point);
+                highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                lastLocalP = localP;
+            }
+        }
+        else if (config.drawPathLine())
+        {
+            LocalPoint lastLocalP = null;
+            for (PathPoint point : tilesToHighlight)
+            {
+                LocalPoint localP = pathPointToLocal(wv, point);
+                drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                lastLocalP = localP;
+            }
+        }
+        else if (config.drawPathLinePoints())
+        {
+            for (PathPoint point : tilesToHighlight)
+            {
+                LocalPoint localP = pathPointToLocal(wv, point);
+                highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+            }
+        }
+
+        if(config.loopPath() && tilesToHighlight.size() > 2 && config.drawPathLine())
+        {
+            LocalPoint lastP = pathPointToLocal(wv, tilesToHighlight.get(tilesToHighlight.size() - 1));
+            LocalPoint firstP = pathPointToLocal(wv, tilesToHighlight.get(0));
+            drawLine(graphics, lastP, firstP, config.pathLineColor(), (float) config.pathLineWidth());
+        }
     }
 
     // Convert PathPoint (region point) to local
@@ -143,17 +190,18 @@ public class PathmakerOverlay extends Overlay
 
     // Draw a line between the provided start and end points
     private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, final Color color, float lineWidth){ //, int counter) {
-        if (startPoint == null || endPoint == null) {
+        if (startLoc == null || endLoc == null)
+        {
             return;
         }
 
         int z = client.getLocalPlayer().getWorldView().getPlane();
 
-        final int startHeight = Perspective.getTileHeight(client, startPoint, z);
-        final int endHeight = Perspective.getTileHeight(client, endPoint, z);
-        
-        Point p1 = Perspective.localToCanvas(client, startPoint.getX(), startPoint.getY(), startHeight);
-        Point p2 = Perspective.localToCanvas(client, endPoint.getX(), endPoint.getY(), endHeight);
+        final int startHeight = Perspective.getTileHeight(client, startLoc, z);
+        final int endHeight = Perspective.getTileHeight(client, endLoc, z);
+
+        Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight);
+        Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight);
 
         if (p1 == null || p2 == null)
         {
@@ -172,10 +220,10 @@ public class PathmakerOverlay extends Overlay
 //        drawCounter(graphics, p2.getX(), p2.getY(), counter);
     }
 
-    String constructHoveredTileString(hoveredTileLabelMode labelMode, Tile tile)
+    String constructHoveredTileString(Tile tile)
     {
         String returnString = "";
-        switch (labelMode)
+        switch (config.hoveredTileLabelModeSelect())
         {
             case TILE_REGION: returnString = getTileRegionString(tile); break;
             case TILE_LOCATION: returnString = getTileLocationString(tile); break;
@@ -183,6 +231,7 @@ public class PathmakerOverlay extends Overlay
             case ALL: returnString = "R: " + getTileRegionString(tile) +
                     ", L: " + getTileLocationString(tile) +
                     ", D: " + getTileDistanceString(startPoint, endPoint); break;
+            default: break;
         }
         return returnString;
     }
