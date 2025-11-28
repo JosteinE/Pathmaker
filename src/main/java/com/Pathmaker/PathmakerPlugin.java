@@ -6,10 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.stream.Collectors;
+import java.util.List;
 
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -20,7 +21,11 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
+import net.runelite.client.ui.ClientToolbar;
 
 @Slf4j
 @PluginDescriptor(
@@ -31,10 +36,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 
 public class PathmakerPlugin extends Plugin
 {
-    private static final String CONFIG_GROUP = "linePath";
-    private static final String REGION_PREFIX = "region_";
+    private static final String ICON_FILE = "panel_icon.png";
 
     private final HashMap<String, PathmakerPath> paths = new HashMap<>();
+    private PathmakerPluginPanel pluginPanel;
+    private NavigationButton navButton;
 
 	@Inject
 	private Client client;
@@ -60,7 +66,14 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private EventBus eventBus;
 
-    boolean drawTiles;
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    @Provides
+    PathmakerConfig provideConfig(ConfigManager configManager)
+    {
+        return configManager.getConfig(PathmakerConfig.class);
+    }
 
 	@Override
 	protected void startUp() throws Exception
@@ -68,12 +81,26 @@ public class PathmakerPlugin extends Plugin
 		log.debug("Example started!");
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
+
+        //config.setStoredPaths("");
+
         if (config.showMapOrbMenuOptions())
         {
             sharingManager.addMenuOptions();
         }
         //loadPoints();
         eventBus.register(sharingManager);
+
+        pluginPanel = new PathmakerPluginPanel(client, this);
+
+        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
+        navButton = NavigationButton.builder()
+                .tooltip("Pathmaker")
+                .icon(icon)
+                .priority(5)
+                .panel(pluginPanel)
+                .build();
+        clientToolbar.addNavigation(navButton);
 	}
 
 	@Override
@@ -85,7 +112,9 @@ public class PathmakerPlugin extends Plugin
         overlayManager.remove(panelOverlay);
         sharingManager.removeMenuOptions();
         //points.clear();
-	}
+        clientToolbar.removeNavigation(navButton);
+
+    }
 
     @Subscribe
     public void onGameTick(GameTick gameTick)
@@ -117,7 +146,7 @@ public class PathmakerPlugin extends Plugin
     @Subscribe
     public void onConfigChanged(ConfigChanged event)
     {
-        if (event.getGroup().equals(PathmakerConfig.GROUND_MARKER_CONFIG_GROUP))
+        if (event.getGroup().equals(PathmakerConfig.PATHMAKER_CONFIG_GROUP))
         {
             if (event.getKey().equals(PathmakerConfig.SHOW_MAP_ORB_MENU_OPTIONS)) {
                 sharingManager.removeMenuOptions();
@@ -128,6 +157,7 @@ public class PathmakerPlugin extends Plugin
                 }
             }
         }
+        //configManager.sendConfig();
     }
 
 	@Subscribe
@@ -137,12 +167,6 @@ public class PathmakerPlugin extends Plugin
 //		{
 //			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.greeting(), null);
 //		}
-	}
-
-	@Provides
-    PathmakerConfig provideConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(PathmakerConfig.class);
 	}
 
     @Subscribe
@@ -336,7 +360,26 @@ public class PathmakerPlugin extends Plugin
     void createOrAddToPath(PathPoint point)
     {
         String activePath = config.activePath();
-        PathmakerPath path = paths.containsKey(activePath) ? paths.get(activePath) : new PathmakerPath(point);
+
+        if(activePath == null) return;
+
+        log.debug("Checking for existing path: {}", activePath);
+        PathmakerPath path;
+        if(paths.containsKey(activePath))
+        {
+            path = paths.get(activePath);
+        }
+        else
+        {
+            path = new PathmakerPath(point);
+            final List<String> newStoredPaths = new ArrayList<>(Text.fromCSV(config.storedPaths()));//new ArrayList<>(paths.keySet());
+            newStoredPaths.add(activePath);
+            //configManager.unsetConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths");
+            //configManager.setConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths", Text.toCSV(newStoredPaths));
+            //configManager.sendConfig();
+            config.setStoredPaths(Text.toCSV(newStoredPaths));
+        }
+
         path.addPathPoint(point);
         paths.put(activePath, path);
         log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",

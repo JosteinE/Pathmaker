@@ -8,10 +8,11 @@ import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
-@ConfigGroup(PathmakerConfig.GROUND_MARKER_CONFIG_GROUP)
+
+@ConfigGroup(PathmakerConfig.PATHMAKER_CONFIG_GROUP)
 public interface PathmakerConfig extends Config
 {
-    String GROUND_MARKER_CONFIG_GROUP = "pathmaker";
+    String PATHMAKER_CONFIG_GROUP = "pathmaker";
     String SHOW_MAP_ORB_MENU_OPTIONS = "showMapOrbMenuOptions";
 
     //------------------------------------------------------------//
@@ -169,24 +170,6 @@ public interface PathmakerConfig extends Config
         return new Color(255, 255, 0, 255);
     }
 
-    enum hoveredTileLineMode
-    {
-        NONE,
-        TRUE_TILE,
-        PATH_END,
-    }
-    @ConfigItem(
-            keyName = "hoveredTileLineModeSelect",
-            name = "Hovered tile line mode",
-            description = "Draw line to the hovered tile.",
-            position = 7,
-            section = hoveredTile
-    )
-    default hoveredTileLineMode hoveredTileLineModeSelect()
-    {
-        return hoveredTileLineMode.NONE;
-    }
-
     //------------------------------------------------------------//
     // Path Line Section
     //------------------------------------------------------------//
@@ -256,7 +239,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean loopPath()
     {
-        return true;
+        return false;
     }
 
     @Alpha
@@ -269,7 +252,7 @@ public interface PathmakerConfig extends Config
     )
     default Color pathLinePointColor()
     {
-        return new Color(0, 255, 0, 255);
+        return new Color(0, 150, 0, 255);
     }
 
     @Alpha
@@ -287,7 +270,7 @@ public interface PathmakerConfig extends Config
 
     @ConfigItem(
             keyName = "pathLinePointWidth",
-            name = "Border width",
+            name = "Line point border width",
             description = "Width of the path line tile border.",
             position = 8,
             section = pathLine
@@ -296,6 +279,37 @@ public interface PathmakerConfig extends Config
     default int pathLinePointWidth()
     {
         return 2;
+    }
+
+    enum hoveredTileLineMode
+    {
+        NONE,
+        TRUE_TILE,
+        PATH_END,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileLineModeSelect",
+            name = "Hovered tile line mode",
+            description = "Draw line to the hovered tile.",
+            position = 9,
+            section = pathLine
+    )
+    default hoveredTileLineMode hoveredTileLineModeSelect()
+    {
+        return hoveredTileLineMode.NONE;
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "hoveredTileLineColor",
+            name = "Line to hovered tile color",
+            description = "Configures the line to the hovered tile color.",
+            position = 10,
+            section = pathLine
+    )
+    default Color hoveredTileLineColor()
+    {
+        return new Color(255, 0, 0, 255);
     }
 
     //------------------------------------------------------------//
@@ -335,7 +349,7 @@ public interface PathmakerConfig extends Config
     @ConfigItem(
             keyName = "storedPaths",
             name = "Stored paths",
-            description = "A list of all of the stored paths.",
+            description = "A list of all of the stored paths. !NB Updates by returning to the plugin list and changing focus away from the plugin panel.",
             position = 3,
             section = pathContainer
     )
@@ -343,6 +357,13 @@ public interface PathmakerConfig extends Config
     {
         return "";
     }
+
+    @ConfigItem(
+            keyName = "storedPaths",
+            name = "",
+            description = ""
+    )
+    void setStoredPaths(String pathString);
 
     //------------------------------------------------------------//
     // Info Box Section

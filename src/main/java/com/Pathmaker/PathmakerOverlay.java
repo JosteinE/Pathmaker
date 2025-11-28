@@ -107,12 +107,12 @@ public class PathmakerOverlay extends Overlay
             {
                 if (tilesToHighlight.isEmpty()){ break; }
                 LocalPoint lastP = pathPointToLocal(wv, tilesToHighlight.get(tilesToHighlight.size() - 1));
-                drawLine(graphics, lastP, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
+                drawLine(graphics, lastP, endPoint, config.hoveredTileLineColor(), (float) config.pathLineWidth());
                 break;
             }
             case TRUE_TILE:
             {
-                drawLine(graphics, startPoint, endPoint, config.pathLineColor(), (float) config.pathLineWidth());
+                drawLine(graphics, startPoint, endPoint, config.hoveredTileLineColor(), (float) config.pathLineWidth());
                 break;
             }
             default: break;
