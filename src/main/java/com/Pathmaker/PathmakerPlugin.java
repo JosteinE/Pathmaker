@@ -291,6 +291,11 @@ public class PathmakerPlugin extends Plugin
         }
     }
 
+    public HashMap<String, PathmakerPath> getLinePaths()
+    {
+        return paths;
+    }
+
     // Returns pathPoints from all paths within the specified region
     Collection<PathPoint> getPathPointsInRegion(int regionId)
     {
@@ -378,6 +383,7 @@ public class PathmakerPlugin extends Plugin
             //configManager.setConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths", Text.toCSV(newStoredPaths));
             //configManager.sendConfig();
             config.setStoredPaths(Text.toCSV(newStoredPaths));
+            pluginPanel.rebuild();
         }
 
         path.addPathPoint(point);

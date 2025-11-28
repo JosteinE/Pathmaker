@@ -7,7 +7,8 @@ import java.util.Set;
 // Collection of path points
 public class PathmakerPath
 {
-    // Map with RegionIDs for keys with an ArrayList<PathPoint> for the specified region.
+    // Map with RegionIDs for keys with an ArrayList<PathPoint> for the specified region
+    // Because a path might be spread across multiple regions
     private final HashMap<Integer, ArrayList<PathPoint>> pathPoints = new HashMap<>();
 
     PathmakerPath(PathPoint initialPathPoint)
