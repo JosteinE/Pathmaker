@@ -213,7 +213,12 @@ public class PathPanel extends JPanel
                 deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
                 deletePathPointButton.addMouseListener(new MouseAdapter()
                 {
-                    //plugin.removePathPoint(regionPoint);
+                    @Override
+                    public void mousePressed(MouseEvent mouseEvent)
+                    {
+                        plugin.removePoint(getPathLabel().getText(), point);
+                        plugin.rebuildPanel();
+                    }
                 });
                 pointContainer.add(deletePathPointButton, BorderLayout.EAST);
 

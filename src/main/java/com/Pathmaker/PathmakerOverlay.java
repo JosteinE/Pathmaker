@@ -16,6 +16,7 @@ import net.runelite.api.coords.WorldPoint;
 
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -145,18 +146,25 @@ public class PathmakerOverlay extends Overlay
             PathmakerPath path = paths.get(pathName);
             int pathSize = path.getSize();
 
-            for (int loadedRegionID : client.getTopLevelWorldView().getMapRegions()) {
+            ArrayList<Integer> loadedRegions = new ArrayList<>();
+            for (int regionId : client.getTopLevelWorldView().getMapRegions())
+            {
+                loadedRegions.add(regionId);
+            }
+
+            for (int loadedRegionID : loadedRegions)
+            {
                 // Skip if path does not contain points in the given region
                 if (!path.hasPointsInRegion(loadedRegionID)) {
                     continue;
                 }
 
-                ArrayList<PathPoint> pointsInRegion = paths.get(pathName).getPointsInRegion(loadedRegionID);
+                ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
 
                 // Draw both line and points
                 if (config.drawPath() && pathSize > 1 && config.drawPathPoints()) {
                     LocalPoint lastLocalP = null;
-                    for (PathPoint point : pointsInRegion) {
+                    for (PathPoint point : drawOrder) {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                         drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
@@ -166,7 +174,7 @@ public class PathmakerOverlay extends Overlay
                     // Only draw line
                 } else if (config.drawPath() && pathSize > 1 ) {
                     LocalPoint lastLocalP = null;
-                    for (PathPoint point : pointsInRegion) {
+                    for (PathPoint point : drawOrder) {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
                         lastLocalP = localP;
@@ -174,7 +182,7 @@ public class PathmakerOverlay extends Overlay
 
                     // Only Draw points
                 } else if (config.drawPathPoints()) {
-                    for (PathPoint point : pointsInRegion) {
+                    for (PathPoint point : drawOrder) {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                     }
@@ -183,7 +191,7 @@ public class PathmakerOverlay extends Overlay
                 // Draw label
                 if (config.drawPathPointLabel())
                 {
-                    for (PathPoint point : pointsInRegion)
+                    for (PathPoint point : drawOrder)
                     {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         addLabel(graphics, localP, 0, "p" + (point.getIndex()+1), config.hoveredTileLabelColor());
@@ -194,9 +202,14 @@ public class PathmakerOverlay extends Overlay
             // Loop path
             if (path.loopPath && path.getSize() > 2 && config.drawPath())
             {
-                LocalPoint lastP = pathPointToLocal(wv, path.getPointAtIndex(path.getSize() - 1));
-                LocalPoint firstP = pathPointToLocal(wv, path.getPointAtIndex(0));
-                drawLine(graphics, lastP, firstP, path.color, (float) config.pathLineWidth());
+                // Making sure both ends are loaded
+                if(path.isPointInRegions(path.getPointAtIndex(path.getSize() -1), loadedRegions) &&
+                        path.isPointInRegions(path.getPointAtIndex(0), loadedRegions))
+                {
+                    LocalPoint lastP = pathPointToLocal(wv, path.getPointAtIndex(path.getSize() - 1));
+                    LocalPoint firstP = pathPointToLocal(wv, path.getPointAtIndex(0));
+                    drawLine(graphics, lastP, firstP, path.color, (float) config.pathLineWidth());
+                }
             }
         }
     }

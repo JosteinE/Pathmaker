@@ -415,6 +415,15 @@ public class PathmakerPlugin extends Plugin
                 point.getRegionId(), point.getX(), point.getY(), activePath);
     }
 
+    void removePoint(String pathName, PathPoint point)
+    {
+        paths.get(pathName).removePathPoint(point);
+        if (paths.get(pathName).getSize() == 0)
+        {
+            removePath(pathName);
+        }
+    }
+
     void removePath(String pathName)
     {
         paths.remove(pathName);
@@ -426,8 +435,8 @@ public class PathmakerPlugin extends Plugin
         return pluginPanel.activePath.getText();
     }
 
-    public EventBus getEventBus()
+    void rebuildPanel()
     {
-        return eventBus;
+        pluginPanel.rebuild();
     }
 }

@@ -88,6 +88,12 @@ public class PathmakerPath
 //        }
     }
 
+    boolean isPointInRegions(PathPoint point, ArrayList<Integer>regionIDs)
+    {
+        //return pathPoints.containsKey(regionId) && pathPoints.get(regionId).contains(point);
+        return regionIDs.contains(point.getRegionId());
+    }
+
     PathPoint getPointAtIndex(int index)
     {
         outerLoop:
@@ -109,11 +115,68 @@ public class PathmakerPath
     int getSize()
     {
         int numPoints = 0;
-        for (int regionId : pathPoints.keySet())
+        if(!pathPoints.isEmpty())
         {
-            numPoints += pathPoints.get(regionId).size();
+            for (int regionId : pathPoints.keySet()) {
+                numPoints += pathPoints.get(regionId).size();
+            }
         }
         return numPoints;
+    }
+
+    ArrayList<PathPoint> getDrawOrder(ArrayList<Integer> loadedRegions)
+    {
+        ArrayList<PathPoint> drawOrder = new ArrayList<>();
+
+        // Creating a map for tracking the last index checked in each of the RegionIDs
+        // (which is used as keys for pathPoint) so the loops do not start at 0 every time
+        final HashMap<Integer, Integer> loopIndexTracker = new HashMap<>();
+        for (int regionId : pathPoints.keySet())
+        {
+            loopIndexTracker.put(regionId, 0);
+        }
+
+        // Calculate the number of points to collect (points that are inside the loaded regions)
+        int numPointsInRegion = 0;
+        for (int loadedRegionId : loadedRegions)
+        {
+            if (pathPoints.containsKey(loadedRegionId))
+            {
+                numPointsInRegion += pathPoints.get(loadedRegionId).size();
+            }
+        }
+
+
+        // Iterate through the list of points (including points in regions not currently loaded)
+        // logging points by their indices (via LastCollected), but only adding points to drawOrder
+        // if the points are in rendered regions.
+        int lastCollected = 0;
+        while(drawOrder.size() < numPointsInRegion)
+        {
+            for (int regionId : pathPoints.keySet())
+            {
+                    for (int i = loopIndexTracker.get(regionId); i < pathPoints.get(regionId).size(); i++) {
+                        loopIndexTracker.put(regionId, i);
+                        PathPoint point = pathPoints.get(regionId).get(i);
+                        int pointIndex = point.getIndex();
+
+                        if (pointIndex == drawOrder.size())
+                        {
+                            if (loadedRegions.contains(regionId))
+                            {
+                                drawOrder.add(point);
+                            }
+                            lastCollected = pointIndex;
+                        }
+                        else if (pointIndex > drawOrder.size())
+                        {
+                            break;
+                        }
+                    }
+            }
+        }
+        log.debug("Draw Order: {}", drawOrder.size());
+        return drawOrder;
     }
 }
 
