@@ -1,14 +1,20 @@
 package com.Pathmaker;
 
 import net.runelite.api.Client;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.util.ImageUtil;
 
 import java.awt.*;
 import java.util.HashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+
+import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 
 
 public class PathmakerPluginPanel extends PluginPanel
@@ -30,7 +36,34 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Create labeled panels
         JPanel northPanel = createLabeledPanel(BorderLayout.NORTH, "Pathmaker", Color.WHITE);
-        JPanel southPanel = createLabeledPanel(BorderLayout.SOUTH, "By Fraph", Color.YELLOW);
+
+        // Add link to config button
+        // But how?
+        // https://github.com/adamk33n3r/runelite-watchdog/blob/master/src/main/java/com/adamk33n3r/runelite/watchdog/NotificationOverlay.java
+//        JButton configButton = new JButton();
+//        configButton.setIcon(new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png")));
+//        configButton.setToolTipText("Config");
+//        configButton.addChangeListener(ce ->
+//        {
+//            plugin.getEventBus().post(
+//                    new OverlayMenuClicked(
+//                    new OverlayMenuEntry(
+//                    RUNELITE_OVERLAY_CONFIG,
+//                            null,
+//                            null),
+//                            notificationOverlay)); <---- What in this is relevant? (link above)
+//        });
+//        northPanel.add(configButton);
+
+        // Add Active Path text field
+        FlatTextField activePath = new FlatTextField();
+        activePath.setText("unnamed");
+        activePath.setForeground(Color.WHITE);
+        activePath.setBackground(Color.GRAY);
+        northPanel.add(activePath, BorderLayout.SOUTH);
+
+
+        JPanel southPanel = createLabeledPanel(BorderLayout.CENTER, "By Fraph", Color.YELLOW);
 
         // Add panels to client panel
         add(northPanel, BorderLayout.NORTH);

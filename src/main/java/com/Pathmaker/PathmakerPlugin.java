@@ -393,4 +393,9 @@ public class PathmakerPlugin extends Plugin
         log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
                 point.getRegionId(), point.getX(), point.getY(), config.activePath());
     }
+
+    public EventBus getEventBus()
+    {
+        return eventBus;
+    }
 }
