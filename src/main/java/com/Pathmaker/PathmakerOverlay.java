@@ -116,13 +116,20 @@ public class PathmakerOverlay extends Overlay
 
             switch (config.hoveredTileLineOriginSelect()) {
                 case PATH_END: {
-                    if (plugin.getStoredPaths().isEmpty()) {
+
+                    if (plugin.getStoredPaths().isEmpty())
+                    {
+                        break;
+                    }
+                    PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePathName());
+                    PathPoint lastTile = activePath.getPointAtIndex(activePath.getSize() - 1);
+
+                    if (!activePath.isPointInRegions(lastTile, client.getTopLevelWorldView().getMapRegions()))
+                    {
                         break;
                     }
 
-                    PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePathName());
-                    LocalPoint lastP = pathPointToLocal(wv, activePath.getPointAtIndex(activePath.getSize() - 1));
-                    drawLine(graphics, lastP, endPoint, hoverLineColor, (float) config.pathLineWidth());
+                    drawLine(graphics, pathPointToLocal(wv, lastTile), endPoint, hoverLineColor, (float) config.pathLineWidth());
                     break;
                 }
                 case TRUE_TILE: {
@@ -231,9 +238,10 @@ public class PathmakerOverlay extends Overlay
 
         final Polygon poly = Perspective.getCanvasTilePoly(client, tile);
 
+        // poly will be null i the tile is within a loaded region, but outside the camera's frustum.
         if (poly == null)
         {
-            log.debug("Failed to highlight tile, POLY is null. LocalPoint wv: {}, x: {}, y: {}", tile.getWorldView(), tile.getX(),  tile.getY());
+            //log.debug("Failed to highlight tile, POLY is null. LocalPoint wv: {}, x: {}, y: {}", tile.getWorldView(), tile.getX(),  tile.getY());
             return;
         }
 
