@@ -9,6 +9,9 @@ import net.runelite.client.ui.components.PluginErrorPanel;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
 
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
 import java.awt.*;
 import java.util.HashMap;
 import javax.swing.*;
@@ -24,6 +27,9 @@ public class PathmakerPluginPanel extends PluginPanel
 
     Client client;
     PathmakerPlugin plugin;
+
+    FlatTextField activePath;
+    final int MAX_TEXT_LENGTH = 12;
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
     {
@@ -56,10 +62,24 @@ public class PathmakerPluginPanel extends PluginPanel
 //        northPanel.add(configButton);
 
         // Add Active Path text field
-        FlatTextField activePath = new FlatTextField();
+        activePath = new FlatTextField();
         activePath.setText("unnamed");
         activePath.setForeground(Color.WHITE);
         activePath.setBackground(Color.GRAY);
+        activePath.addKeyListener(new KeyListener()
+        {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (activePath.getTextField().getText().length() > MAX_TEXT_LENGTH)
+                {
+                    activePath.setText(activePath.getText().substring(0,MAX_TEXT_LENGTH));
+                }
+            }
+            @Override
+            public void keyPressed(KeyEvent e){}
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        });
         northPanel.add(activePath, BorderLayout.SOUTH);
 
 
@@ -94,8 +114,8 @@ public class PathmakerPluginPanel extends PluginPanel
         pathView.removeAll();
 
         // HashMap<String, PathmakerPath>
-        HashMap<String, PathmakerPath> paths = plugin.getLinePaths();
-        for (final String pathLabel : plugin.getLinePaths().keySet())
+        HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
+        for (final String pathLabel : plugin.getStoredPaths().keySet())
         {
 //            if (group.getName().toLowerCase().contains(getSearchText().toLowerCase()) &&
 //                    (Filter.ALL.equals(filter) ||
@@ -104,6 +124,12 @@ public class PathmakerPluginPanel extends PluginPanel
 //                            (Filter.INVISIBLE.equals(filter) && !group.isVisible())))
 //          {
             PathPanel pathEntry = new PathPanel(plugin, pathLabel);
+
+            // Set as active path on label click
+            pathEntry.getPathLabel().addActionListener(actionEvent ->
+            {
+                activePath.setText(pathEntry.getPathLabel().getText());
+            });
             pathView.add(pathEntry, BorderLayout.CENTER);
             pathView.add(Box.createRigidArea(new Dimension(0, 10)));
             // }
@@ -135,5 +161,14 @@ public class PathmakerPluginPanel extends PluginPanel
         bodyPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
         bodyPanel.add(titlePanel, borderLayout);
         return bodyPanel;
+    }
+
+    private void textFieldKeyTyped(java.awt.event.KeyEvent evt)
+    {
+        // ÆÆÆÆÆÆÆÆÆÆÆÆ
+        if(activePath.getText().length()>=12)
+        {
+            evt.consume();
+        }
     }
 }

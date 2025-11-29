@@ -38,7 +38,7 @@ public class PathmakerPlugin extends Plugin
 {
     private static final String ICON_FILE = "panel_icon.png";
 
-    final HashMap<String, PathmakerPath> paths = new HashMap<>();
+    private final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
 
@@ -123,13 +123,15 @@ public class PathmakerPlugin extends Plugin
     public void onGameTick(GameTick gameTick)
     {
         panelOverlay.calculateCurrentSpeed();
-        overlay.importTilesToHighlight(getTilesToHighlight());
+        //overlay.importTilesToHighlight(getTilesToHighlight());
     }
 
     // Get marked tiles within the rendered regions
     Collection<PathPoint> getTilesToHighlight()
     {
         Collection<PathPoint>  pathPoints = new ArrayList<>();
+
+        // Get rendered regionIDs
         int[] regionsToLoad = client.getTopLevelWorldView().getMapRegions();
         //log.debug("Number of regions to load: {}", regionsToLoad.length);
         for (PathmakerPath path : paths.values())
@@ -294,7 +296,7 @@ public class PathmakerPlugin extends Plugin
         }
     }
 
-    public HashMap<String, PathmakerPath> getLinePaths()
+    public HashMap<String, PathmakerPath> getStoredPaths()
     {
         return paths;
     }
@@ -367,7 +369,7 @@ public class PathmakerPlugin extends Plugin
     // Create a new path starting with the given point or add to existing path
     void createOrAddToPath(PathPoint point)
     {
-        String activePath = config.activePath();
+        String activePath = pluginPanel.activePath.getText();//config.activePath();
 
         if(activePath == null) return;
 
@@ -376,10 +378,14 @@ public class PathmakerPlugin extends Plugin
         if(paths.containsKey(activePath))
         {
             path = paths.get(activePath);
+            path.addPathPoint(point);
         }
         else
         {
+            // Initialize new path with the initial point
             path = new PathmakerPath(point);
+
+            // Update config stored path list
             final List<String> newStoredPaths = new ArrayList<>(Text.fromCSV(config.storedPaths()));//new ArrayList<>(paths.keySet());
             newStoredPaths.add(activePath);
             //configManager.unsetConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths");
@@ -387,11 +393,21 @@ public class PathmakerPlugin extends Plugin
             //configManager.sendConfig();
             config.setStoredPaths(Text.toCSV(newStoredPaths));
         }
-        path.addPathPoint(point);
         paths.put(activePath, path);
         pluginPanel.rebuild();
         log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
-                point.getRegionId(), point.getX(), point.getY(), config.activePath());
+                point.getRegionId(), point.getX(), point.getY(), activePath);
+    }
+
+    void removePath(String pathName)
+    {
+        paths.remove(pathName);
+        pluginPanel.rebuild();
+    }
+
+    String getActivePath()
+    {
+        return pluginPanel.activePath.getText();
     }
 
     public EventBus getEventBus()

@@ -17,6 +17,7 @@ import net.runelite.api.coords.WorldPoint;
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
 import net.runelite.client.ui.overlay.Overlay;
@@ -30,9 +31,10 @@ public class PathmakerOverlay extends Overlay
     private static final int MAX_DRAW_DISTANCE = 32;
 
     // The integer represents RegionID
-    private final ArrayList<PathPoint> tilesToHighlight = new ArrayList<>();
+    //private final ArrayList<PathPoint> tilesToHighlight = new ArrayList<>();
 
     private final Client client;
+    private final PathmakerPlugin plugin;
     private final PathmakerConfig config;
 
     private final float tileSize = 128;
@@ -44,9 +46,10 @@ public class PathmakerOverlay extends Overlay
     // For ref: net.runelite.client.ui.overlay.OverlayRenderer
 
     @Inject
-    private PathmakerOverlay(Client client, PathmakerConfig config)//, WorldView worldview)
+    private PathmakerOverlay(Client client, PathmakerPlugin plugin, PathmakerConfig config)//, WorldView worldview)
     {
         this.client = client;
+        this.plugin = plugin;
         this.config = config;
 
         //this.worldview = worldview;
@@ -105,8 +108,10 @@ public class PathmakerOverlay extends Overlay
         {
             case PATH_END:
             {
-                if (tilesToHighlight.isEmpty()){ break; }
-                LocalPoint lastP = pathPointToLocal(wv, tilesToHighlight.get(tilesToHighlight.size() - 1));
+                if (plugin.getStoredPaths().isEmpty()){ break; }
+
+                PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePath());
+                LocalPoint lastP = pathPointToLocal(wv, activePath.getPointAtIndex(activePath.getSize() - 1));
                 drawLine(graphics, lastP, endPoint, config.hoveredTileLineColor(), (float) config.pathLineWidth());
                 break;
             }
@@ -122,43 +127,57 @@ public class PathmakerOverlay extends Overlay
     }
 
     // Highlight tiles marked by the right-click menu and draw lines between them
-    void drawPath(Graphics2D graphics, WorldView wv)
-    {
-        if(config.drawPathLine() && config.drawPathLinePoints())
-        {
-            LocalPoint lastLocalP = null;
-            for (PathPoint point : tilesToHighlight)
-            {
-                LocalPoint localP = pathPointToLocal(wv, point);
-                highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
-                lastLocalP = localP;
-            }
-        }
-        else if (config.drawPathLine())
-        {
-            LocalPoint lastLocalP = null;
-            for (PathPoint point : tilesToHighlight)
-            {
-                LocalPoint localP = pathPointToLocal(wv, point);
-                drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
-                lastLocalP = localP;
-            }
-        }
-        else if (config.drawPathLinePoints())
-        {
-            for (PathPoint point : tilesToHighlight)
-            {
-                LocalPoint localP = pathPointToLocal(wv, point);
-                highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-            }
-        }
+    void drawPath(Graphics2D graphics, WorldView wv) {
+        HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
 
-        if(config.loopPath() && tilesToHighlight.size() > 2 && config.drawPathLine())
+        for (String pathName : paths.keySet())
         {
-            LocalPoint lastP = pathPointToLocal(wv, tilesToHighlight.get(tilesToHighlight.size() - 1));
-            LocalPoint firstP = pathPointToLocal(wv, tilesToHighlight.get(0));
-            drawLine(graphics, lastP, firstP, config.pathLineColor(), (float) config.pathLineWidth());
+            PathmakerPath path = paths.get(pathName);
+            int pathSize = path.getSize();
+
+            for (int loadedRegionID : client.getTopLevelWorldView().getMapRegions()) {
+                // Skip if path does not contain points in the given region
+                if (!path.hasPointsInRegion(loadedRegionID)) {
+                    continue;
+                }
+
+                ArrayList<PathPoint> pointsInRegion = paths.get(pathName).getPointsInRegion(loadedRegionID);
+
+                // Draw both line and points
+                if (config.drawPathLine() && pathSize > 1 && config.drawPathLinePoints()) {
+                    LocalPoint lastLocalP = null;
+                    for (PathPoint point : pointsInRegion) {
+                        LocalPoint localP = pathPointToLocal(wv, point);
+                        highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                        drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                        lastLocalP = localP;
+                    }
+
+                    // Only draw line
+                } else if (config.drawPathLine() && pathSize > 1 ) {
+                    LocalPoint lastLocalP = null;
+                    for (PathPoint point : pointsInRegion) {
+                        LocalPoint localP = pathPointToLocal(wv, point);
+                        drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                        lastLocalP = localP;
+                    }
+
+                    // Only Draw points
+                } else if (config.drawPathLinePoints()) {
+                    for (PathPoint point : pointsInRegion) {
+                        LocalPoint localP = pathPointToLocal(wv, point);
+                        highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                    }
+                }
+            }
+
+            // Loop path
+            if (config.loopPath() && path.getSize() > 2 && config.drawPathLine())
+            {
+                LocalPoint lastP = pathPointToLocal(wv, path.getPointAtIndex(path.getSize() - 1));
+                LocalPoint firstP = pathPointToLocal(wv, path.getPointAtIndex(0));
+                drawLine(graphics, lastP, firstP, config.pathLineColor(), (float) config.pathLineWidth());
+            }
         }
     }
 
@@ -261,17 +280,18 @@ public class PathmakerOverlay extends Overlay
         }
     }
 
-    void importTilesToHighlight(Collection<PathPoint> pathPoints)
-    {
-        tilesToHighlight.clear();
-        for (PathPoint point : pathPoints)
-        {
-            if(!tilesToHighlight.contains(point))
-            {
-                tilesToHighlight.add(point);
-            }
-        }
+//    // HashMap<String, PathmakerPath> paths
+//    void importTilesToHighlight(Collection<PathPoint> pathPoints)
+//    {
+//        tilesToHighlight.clear();
+//        for (PathPoint point : pathPoints)
+//        {
+////            if(!tilesToHighlight.contains(point))
+////            {
+//                tilesToHighlight.add(point);
+////            }
+//        }
         //log.debug("Number of tiles to highlight: {}", tilesToHighlight.size());
         //tilesToHighlight.addAll(pathPoints);
-    }
+   // }
 }

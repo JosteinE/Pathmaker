@@ -1,12 +1,14 @@
 package com.Pathmaker;
 
 import com.google.common.collect.ListMultimap;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
 // Collection of path points
+@Slf4j
 public class PathmakerPath
 {
     // Map with RegionIDs for keys with an ArrayList<PathPoint> for the specified region
@@ -29,7 +31,7 @@ public class PathmakerPath
             pathPoints.put(regionID, new ArrayList<PathPoint>());
         }
         pathPoints.get(regionID).add(pathPoint);
-        pathPoint.setIndex(getSize());
+        pathPoint.setIndex(getSize()-1);
     }
 
     void removePathPoint(PathPoint pathPoint)
@@ -58,6 +60,11 @@ public class PathmakerPath
         return  pathPoints.get(regionID);
     }
 
+    boolean hasPointsInRegion(int regionID)
+    {
+        return  pathPoints.containsKey(regionID);
+    }
+
     void setNewIndex(PathPoint point, int newIndex)
     {
         point.setIndex(newIndex);
@@ -76,6 +83,24 @@ public class PathmakerPath
 //                }
 //            }
 //        }
+    }
+
+    PathPoint getPointAtIndex(int index)
+    {
+        outerLoop:
+        for(int regionId : pathPoints.keySet())
+        {
+            for (PathPoint point : pathPoints.get(regionId))
+            {
+                if (point.getIndex() == index)
+                {
+                    return point;
+                }
+            }
+        }
+
+        log.debug("Could not find point at index: {}", index);
+        return null;
     }
 
     int getSize()
