@@ -38,7 +38,7 @@ public class PathmakerPlugin extends Plugin
 {
     private static final String ICON_FILE = "panel_icon.png";
 
-    private final HashMap<String, PathmakerPath> paths = new HashMap<>();
+    final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
 
@@ -82,7 +82,9 @@ public class PathmakerPlugin extends Plugin
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
 
-        //config.setStoredPaths("");
+        // Temp!
+        config.setStoredPaths("");
+        paths.clear();
 
         if (config.showMapOrbMenuOptions())
         {
@@ -111,9 +113,10 @@ public class PathmakerPlugin extends Plugin
         overlayManager.remove(overlay);
         overlayManager.remove(panelOverlay);
         sharingManager.removeMenuOptions();
-        //points.clear();
         clientToolbar.removeNavigation(navButton);
 
+        // Temp!
+        paths.clear();
     }
 
     @Subscribe
@@ -383,11 +386,10 @@ public class PathmakerPlugin extends Plugin
             //configManager.setConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths", Text.toCSV(newStoredPaths));
             //configManager.sendConfig();
             config.setStoredPaths(Text.toCSV(newStoredPaths));
-            pluginPanel.rebuild();
         }
-
         path.addPathPoint(point);
         paths.put(activePath, path);
+        pluginPanel.rebuild();
         log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
                 point.getRegionId(), point.getX(), point.getY(), config.activePath());
     }

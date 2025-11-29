@@ -70,8 +70,7 @@ public class PathmakerPluginPanel extends PluginPanel
 //                            (Filter.VISIBLE.equals(filter) && group.isVisible()) ||
 //                            (Filter.INVISIBLE.equals(filter) && !group.isVisible())))
 //          {
-            PathPanel pathEntry = new PathPanel(plugin, paths.get(pathLabel));
-            pathEntry.setPathLabel(pathLabel);
+            PathPanel pathEntry = new PathPanel(plugin, pathLabel);
             pathView.add(pathEntry, BorderLayout.CENTER);
             pathView.add(Box.createRigidArea(new Dimension(0, 10)));
             // }

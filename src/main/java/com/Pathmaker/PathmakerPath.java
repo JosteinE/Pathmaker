@@ -1,5 +1,7 @@
 package com.Pathmaker;
 
+import com.google.common.collect.ListMultimap;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
@@ -27,6 +29,7 @@ public class PathmakerPath
             pathPoints.put(regionID, new ArrayList<PathPoint>());
         }
         pathPoints.get(regionID).add(pathPoint);
+        pathPoint.setIndex(getSize());
     }
 
     void removePathPoint(PathPoint pathPoint)
@@ -53,6 +56,36 @@ public class PathmakerPath
     ArrayList<PathPoint> getPointsInRegion(int regionID)
     {
         return  pathPoints.get(regionID);
+    }
+
+    void setNewIndex(PathPoint point, int newIndex)
+    {
+        point.setIndex(newIndex);
+
+        // Implement reordering!!
+
+//        outerLoop:
+//        for(int regionId : pathPoints.keySet())
+//        {
+//            for (PathPoint point : pathPoints.get(regionId))
+//            {
+//                if (point.getIndex() == currentIndex)
+//                {
+//                    point.setIndex(newIndex);
+//                    break outerLoop;
+//                }
+//            }
+//        }
+    }
+
+    int getSize()
+    {
+        int numPoints = 0;
+        for (int regionId : pathPoints.keySet())
+        {
+            numPoints += pathPoints.get(regionId).size();
+        }
+        return numPoints;
     }
 }
 
