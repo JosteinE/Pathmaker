@@ -3,6 +3,7 @@ package com.Pathmaker;
 import com.google.common.collect.ListMultimap;
 import lombok.extern.slf4j.Slf4j;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
@@ -14,6 +15,8 @@ public class PathmakerPath
     // Map with RegionIDs for keys with an ArrayList<PathPoint> for the specified region
     // Because a path might be spread across multiple regions
     private final HashMap<Integer, ArrayList<PathPoint>> pathPoints = new HashMap<>();
+    Color color;
+    boolean loopPath = false;
 
     PathmakerPath(PathPoint initialPathPoint)
     {

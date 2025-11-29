@@ -2,10 +2,13 @@ package com.Pathmaker;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
+
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,6 +29,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 
 @Slf4j
 @PluginDescriptor(
@@ -41,6 +45,8 @@ public class PathmakerPlugin extends Plugin
     private final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
+
+    boolean hotKeyPressed = false;
 
 	@Inject
 	private Client client;
@@ -69,6 +75,10 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private ClientToolbar clientToolbar;
 
+    @Getter
+    @Inject
+    private ColorPickerManager colorPickerManager;
+
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)
     {
@@ -83,7 +93,7 @@ public class PathmakerPlugin extends Plugin
         overlayManager.add(panelOverlay);
 
         // Temp!
-        config.setStoredPaths("");
+        //config.setStoredPaths("");
         paths.clear();
 
         if (config.showMapOrbMenuOptions())
@@ -179,7 +189,7 @@ public class PathmakerPlugin extends Plugin
     {
         // Only add menu option if shift is being held
         MenuAction menuAction = event.getMenuEntry().getType();
-        final boolean hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
+        hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
 
         if (hotKeyPressed && (menuAction == MenuAction.WALK || menuAction == MenuAction.SET_HEADING))
         {
@@ -333,6 +343,11 @@ public class PathmakerPlugin extends Plugin
         return pathsInRegionKeys;
     }
 
+    Color getDefaultPathColor()
+    {
+        return config.pathColor();
+    }
+
     // Return PathPoint if one was previously created on the specified tile
     PathPoint getPathPointAtRegionTile(int regionId, int relativeX,  int relativeY, int plane)
     {
@@ -384,14 +399,15 @@ public class PathmakerPlugin extends Plugin
         {
             // Initialize new path with the initial point
             path = new PathmakerPath(point);
+            path.color = getDefaultPathColor();
 
             // Update config stored path list
-            final List<String> newStoredPaths = new ArrayList<>(Text.fromCSV(config.storedPaths()));//new ArrayList<>(paths.keySet());
-            newStoredPaths.add(activePath);
+            //final List<String> newStoredPaths = new ArrayList<>(Text.fromCSV(config.storedPaths()));//new ArrayList<>(paths.keySet());
+            //newStoredPaths.add(activePath);
             //configManager.unsetConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths");
             //configManager.setConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths", Text.toCSV(newStoredPaths));
             //configManager.sendConfig();
-            config.setStoredPaths(Text.toCSV(newStoredPaths));
+            //config.setStoredPaths(Text.toCSV(newStoredPaths));
         }
         paths.put(activePath, path);
         pluginPanel.rebuild();
@@ -405,7 +421,7 @@ public class PathmakerPlugin extends Plugin
         pluginPanel.rebuild();
     }
 
-    String getActivePath()
+    String getActivePathName()
     {
         return pluginPanel.activePath.getText();
     }

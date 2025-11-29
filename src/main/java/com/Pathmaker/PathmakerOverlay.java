@@ -67,9 +67,9 @@ public class PathmakerOverlay extends Overlay
         startPoint = playerPosLocal == null ? startPoint : playerPosLocal;
 
         // Current tile
-        if (config.highlightCurrentTile())
+        if (config.highlightPlayerTile())
         {
-            highlightTile(graphics, startPoint, config.highlightCurrentColor(), config.currentTileBorderWidth(), config.currentTileFillColor());
+            highlightTile(graphics, startPoint, config.highlightPlayerColor(), config.playerTileBorderWidth(), config.playerTileFillColor());
         }
 
         // Fetch hovered tile and if successful, assign it to endPoint
@@ -104,23 +104,33 @@ public class PathmakerOverlay extends Overlay
         }
 
         // Draw line to hovered line
-        switch (config.hoveredTileLineModeSelect())
+        if(config.hoveredTileLineDrawModeSelect() == PathmakerConfig.hoveredTileLineDrawMode.ALWAYS
+                || (config.hoveredTileLineDrawModeSelect() == PathmakerConfig.hoveredTileLineDrawMode.SHIFT_DOWN
+                && plugin.hotKeyPressed))
         {
-            case PATH_END:
-            {
-                if (plugin.getStoredPaths().isEmpty()){ break; }
+            // Set hover line to match the active path color if true
+            Color hoverLineColor = config.hoverLineColorMatchPath() ?
+                    plugin.getStoredPaths().get(plugin.getActivePathName()).color :
+                    config.hoveredTileLineColor();
 
-                PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePath());
-                LocalPoint lastP = pathPointToLocal(wv, activePath.getPointAtIndex(activePath.getSize() - 1));
-                drawLine(graphics, lastP, endPoint, config.hoveredTileLineColor(), (float) config.pathLineWidth());
-                break;
+            switch (config.hoveredTileLineOriginSelect()) {
+                case PATH_END: {
+                    if (plugin.getStoredPaths().isEmpty()) {
+                        break;
+                    }
+
+                    PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePathName());
+                    LocalPoint lastP = pathPointToLocal(wv, activePath.getPointAtIndex(activePath.getSize() - 1));
+                    drawLine(graphics, lastP, endPoint, hoverLineColor, (float) config.pathLineWidth());
+                    break;
+                }
+                case TRUE_TILE: {
+                    drawLine(graphics, startPoint, endPoint, hoverLineColor, (float) config.pathLineWidth());
+                    break;
+                }
+                default:
+                    break;
             }
-            case TRUE_TILE:
-            {
-                drawLine(graphics, startPoint, endPoint, config.hoveredTileLineColor(), (float) config.pathLineWidth());
-                break;
-            }
-            default: break;
         }
 
         return null;
@@ -144,39 +154,49 @@ public class PathmakerOverlay extends Overlay
                 ArrayList<PathPoint> pointsInRegion = paths.get(pathName).getPointsInRegion(loadedRegionID);
 
                 // Draw both line and points
-                if (config.drawPathLine() && pathSize > 1 && config.drawPathLinePoints()) {
+                if (config.drawPath() && pathSize > 1 && config.drawPathPoints()) {
                     LocalPoint lastLocalP = null;
                     for (PathPoint point : pointsInRegion) {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                        drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
                         lastLocalP = localP;
                     }
 
                     // Only draw line
-                } else if (config.drawPathLine() && pathSize > 1 ) {
+                } else if (config.drawPath() && pathSize > 1 ) {
                     LocalPoint lastLocalP = null;
                     for (PathPoint point : pointsInRegion) {
                         LocalPoint localP = pathPointToLocal(wv, point);
-                        drawLine(graphics, lastLocalP, localP, config.pathLineColor(), (float) config.pathLineWidth());
+                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
                         lastLocalP = localP;
                     }
 
                     // Only Draw points
-                } else if (config.drawPathLinePoints()) {
+                } else if (config.drawPathPoints()) {
                     for (PathPoint point : pointsInRegion) {
                         LocalPoint localP = pathPointToLocal(wv, point);
                         highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                     }
                 }
+
+                // Draw label
+                if (config.drawPathPointLabel())
+                {
+                    for (PathPoint point : pointsInRegion)
+                    {
+                        LocalPoint localP = pathPointToLocal(wv, point);
+                        addLabel(graphics, localP, 0, "p" + (point.getIndex()+1), config.hoveredTileLabelColor());
+                    }
+                }
             }
 
             // Loop path
-            if (config.loopPath() && path.getSize() > 2 && config.drawPathLine())
+            if (path.loopPath && path.getSize() > 2 && config.drawPath())
             {
                 LocalPoint lastP = pathPointToLocal(wv, path.getPointAtIndex(path.getSize() - 1));
                 LocalPoint firstP = pathPointToLocal(wv, path.getPointAtIndex(0));
-                drawLine(graphics, lastP, firstP, config.pathLineColor(), (float) config.pathLineWidth());
+                drawLine(graphics, lastP, firstP, path.color, (float) config.pathLineWidth());
             }
         }
     }

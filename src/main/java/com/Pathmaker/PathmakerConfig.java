@@ -16,23 +16,23 @@ public interface PathmakerConfig extends Config
     String SHOW_MAP_ORB_MENU_OPTIONS = "showMapOrbMenuOptions";
 
     //------------------------------------------------------------//
-    // Current Tile Section
+    // Player Tile Section
     //------------------------------------------------------------//
     @ConfigSection(
-            name = "Current tile",
-            description = "Current tile configuration.",
+            name = "Player tile",
+            description = "Player tile configuration.",
             position = 2
     )
-    String currentTile = "currentTile";
+    String playerTile = "playerTile";
 
     @ConfigItem(
             keyName = "highlightCurrentTile",
             name = "Highlight true tile",
             description = "Highlights true tile player is on as seen by server.",
             position = 1,
-            section = currentTile
+            section = playerTile
     )
-    default boolean highlightCurrentTile()
+    default boolean highlightPlayerTile()
     {
         return true;
     }
@@ -43,9 +43,9 @@ public interface PathmakerConfig extends Config
             name = "Highlight color",
             description = "Configures the highlight color of current true tile.",
             position = 2,
-            section = currentTile
+            section = playerTile
     )
-    default Color highlightCurrentColor()
+    default Color highlightPlayerColor()
     {
         return Color.CYAN;
     }
@@ -56,9 +56,9 @@ public interface PathmakerConfig extends Config
             name = "Fill color",
             description = "Configures the fill color of current true tile.",
             position = 3,
-            section = currentTile
+            section = playerTile
     )
-    default Color currentTileFillColor()
+    default Color playerTileFillColor()
     {
         return new Color(0, 0, 0, 50);
     }
@@ -68,10 +68,10 @@ public interface PathmakerConfig extends Config
             name = "Border width",
             description = "Width of the true tile marker border.",
             position = 4,
-            section = currentTile
+            section = playerTile
     )
     @Range(max = 10)
-    default int currentTileBorderWidth()
+    default int playerTileBorderWidth()
     {
         return 2;
     }
@@ -81,15 +81,15 @@ public interface PathmakerConfig extends Config
     //------------------------------------------------------------//
     @ConfigSection(
             name = "Hovered tile",
-            description = "Hovered tile configuration.",
+            description = "Cursor hovered tile configuration.",
             position = 1
     )
     String hoveredTile = "hoveredTile";
 
     @ConfigItem(
             keyName = "highlightHoveredTile",
-            name = "Highlight hovered tile",
-            description = "Highlights tile player is hovering with mouse.",
+            name = "Highlight tile",
+            description = "Highlights the tile that the player is hovering over.",
             position = 1,
             section = hoveredTile
     )
@@ -147,7 +147,7 @@ public interface PathmakerConfig extends Config
     }
     @ConfigItem(
             keyName = "hoveredTileLabelModeSelect",
-            name = "Hovered tile label mode",
+            name = "Tile label mode",
             description = "Label to be placed on the hovered tile.",
             position = 5,
             section = hoveredTile
@@ -160,7 +160,7 @@ public interface PathmakerConfig extends Config
     @Alpha
     @ConfigItem(
             keyName = "hoveredTileLabelColor",
-            name = "Hovered tile label color",
+            name = "Tile label color",
             description = "Configures the fill color of hovered tile label.",
             position = 6,
             section = hoveredTile
@@ -170,36 +170,98 @@ public interface PathmakerConfig extends Config
         return new Color(255, 255, 0, 255);
     }
 
+    enum hoveredTileLineOrigin
+    {
+        NONE,
+        TRUE_TILE,
+        PATH_END,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileLineModeSelect",
+            name = "Tile line origin",
+            description = "Line to be drawn to the hovered tile.",
+            position = 7,
+            section = hoveredTile
+    )
+    default hoveredTileLineOrigin hoveredTileLineOriginSelect()
+    {
+        return hoveredTileLineOrigin.PATH_END;
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "hoveredTileLineColor",
+            name = "Line color",
+            description = "Configures the line to the hovered tile color.",
+            position = 8,
+            section = hoveredTile
+    )
+    default Color hoveredTileLineColor()
+    {
+        return new Color(255, 0, 0, 255);
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "hoverLineColorMatchPath",
+            name = "Match active path",
+            description = "Match the active path color",
+            position = 9,
+            section = hoveredTile
+    )
+    default boolean hoverLineColorMatchPath()
+    {
+        return false;
+    }
+
+    enum hoveredTileLineDrawMode
+    {
+        NEVER,
+        SHIFT_DOWN,
+        ALWAYS,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileLineDrawModeSelect",
+            name = "Line draw mode",
+            description = "When the hovered tile line should be drawn",
+            position = 10,
+            section = hoveredTile
+    )
+    default hoveredTileLineDrawMode hoveredTileLineDrawModeSelect()
+    {
+        return hoveredTileLineDrawMode.SHIFT_DOWN;
+    }
+
     //------------------------------------------------------------//
     // Path Line Section
     //------------------------------------------------------------//
     @ConfigSection(
-            name = "Path line",
-            description = "Path line configuration.",
+            name = "Path",
+            description = "Path configuration.",
             position = 3
     )
-    String pathLine = "pathLine";
+    String path = "path";
 
     @ConfigItem(
-            keyName = "drawPathLine",
+            keyName = "drawPath",
             name = "Draw",
             description = "Render path lines",
             position = 1,
-            section = pathLine
+            section = path
     )
-    default boolean drawPathLine()
+    default boolean drawPath()
     {
         return true;
     }
 
     @ConfigItem(
-            keyName = "drawPathLinePoints",
+            keyName = "drawPathPoints",
             name = "Draw point tiles",
             description = "Highlight path point tiles.",
             position = 2,
-            section = pathLine
+            section = path
     )
-    default boolean drawPathLinePoints()
+    default boolean drawPathPoints()
     {
         return true;
     }
@@ -209,7 +271,7 @@ public interface PathmakerConfig extends Config
             name = "Path width",
             description = "Width of the path line.",
             position = 3,
-            section = pathLine
+            section = path
     )
     @Range(max = 10)
     default int pathLineWidth()
@@ -220,27 +282,27 @@ public interface PathmakerConfig extends Config
     @Alpha
     @ConfigItem(
             keyName = "pathLineColor",
-            name = "Line color",
+            name = "Path color",
             description = "Configures the path line color.",
             position = 4,
-            section = pathLine
+            section = path
     )
-    default Color pathLineColor()
+    default Color pathColor()
     {
         return new Color(0, 255, 0, 255);
     }
 
-    @ConfigItem(
-            keyName = "loopPath",
-            name = "Loop path",
-            description = "Draw from the end point to the start point.",
-            position = 5,
-            section = pathLine
-    )
-    default boolean loopPath()
-    {
-        return false;
-    }
+//    @ConfigItem(
+//            keyName = "loopPath",
+//            name = "Loop path",
+//            description = "Draw from the end point to the start point.",
+//            position = 5,
+//            section = pathLine
+//    )
+//    default boolean loopPath()
+//    {
+//        return false;
+//    }
 
     @Alpha
     @ConfigItem(
@@ -248,7 +310,7 @@ public interface PathmakerConfig extends Config
             name = "Line point tile color",
             description = "Configures the path line point tile color.",
             position = 6,
-            section = pathLine
+            section = path
     )
     default Color pathLinePointColor()
     {
@@ -261,7 +323,7 @@ public interface PathmakerConfig extends Config
             name = "Line point tile fill color",
             description = "Configures the path line point tile fill color.",
             position = 7,
-            section = pathLine
+            section = path
     )
     default Color pathLinePointFillColor()
     {
@@ -273,7 +335,7 @@ public interface PathmakerConfig extends Config
             name = "Line point border width",
             description = "Width of the path line tile border.",
             position = 8,
-            section = pathLine
+            section = path
     )
     @Range(max = 10)
     default int pathLinePointWidth()
@@ -281,89 +343,70 @@ public interface PathmakerConfig extends Config
         return 2;
     }
 
-    enum hoveredTileLineMode
-    {
-        NONE,
-        TRUE_TILE,
-        PATH_END,
-    }
     @ConfigItem(
-            keyName = "hoveredTileLineModeSelect",
-            name = "Hovered tile line mode",
-            description = "Draw line to the hovered tile.",
+            keyName = "drawPathPointLabel",
+            name = "Draw point labels",
+            description = "Add point index labels.",
             position = 9,
-            section = pathLine
+            section = path
     )
-    default hoveredTileLineMode hoveredTileLineModeSelect()
+    default boolean drawPathPointLabel()
     {
-        return hoveredTileLineMode.NONE;
+        return false;
     }
-
-    @Alpha
-    @ConfigItem(
-            keyName = "hoveredTileLineColor",
-            name = "Line to hovered tile color",
-            description = "Configures the line to the hovered tile color.",
-            position = 10,
-            section = pathLine
-    )
-    default Color hoveredTileLineColor()
-    {
-        return new Color(255, 0, 0, 255);
-    }
-
-    //------------------------------------------------------------//
-    // Path Container Section
-    //------------------------------------------------------------//
-    @ConfigSection(
-            name = "Path Container",
-            description = "Contains all paths.",
-            position = 4
-    )
-    String pathContainer = "pathContainer";
 
     @ConfigItem(
             keyName = SHOW_MAP_ORB_MENU_OPTIONS,
             name = "Show map orb menu options",
             description = "Adds import/export/clear options to the world map orb.",
-            position = 1,
-            section = pathContainer
+            position = 10,
+            section = path
     )
     default boolean showMapOrbMenuOptions()
     {
         return true;
     }
 
-    @ConfigItem(
-            keyName = "activePath",
-            name = "Active path",
-            description = "The currently selected path to add points to.",
-            position = 2,
-            section = pathContainer
-    )
-    default String activePath()
-    {
-        return "Unnamed";
-    }
+    //------------------------------------------------------------//
+    // Path Container Section
+    //------------------------------------------------------------//
+//    @ConfigSection(
+//            name = "Path Container",
+//            description = "Contains all paths.",
+//            position = 4
+//    )
+//    String pathContainer = "pathContainer";
 
-    @ConfigItem(
-            keyName = "storedPaths",
-            name = "Stored paths",
-            description = "A list of all of the stored paths. !NB Updates by returning to the plugin list and changing focus away from the plugin panel.",
-            position = 3,
-            section = pathContainer
-    )
-    default String storedPaths()
-    {
-        return "";
-    }
-
-    @ConfigItem(
-            keyName = "storedPaths",
-            name = "",
-            description = ""
-    )
-    void setStoredPaths(String pathString);
+//    @ConfigItem(
+//            keyName = "activePath",
+//            name = "Active path",
+//            description = "The currently selected path to add points to.",
+//            position = 2,
+//            section = pathContainer
+//    )
+//    default String activePath()
+//    {
+//        return "Unnamed";
+//    }
+//
+//    @ConfigItem(
+//            keyName = "storedPaths",
+//            name = "Stored paths",
+//            description = "A list of all of the stored paths. !NB Updates by returning to the plugin list and changing focus away from the plugin panel.",
+//            position = 3,
+//            section = pathContainer
+//    )
+//    default String storedPaths()
+//    {
+//        return "";
+//    }
+//
+//    @ConfigItem(
+//            keyName = "storedPaths",
+//            name = "",
+//            description = ""
+//    )
+//    void setStoredPaths(String pathString);
 
     //------------------------------------------------------------//
     // Info Box Section

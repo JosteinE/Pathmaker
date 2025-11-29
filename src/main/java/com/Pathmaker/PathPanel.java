@@ -14,6 +14,8 @@ import javax.swing.ImageIcon;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.util.ImageUtil;
+import java.awt.event.MouseAdapter;
+import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 
 public class PathPanel extends JPanel
 {
@@ -23,8 +25,10 @@ public class PathPanel extends JPanel
 
     private static final ImageIcon EXPAND_ICON;
     private static final ImageIcon COLLAPSE_ICON;
-    private static final ImageIcon DELETE_ICON;
-    private static final ImageIcon BRUSH_ICON;
+    //private static final ImageIcon DELETE_ICON;
+    //private static final ImageIcon BRUSH_ICON;
+    private static final ImageIcon LOOP_ON_ICON;
+    private static final ImageIcon LOOP_OFF_ICON;
 
     private final PathmakerPlugin plugin;
     private final PathmakerPath path;
@@ -34,18 +38,26 @@ public class PathPanel extends JPanel
     private final JButton label = new JButton();
     private final JLabel deletePath = new JLabel();
 
+    private final int ICON_WIDTH = 18;
+
     private boolean panelExpanded = true;
     private final JButton expandToggle;
-    private final JButton deletePathButton;
+    //private final JButton deletePathButton;
     //private final JButton pathColorButton;
+
+    private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
+    private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
     static
     {
-        DELETE_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png"));
-        BRUSH_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png"));
-        BufferedImage upArrow = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
-        COLLAPSE_ICON = new ImageIcon(upArrow);
-        EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrow, Math.PI));
+        //BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
+        //DELETE_ICON = new ImageIcon(crossImage);
+        //BRUSH_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png"));
+        BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
+        COLLAPSE_ICON = new ImageIcon(upArrowImage);
+        EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
+        LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
+        LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
     }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
@@ -56,51 +68,51 @@ public class PathPanel extends JPanel
 
         JPanel labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelPanel.setBorder(NAME_BOTTOM_BORDER);
+        //labelPanel.setBorder(NAME_BOTTOM_BORDER);
 
         label.setText(pathLabel);
-        //nameWrapper.add(expandToggle, BorderLayout.WEST);
+        label.setForeground(path.color);
+        label.setPreferredSize(new Dimension(148, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
-        //nameWrapper.add(nameActions, BorderLayout.EAST);
 
         expandToggle = new JButton(panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
-        expandToggle.setPreferredSize(new Dimension(15, 0));
-        //expandToggle.setBorder(new EmptyBorder(0, 6, 1, 0));
+        expandToggle.setPreferredSize(new Dimension(ICON_WIDTH, 0));
         expandToggle.setToolTipText((panelExpanded ? "Expand" : "Collapse") + " path");
         expandToggle.addActionListener(actionEvent ->
         {
             toggleCollapsed();
-            //plugin.saveMarkers();
         });
 
-        JButton colorPicker = new JButton();
-        colorPicker.setPreferredSize(new Dimension(15, 0));
-        colorPicker.setIcon(BRUSH_ICON);
-        colorPicker.setToolTipText("Choose path color");
-        colorPicker.addActionListener(actionEvent ->
+        JButton colorPickerButton = new JButton();
+        colorPickerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+        colorPickerButton.setIcon(new ImageIcon(ImageUtil.recolorImage(brushImage, path.color)));
+        colorPickerButton.setToolTipText("Choose path color");
+        colorPickerButton.addMouseListener(new MouseAdapter()
         {
-//            @Override
-//            public void mousePressed(MouseEvent mouseEvent)
-//            {
-//                RuneliteColorPicker colourPicker = getColourPicker(line.getColour() == null ? plugin.defaultColour : line.getColour());
-//                colourPicker.setOnColorChange(c ->
-//                {
-//                    line.setColour(c);
-//                    colour.setBorder(line.getWidth() == 0 ? null : new MatteBorder(0, 0, 3, 0, line.getColour()));
-//                    colour.setIcon(line.getWidth() == 0 ? NO_SETTINGS_ICON : SETTINGS_ICON);
-//                });
-//                colourPicker.setVisible(true);
+            @Override
+            public void mousePressed(MouseEvent mouseEvent)
+            {
+                RuneliteColorPicker colorPicker = getColorPicker(path.color == null ? plugin.getDefaultPathColor() : path.color);
+                colorPicker.setOnColorChange(newColor ->
+                {
+                    path.color = newColor;
+                    label.setForeground(newColor);
+                    colorPickerButton.setIcon(new ImageIcon(ImageUtil.recolorImage(brushImage, newColor)));
+                });
+                colorPicker.setVisible(true);
+            }
         });
 
+        // Add button panel on the left
         JPanel leftActionPanel = new JPanel(new BorderLayout());
         leftActionPanel.add(expandToggle, BorderLayout.WEST);
-        leftActionPanel.add(colorPicker, BorderLayout.EAST);
+        leftActionPanel.add(colorPickerButton, BorderLayout.EAST);
         labelPanel.add(leftActionPanel, BorderLayout.WEST);
 
-        deletePathButton = new JButton();
-        deletePathButton.setIcon(DELETE_ICON);
+        JButton deletePathButton = new JButton();
+        deletePathButton.setIcon(new ImageIcon(ImageUtil.recolorImage(crossImage, Color.RED)));
         deletePathButton.setToolTipText("Delete point");
-        deletePathButton.setBorder(new EmptyBorder(1, 0, 0, 0));
+        deletePathButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
         String warningMsg = "Are you sure you want to permanently delete path: " + label.getText() + "?";
         deletePathButton.addMouseListener(new MouseAdapter()
         {
@@ -116,7 +128,28 @@ public class PathPanel extends JPanel
                 }
             }
         });
-        labelPanel.add(deletePathButton, BorderLayout.EAST);
+
+        // Add loop button
+        JButton loopButton = new JButton();
+        loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+        loopButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+        loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
+        loopButton.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent mouseEvent)
+            {
+                path.loopPath = !path.loopPath;
+                loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
+                loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+            }
+        });
+
+        // Add button panel to the right
+        JPanel rightActionPanel = new JPanel(new BorderLayout());
+        rightActionPanel.add(loopButton, BorderLayout.WEST);
+        rightActionPanel.add(deletePathButton, BorderLayout.EAST);
+        labelPanel.add(rightActionPanel, BorderLayout.EAST);
 
 //        pathColorButton = new JButton();
 //        pathColorButton.setToolTipText("Edit path colour");
@@ -156,6 +189,8 @@ public class PathPanel extends JPanel
                 //
                 JLabel pointLabel = new JLabel();
                 pointLabel.setText("Point: ");
+                pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                pointLabel.setPreferredSize(new Dimension(60, 20));
                 pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 pointContainer.add(pointLabel, BorderLayout.WEST);
 
@@ -163,7 +198,6 @@ public class PathPanel extends JPanel
                 // Add spinner box for optionally assigning a new point index.
                 JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getIndex() + 1, 1, pathSize, 1));
                 indexSpinner.setToolTipText("point index");
-                //index.setPreferredSize(new Dimension(53, 20));
                 indexSpinner.addChangeListener(ce ->
                 {
                     plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue()-1);
@@ -174,17 +208,15 @@ public class PathPanel extends JPanel
                 pointContainer.add(indexSpinner, BorderLayout.CENTER);
 
                 JButton deletePathPointButton = new JButton();
-                deletePath.setIcon(DELETE_ICON);
+                deletePathPointButton.setIcon(new ImageIcon(crossImage));
                 deletePathPointButton.setToolTipText("Delete point");
-                deletePathPointButton.setBorder(new EmptyBorder(1, 0, 0, 0));
+                deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
                 deletePathPointButton.addMouseListener(new MouseAdapter()
                 {
                     //plugin.removePathPoint(regionPoint);
                 });
                 pointContainer.add(deletePathPointButton, BorderLayout.EAST);
 
-                //rightActions.add(deleteLine);
-                //pointContainer.add(rightActions, BorderLayout.EAST);
                 pointContainer.setVisible(panelExpanded);
                 pathContainer.add(pointContainer);
             }
@@ -212,5 +244,17 @@ public class PathPanel extends JPanel
     JButton getPathLabel()
     {
         return label;
+    }
+
+    private RuneliteColorPicker getColorPicker(Color colour)
+    {
+        RuneliteColorPicker colorPicker = plugin.getColorPickerManager().create(
+                SwingUtilities.windowForComponent(this),
+                colour,
+                label.getText() + " path color",
+                false);
+        colorPicker.setLocationRelativeTo(this);
+        //colourPicker.setOnClose(c -> plugin.saveMarkers());
+        return colorPicker;
     }
 }

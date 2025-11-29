@@ -29,7 +29,7 @@ public class PathmakerPluginPanel extends PluginPanel
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_TEXT_LENGTH = 12;
+    final int MAX_TEXT_LENGTH = 11;
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
     {
@@ -38,7 +38,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Define standard client panel layout
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        //setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // Create labeled panels
         JPanel northPanel = createLabeledPanel(BorderLayout.NORTH, "Pathmaker", Color.WHITE);
@@ -62,49 +62,58 @@ public class PathmakerPluginPanel extends PluginPanel
 //        northPanel.add(configButton);
 
         // Add Active Path text field
+        JLabel activePathLabel = new JLabel("Active Path: ");
+        activePathLabel.setPreferredSize(new Dimension(75, 20));
+        activePathLabel.setForeground(Color.WHITE);
+        northPanel.add(activePathLabel, BorderLayout.WEST);
+
         activePath = new FlatTextField();
         activePath.setText("unnamed");
         activePath.setForeground(Color.WHITE);
-        activePath.setBackground(Color.GRAY);
+        activePath.setBackground(Color.DARK_GRAY);
         activePath.addKeyListener(new KeyListener()
         {
             @Override
-            public void keyTyped(KeyEvent e) {
+            public void keyTyped(KeyEvent e)
+            {
                 if (activePath.getTextField().getText().length() > MAX_TEXT_LENGTH)
                 {
-                    activePath.setText(activePath.getText().substring(0,MAX_TEXT_LENGTH));
+                    e.consume();
                 }
             }
             @Override
             public void keyPressed(KeyEvent e){}
             @Override
-            public void keyReleased(KeyEvent e) {}
+            public void keyReleased(KeyEvent e){}
         });
-        northPanel.add(activePath, BorderLayout.SOUTH);
+        northPanel.add(activePath);
 
-
-        JPanel southPanel = createLabeledPanel(BorderLayout.CENTER, "By Fraph", Color.YELLOW);
-
-        // Add panels to client panel
+        // Add panel to client panel
         add(northPanel, BorderLayout.NORTH);
-        add(southPanel, BorderLayout.SOUTH);
 
         // Configure path view panel
         pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
-        pathView.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        //pathView.setMaximumSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
+        //pathView.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));//PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight()-20));
+        pathView.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
 
         // Configure PluginErrorPanel
-        noPathPanel.setVisible(false);
-        noPathPanel.setContent("Pathmaker", "Shift right-click a tile to add a path point.");
-        pathView.add(noPathPanel, BorderLayout.CENTER);
+        //noPathPanel.setVisible(false);
+        //noPathPanel.setPreferredSize(new Dimension(50, 30));
+        //noPathPanel.setContent("No stored paths", "Shift right-click a tile to add a path point.");
 
         // Add body panel
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        centerPanel.add(pathView, BorderLayout.CENTER);
+        //JPanel centerPanel = new JPanel(new BorderLayout());
+        //centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight() - 5));
+        //centerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        //centerPanel.add(noPathPanel, BorderLayout.NORTH);
+        //centerPanel.add(pathView, BorderLayout.CENTER);
 
-        // Add path view panel to body
-        add(centerPanel, BorderLayout.CENTER);
+        add(pathView);//, BorderLayout.CENTER);
+
+        // Signature panel
+        //JPanel southPanel = createLabeledPanel(BorderLayout.CENTER, "By Fraph", Color.YELLOW);
+        //add(southPanel, BorderLayout.SOUTH);
 
         rebuild();
     }
@@ -117,12 +126,7 @@ public class PathmakerPluginPanel extends PluginPanel
         HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
         for (final String pathLabel : plugin.getStoredPaths().keySet())
         {
-//            if (group.getName().toLowerCase().contains(getSearchText().toLowerCase()) &&
-//                    (Filter.ALL.equals(filter) ||
-//                            (Filter.REGION.equals(filter) && plugin.anyLineInRegion(group.getLines(), regionId)) ||
-//                            (Filter.VISIBLE.equals(filter) && group.isVisible()) ||
-//                            (Filter.INVISIBLE.equals(filter) && !group.isVisible())))
-//          {
+            // Create new path entry
             PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
             // Set as active path on label click
@@ -130,10 +134,9 @@ public class PathmakerPluginPanel extends PluginPanel
             {
                 activePath.setText(pathEntry.getPathLabel().getText());
             });
-            pathView.add(pathEntry, BorderLayout.CENTER);
-            pathView.add(Box.createRigidArea(new Dimension(0, 10)));
+            pathView.add(pathEntry);//, BorderLayout.CENTER);
+            //pathView.add(Box.createRigidArea(new Dimension(0, 10)));
             // }
-
         }
 
         boolean empty = pathView.getComponentCount() == 0;
@@ -161,14 +164,5 @@ public class PathmakerPluginPanel extends PluginPanel
         bodyPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
         bodyPanel.add(titlePanel, borderLayout);
         return bodyPanel;
-    }
-
-    private void textFieldKeyTyped(java.awt.event.KeyEvent evt)
-    {
-        // ÆÆÆÆÆÆÆÆÆÆÆÆ
-        if(activePath.getText().length()>=12)
-        {
-            evt.consume();
-        }
     }
 }
