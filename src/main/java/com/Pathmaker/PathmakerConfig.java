@@ -9,10 +9,10 @@ import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
 
-@ConfigGroup(PathmakerConfig.PATHMAKER_CONFIG_GROUP)
+@ConfigGroup(PathmakerConfig.CONFIG_GROUP)
 public interface PathmakerConfig extends Config
 {
-    String PATHMAKER_CONFIG_GROUP = "pathmaker";
+    String CONFIG_GROUP = "pathmaker";
     String SHOW_MAP_ORB_MENU_OPTIONS = "showMapOrbMenuOptions";
 
     //------------------------------------------------------------//

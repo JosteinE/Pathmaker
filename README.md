@@ -1,42 +1,44 @@
 # Pathmaker
 
 Draw lines between tiles marked by shift+right-click.
-Intuitively construct paths using plugin's side panel.
 
-Additional features:
+Intuitively construct paths using plugin's side panel. New "Active Path" names will construct new paths.
 
-In the plugin panel:
-- Paths
+### **Additional features:**
+
+#### In the plugin panel:
+- **Paths**
   - Can store multiple
   - Set name
+    - Click names of existing paths to set them as active
   - Looped or non-looped
   - Set color
   - Show/hide
   - Delete
-- Path points
+- **Path points**
   - Collapse view
   - Rearrange
   - Delete
 
-In the config menu:
+#### In the config menu:
 - Hovered tile elements (Always/On shift-down/never)
-  - Highlight
+  - **Highlight**
     - Color
     - Border width
-  - Labels
+  - **Labels**
     - Region ID
     - XY coordinates
     - Distance to tile
-  - Line to hovered tile from:
+  - **Line to hovered tile from:**
     - Set line origin
       - Player
       - Path end
     - Color
       - Can also match the active path 
-- Player true tile 
+- **Player true tile** 
   - Color 
     - Border Width
-- Path
+- **Path**
   - Draw
   - Highlight path point tiles
     - Index label
@@ -44,5 +46,9 @@ In the config menu:
     - Color
   - Path width
   - Default path color
-- Info box
+- **Info box**
   - Show speed (potentially useful for sailing paths)
+
+### TODO
+- Add import & export buttons
+- Fix any post-release issues

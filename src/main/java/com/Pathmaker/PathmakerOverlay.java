@@ -78,7 +78,10 @@ public class PathmakerOverlay extends Overlay
         WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
 
         // Highlight tiles marked by the right-click menu and draw lines between them
-        drawPath(graphics, wv);
+        if(!plugin.getStoredPaths().isEmpty())
+        {
+            drawPath(graphics, wv);
+        }
 
         // Draw hovered tile elements
         if (config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.ALWAYS

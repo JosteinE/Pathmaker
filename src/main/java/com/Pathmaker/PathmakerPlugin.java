@@ -1,13 +1,17 @@
 package com.Pathmaker;
 
+import com.google.common.base.Strings;
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.swing.*;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
-
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
@@ -44,6 +48,7 @@ import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 public class PathmakerPlugin extends Plugin
 {
     private static final String ICON_FILE = "panel_icon.png";
+    private static final String CONFIG_KEY = "paths";
 
     private final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
@@ -82,6 +87,9 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private ClientThread clientThread;
 
+    @Inject
+    private Gson gson;
+
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)
     {
@@ -91,15 +99,12 @@ public class PathmakerPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		log.debug("Example started!");
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
 
-        // Temp!
-        //config.setStoredPaths("");
-
         pluginPanel = new PathmakerPluginPanel(client, this);
 
+        load();
 
         clientThread.invokeLater(() ->
         {
@@ -117,13 +122,44 @@ public class PathmakerPlugin extends Plugin
 	@Override
 	protected void shutDown() throws Exception
 	{
-		log.debug("Example stopped!");
         overlayManager.remove(overlay);
         overlayManager.remove(panelOverlay);
         clientToolbar.removeNavigation(navButton);
 
-        // Temp!
         paths.clear();
+    }
+
+    void save()
+    {
+        configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+        String json = gson.toJson(paths);
+        configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, json);
+        configManager.sendConfig();
+    }
+
+    private void load()
+    {
+        paths.clear();
+        String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+
+        if (Strings.isNullOrEmpty(json))
+        {
+            return;
+        }
+
+        try
+        {
+            HashMap<String, PathmakerPath> loadedPaths = gson.fromJson(json, new TypeToken<HashMap<String, PathmakerPath>>(){}.getType());
+            paths.putAll(loadedPaths);
+        }
+        catch (IllegalStateException | JsonSyntaxException ignore)
+        {
+            JOptionPane.showConfirmDialog(pluginPanel,
+                    "The paths you are trying to load from your config are malformed",
+                    "Warning", JOptionPane.OK_CANCEL_OPTION);
+        }
+
+        rebuildPanel();
     }
 
     @Subscribe
@@ -156,7 +192,7 @@ public class PathmakerPlugin extends Plugin
     @Subscribe
     public void onConfigChanged(ConfigChanged event)
     {
-        if (event.getGroup().equals(PathmakerConfig.PATHMAKER_CONFIG_GROUP))
+        if (event.getGroup().equals(PathmakerConfig.CONFIG_GROUP))
         {
         }
     }
@@ -201,7 +237,7 @@ public class PathmakerPlugin extends Plugin
                     worldPoint.getPlane());
 
             // If tile is not previously marked, add the "add" option.
-            if (pathPoint == null || !paths.get(getActivePathName()).containsPoint(pathPoint))
+            if (pathPoint == null || !paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
             {
                 String target = paths.containsKey(getActivePathName()) ?
                         ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), paths.get(getActivePathName()).color) :
@@ -333,14 +369,6 @@ public class PathmakerPlugin extends Plugin
             // Initialize new path with the initial point
             path = new PathmakerPath(point);
             path.color = getDefaultPathColor();
-
-            // Update config stored path list
-            //final List<String> newStoredPaths = new ArrayList<>(Text.fromCSV(config.storedPaths()));//new ArrayList<>(paths.keySet());
-            //newStoredPaths.add(activePath);
-            //configManager.unsetConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths");
-            //configManager.setConfiguration(PathmakerConfig.PATHMAKER_CONFIG_GROUP, "storedPaths", Text.toCSV(newStoredPaths));
-            //configManager.sendConfig();
-            //config.setStoredPaths(Text.toCSV(newStoredPaths));
         }
         paths.put(activePath, path);
         rebuildPanel();
@@ -369,5 +397,6 @@ public class PathmakerPlugin extends Plugin
     void rebuildPanel()
     {
         pluginPanel.rebuild();
+        save();
     }
 }

@@ -18,6 +18,7 @@ public class PathmakerPath
     Color color;
     boolean loopPath = false;
     boolean hidden = false;
+    boolean panelExpanded = true;
 
     PathmakerPath(PathPoint initialPathPoint)
     {

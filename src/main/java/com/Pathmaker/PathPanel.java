@@ -35,7 +35,7 @@ public class PathPanel extends JPanel
 
     private final int ICON_WIDTH = 18;
 
-    private boolean panelExpanded = true;
+    //private boolean panelExpanded = true;
     private final JButton expandToggle;
     private final JButton visibilityToggle;
 
@@ -67,9 +67,9 @@ public class PathPanel extends JPanel
         label.setPreferredSize(new Dimension(130, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
-        expandToggle = new JButton(panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
+        expandToggle = new JButton(path.panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
         expandToggle.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-        expandToggle.setToolTipText((panelExpanded ? "Expand" : "Collapse") + " path");
+        expandToggle.setToolTipText((path.panelExpanded ? "Expand" : "Collapse") + " path");
         expandToggle.addActionListener(actionEvent ->
         {
             toggleCollapsed();
@@ -195,7 +195,7 @@ public class PathPanel extends JPanel
             });
             pointContainer.add(deletePathPointButton, BorderLayout.EAST);
 
-            pointContainer.setVisible(panelExpanded);
+            pointContainer.setVisible(path.panelExpanded);
             pathContainer.add(pointContainer);
         }
         add(pathContainer);
@@ -203,14 +203,14 @@ public class PathPanel extends JPanel
 
     private void toggleCollapsed()
     {
-        panelExpanded = !panelExpanded;
+        path.panelExpanded = !path.panelExpanded;
         for (int i = 1; i < pathContainer.getComponentCount(); i++)
         {
-            pathContainer.getComponent(i).setVisible(panelExpanded);
+            pathContainer.getComponent(i).setVisible(path.panelExpanded);
         }
 
-        expandToggle.setIcon(panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
-        expandToggle.setToolTipText((panelExpanded ? "Collapse" : "Expand") + " path");
+        expandToggle.setIcon(path.panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
+        expandToggle.setToolTipText((path.panelExpanded ? "Collapse" : "Expand") + " path");
     }
 
     private void toggleVisibility()

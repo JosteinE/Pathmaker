@@ -158,11 +158,11 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Add body panel
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight() - 5));
+        //centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
         centerPanel.add(noPathPanel, BorderLayout.NORTH);
         centerPanel.add(pathView, BorderLayout.CENTER);
 
-        add(centerPanel);//, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
 
         rebuild();
     }
@@ -183,9 +183,7 @@ public class PathmakerPluginPanel extends PluginPanel
             {
                 activePath.setText(pathEntry.getPathLabel().getText());
             });
-            pathView.add(pathEntry);//, BorderLayout.CENTER);
-            //pathView.add(Box.createRigidArea(new Dimension(0, 10)));
-            // }
+            pathView.add(pathEntry, BorderLayout.CENTER);
         }
 
         boolean empty = pathView.getComponentCount() == 0;
