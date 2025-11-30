@@ -223,7 +223,7 @@ public class PathmakerPlugin extends Plugin
             if (pathPoint == null || !paths.get(getActivePathName()).containsPoint(pathPoint))
             {
                 client.getMenu().createMenuEntry(-1)
-                        .setOption("Add to path")
+                        .setOption("Add to path: " + getActivePathName())
                         .setTarget(event.getTarget())
                         .setType(MenuAction.RUNELITE)
                         .onClick(e -> createOrAddToPath(new PathPoint(

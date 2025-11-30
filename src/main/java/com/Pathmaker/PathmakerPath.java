@@ -54,6 +54,7 @@ public class PathmakerPath
         reconstructDrawOrder();
     }
 
+    // Fetch all path points and close any draw index gaps
     void reconstructDrawOrder()
     {
         ArrayList<PathPoint> drawOrder = getDrawOrder(null);
@@ -88,6 +89,7 @@ public class PathmakerPath
         return  pathPoints.containsKey(regionID);
     }
 
+    // Set new draw index for a specific point and move the other point's indices accordingly
     void setNewIndex(PathPoint point, final int newIndex)
     {
         int oldIndex = point.getDrawIndex();
@@ -99,15 +101,7 @@ public class PathmakerPath
         int targetIndex = newGreater ? newIndex : (oldIndex - 1);
         int otherIndexMoveDir = newGreater ? -1 : 1;
 
-
-        // New index = 1
-        // old index = 2
-
-        // start = 1
-        // target = 1
-
-        // moveDir += 1
-
+// An easier look at what's going on in the uncommented for loop below
 //        if(newIndex > oldIndex)
 //        {
 //            // 3p
@@ -133,15 +127,10 @@ public class PathmakerPath
 //            return;
 //        }
 
-
-        // 2 -> 1
-        // start: 1
-        // target: 1
-        // move: +1
-
         ArrayList<Integer> regionsToReconstruct = new ArrayList<>();
         regionsToReconstruct.add(point.getRegionId());
 
+        // move affected indices up/down depending on if the new specified index is greater or less than the old one.
         for (int i = startIndex; i <= targetIndex; i++)
         {
             PathPoint drawPoint = getPointAtDrawIndex(i);
@@ -153,20 +142,26 @@ public class PathmakerPath
                 regionsToReconstruct.add(drawPoint.getRegionId());
             }
         }
+
+        // Move the chosen point to the desired index
         log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
         point.setDrawIndex(newIndex);
 
+        // Once the points have been reassigned their draw order, reorder the affected ArrayList to match
+        // as this will make it easier for our getDrawOrder later
         for (int regionId : regionsToReconstruct)
         {
             reconstructRegionOrder(regionId);
         }
 
+        // Temp debug print
         for(PathPoint drawPoint : getDrawOrder(null))
         {
             log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
         }
     }
 
+    // Sort the specified ArrayList in the order of draw indices
     void reconstructRegionOrder(int regionId)
     {
         if (pathPoints.get(regionId).size() < 2) {return;}
@@ -186,6 +181,7 @@ public class PathmakerPath
             if(regionOrdered){break;}
         }
 
+        // Temp debug print
         for (PathPoint point : pathPoints.get(regionId))
         {
             log.debug("Reconstructed array draw order: {}", point.getDrawIndex());
@@ -235,6 +231,7 @@ public class PathmakerPath
         return null;
     }
 
+    // Return the size of all stored points (across all relevant regions) for this path
     int getSize()
     {
         int numPoints = 0;
@@ -249,7 +246,7 @@ public class PathmakerPath
 
     // Return an ArrayList with the PathPoints in the order they should be drawn
     // NB! If param loadedRegions is null, then getDrawOrder will return the tiles also
-    // NOT in loaded regions. (which you don't want to render)
+    // NOT in loaded regions. (which you don't want to render, but is for sorting. See reconstructDrawOrder())
     ArrayList<PathPoint> getDrawOrder(@Nullable ArrayList<Integer> loadedRegions)
     {
         ArrayList<PathPoint> drawOrder = new ArrayList<>();
@@ -260,7 +257,11 @@ public class PathmakerPath
 
         // Creating a map for tracking the last index checked in each of the RegionIDs
         // (which is used as keys for pathPoint) so the loops do not start at 0 every time
+        // This works because stored points are sorted in their individual region ArrayLists
+        // based on their draw order.
         final HashMap<Integer, Integer> loopIndexTracker = new HashMap<>();
+
+        // If loadedRegions is null then return the full list of points in draw order regardless of region
         if(loadedRegions == null)
         {
             for (int regionId : pathPoints.keySet())
@@ -271,10 +272,11 @@ public class PathmakerPath
         }
         else
         {
-            for (int i = 0; i < loadedRegions.size(); i++)
+            for (Integer loadedRegion : loadedRegions)
             {
-                if (pathPoints.containsKey(loadedRegions.get(i))) {
-                    loopIndexTracker.put(loadedRegions.get(i), 0);
+                if (pathPoints.containsKey(loadedRegion))
+                {
+                    loopIndexTracker.put(loadedRegion, 0);
                 }
             }
 
@@ -295,8 +297,7 @@ public class PathmakerPath
             }
         }
 
-        // Iterate through the list of points (including points in regions not currently loaded)
-        // but only adding points to drawOrder if the points are in loaded regions.
+        // Iterate through the relevant list of points, collecting the points in the order of their draw index
         int lastSize = -1;
         while(drawOrder.size() < numPointsInRegion)
         {
@@ -304,6 +305,8 @@ public class PathmakerPath
             if (lastSize == drawOrder.size())
             {
                 indexToFind += 1;
+
+                // Break it if failed to find point within the scope
                 if (indexToFind >= numPointsInRegion)
                 {
                     log.debug("Missing draw indices {}, out of: {}", numPointsInRegion- drawOrder.size(), numPointsInRegion);
@@ -311,7 +314,11 @@ public class PathmakerPath
                 }
             }
 
+
             lastSize = drawOrder.size();
+
+            // Look for point with draw index equal to indexToFind. Store current location for a given ArrayList in
+            // loopIndexTracker and break - if the next index is greater than indexToFind.
             for (int relevantRegionId : loopIndexTracker.keySet())
             {
                 for (int i = loopIndexTracker.get(relevantRegionId); i < pathPoints.get(relevantRegionId).size(); i++)

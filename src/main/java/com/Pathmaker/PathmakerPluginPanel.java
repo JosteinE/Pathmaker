@@ -29,7 +29,7 @@ public class PathmakerPluginPanel extends PluginPanel
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_TEXT_LENGTH = 8; // Based on ÆÆÆÆÆÆÆÆ
+    final int MAX_TEXT_LENGTH = 7; // Based on ÆÆÆÆÆÆÆÆ
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
     {
@@ -38,13 +38,26 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Define standard client panel layout
         setLayout(new BorderLayout());
-        //setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // Create labeled panels
-        JPanel northPanel = createLabeledPanel(BorderLayout.NORTH, "Pathmaker", Color.WHITE);
+        // Create title panel
+        JPanel titlePanel = new JPanel();
+        titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+
+        // Create label and add to title panel
+        JLabel title = new JLabel();
+        title.setText("Pathmaker");
+        title.setForeground(Color.WHITE);
+        title.setToolTipText("by Fraph");
+        titlePanel.add(title, BorderLayout.CENTER);
+
+        // Create body panel and add titlePanel
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+        northPanel.add(titlePanel, BorderLayout.NORTH);
 
         // Add link to config button
-        // But how?
+        // But how? Watchdogs implementation
         // https://github.com/adamk33n3r/runelite-watchdog/blob/master/src/main/java/com/adamk33n3r/runelite/watchdog/NotificationOverlay.java
 //        JButton configButton = new JButton();
 //        configButton.setIcon(new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png")));
@@ -144,25 +157,5 @@ public class PathmakerPluginPanel extends PluginPanel
 
         repaint();
         revalidate();
-    }
-
-    // Create labeled panel within a panel
-    JPanel createLabeledPanel(String borderLayout, String label, Color color)
-    {
-        // Create title panel
-        JPanel titlePanel = new JPanel();
-        titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
-
-        // Create label and add to title panel
-        JLabel title = new JLabel();
-        title.setText(label);
-        title.setForeground(color);
-        titlePanel.add(title, BorderLayout.CENTER);
-
-        // Create body panel and add titlePanel
-        JPanel bodyPanel = new JPanel(new BorderLayout());
-        bodyPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
-        bodyPanel.add(titlePanel, borderLayout);
-        return bodyPanel;
     }
 }
