@@ -7,7 +7,7 @@ import net.runelite.api.coords.WorldPoint;
 // Ref: GroundMarkerPoint - https://github.com/runelite/runelite/blob/master/runelite-client/src/main/java/net/runelite/client/plugins/groundmarkers/GroundMarkerPoint.java#L38
 public class PathPoint
 {
-    private int pathIndex = 0;
+    private int pathDrawIndex = 0;
     private int regionId;
     private int regionX;
     private int regionY;
@@ -40,6 +40,12 @@ public class PathPoint
     {
         return regionId;
     }
+
+    void setRegionId(int regionId)
+    {
+        this.regionId = regionId;
+    }
+
     int getX()
     {
         return regionX;
@@ -59,13 +65,13 @@ public class PathPoint
         return color;
     }
 
-    void setIndex(int index)
+    void setDrawIndex(int index)
     {
-        this.pathIndex = index;
+        this.pathDrawIndex = index;
     }
 
-    int getIndex()
+    int getDrawIndex()
     {
-        return pathIndex;
+        return pathDrawIndex;
     }
 }

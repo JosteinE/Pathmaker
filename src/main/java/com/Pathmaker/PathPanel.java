@@ -196,14 +196,12 @@ public class PathPanel extends JPanel
 
                 PathPoint point = regionPoints.get(i);
                 // Add spinner box for optionally assigning a new point index.
-                JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getIndex() + 1, 1, pathSize, 1));
+                JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
                 indexSpinner.setToolTipText("point index");
                 indexSpinner.addChangeListener(ce ->
                 {
                     plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue()-1);
-                    // rebuild
-                    // redraw path
-                    //plugin.saveMarkers();
+                    plugin.rebuildPanel();
                 });
                 pointContainer.add(indexSpinner, BorderLayout.CENTER);
 
