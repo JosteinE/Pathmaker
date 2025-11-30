@@ -10,6 +10,7 @@ import net.runelite.api.coords.WorldPoint;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -219,7 +220,8 @@ public class PathmakerPlugin extends Plugin
                     worldPoint.getPlane());
 
             // If tile is not previously marked, add the "add" option.
-            if (pathPoint == null) {
+            if (pathPoint == null || !paths.get(getActivePathName()).containsPoint(pathPoint))
+            {
                 client.getMenu().createMenuEntry(-1)
                         .setOption("Add to path")
                         .setTarget(event.getTarget())
@@ -230,18 +232,20 @@ public class PathmakerPlugin extends Plugin
                                 worldPoint.getRegionY(),
                                 worldPoint.getPlane())));
             }
-            else // Add remove function for existing tiles!
+
+            if (pathPoint != null)
             {
-//            client.createMenuEntry(-1)
-//                    .setOption("Remove from path")
-//                    .setTarget("Tile")
-//                    .setType(MenuAction.RUNELITE)
-//                    .onClick(e ->
-//                            FUNC:REMOVETILE(new PathPoint(
-//                                    worldPoint.getRegionID(),
-//                                    worldPoint.getRegionX(),
-//                                    worldPoint.getRegionY(),
-//                                    worldPoint.getPlane())));
+                for (String pathName : paths.keySet())
+                {
+                    if (paths.get(pathName).containsPoint(pathPoint))
+                    {
+                        client.getMenu().createMenuEntry(-1)
+                                .setOption("Remove from path: " + pathName)
+                                .setTarget(event.getTarget())
+                                .setType(MenuAction.RUNELITE)
+                                .onClick(e -> removePoint(pathName, pathPoint));
+                    }
+                }
             }
 
 

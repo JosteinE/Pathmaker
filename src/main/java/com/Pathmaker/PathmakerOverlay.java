@@ -86,10 +86,10 @@ public class PathmakerOverlay extends Overlay
 
         // Return here if the distance to hovered tile exceeds the user interactable area.
         // If endPoint height = 0, it likely means it's out of bounds
-//        if(startPoint.distanceTo(endPoint) / tileSize >= MAX_DRAW_DISTANCE)
-//        {
-//            return null;
-//        }
+        if(startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE)
+        {
+            return null;
+        }
 
         // Hovered tile
         if (config.highlightHoveredTile() && tile != null && isRegionLoaded(tile.getWorldLocation().getRegionID()))

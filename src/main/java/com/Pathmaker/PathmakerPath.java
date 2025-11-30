@@ -209,6 +209,15 @@ public class PathmakerPath
         return regionIDs.contains(point.getRegionId());
     }
 
+    boolean containsPoint(PathPoint point)
+    {
+        for (ArrayList<PathPoint> regionPoints : pathPoints.values())
+            if (regionPoints.contains(point))
+                return true;
+
+        return false;
+    }
+
     PathPoint getPointAtDrawIndex(int index)
     {
         for(int regionId : pathPoints.keySet())
