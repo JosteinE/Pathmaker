@@ -105,6 +105,10 @@ public class PathmakerPlugin extends Plugin
 
         pluginPanel = new PathmakerPluginPanel(client, this);
 
+
+        // Causes error on first launch after cache revalidation - do this later?
+        // 2025-11-30 12:28:45 CET [AWT-EventQueue-0] WARN  net.runelite.client.util.ImageUtil - Failed to load image from class: com.Pathmaker.PathmakerPlugin, path: com/Pathmaker/panel_icon.png
+        //2025-11-30 12:28:45 CET [AWT-EventQueue-0] ERROR n.r.client.plugins.PluginManager - Unable to start plugin PathmakerPlugin
         final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
         navButton = NavigationButton.builder()
                 .tooltip("Pathmaker")

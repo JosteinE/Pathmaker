@@ -5,9 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 // Collection of path points
 @Slf4j
@@ -18,6 +17,7 @@ public class PathmakerPath
     private final HashMap<Integer, ArrayList<PathPoint>> pathPoints = new HashMap<>();
     Color color;
     boolean loopPath = false;
+    boolean hidden = false;
 
     PathmakerPath(PathPoint initialPathPoint)
     {
@@ -99,6 +99,15 @@ public class PathmakerPath
         int targetIndex = newGreater ? newIndex : (oldIndex - 1);
         int otherIndexMoveDir = newGreater ? -1 : 1;
 
+
+        // New index = 1
+        // old index = 2
+
+        // start = 1
+        // target = 1
+
+        // moveDir += 1
+
 //        if(newIndex > oldIndex)
 //        {
 //            // 3p
@@ -130,24 +139,56 @@ public class PathmakerPath
         // target: 1
         // move: +1
 
+        ArrayList<Integer> regionsToReconstruct = new ArrayList<>();
+        regionsToReconstruct.add(point.getRegionId());
+
         for (int i = startIndex; i <= targetIndex; i++)
         {
-            log.debug("Index {} was assigned index: {}", getPointAtDrawIndex(i).getDrawIndex(), i+otherIndexMoveDir);
-            getPointAtDrawIndex(i).setDrawIndex(i + otherIndexMoveDir);
+            PathPoint drawPoint = getPointAtDrawIndex(i);
+            log.debug("Index {} was assigned index: {}", drawPoint.getDrawIndex(), i+otherIndexMoveDir);
+            drawPoint.setDrawIndex(i + otherIndexMoveDir);
+
+            if(!regionsToReconstruct.contains(drawPoint.getRegionId()))
+            {
+                regionsToReconstruct.add(drawPoint.getRegionId());
+            }
         }
         log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
-        getPointAtDrawIndex(oldIndex).setDrawIndex(newIndex);
+        point.setDrawIndex(newIndex);
 
-//        for(PathPoint drawPoint : getDrawOrder(null))
-//        {
-//            log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
-//        }
-        for(int regiondID : pathPoints.keySet())
+        for (int regionId : regionsToReconstruct)
         {
-            for(PathPoint pathPoint : pathPoints.get(regiondID))
+            reconstructRegionOrder(regionId);
+        }
+
+        for(PathPoint drawPoint : getDrawOrder(null))
+        {
+            log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
+        }
+    }
+
+    void reconstructRegionOrder(int regionId)
+    {
+        if (pathPoints.get(regionId).size() < 2) {return;}
+
+        while(true)
+        {
+            boolean regionOrdered = true;
+            for (int i = 1; i < pathPoints.get(regionId).size(); i++)
             {
-                log.debug("DrawIndex: {}", pathPoint.getDrawIndex());
+                if(pathPoints.get(regionId).get(i).getDrawIndex() < pathPoints.get(regionId).get(i-1).getDrawIndex())
+                {
+                    Collections.swap(pathPoints.get(regionId), i, i-1);
+                    regionOrdered = false;
+                }
             }
+
+            if(regionOrdered){break;}
+        }
+
+        for (PathPoint point : pathPoints.get(regionId))
+        {
+            log.debug("Reconstructed array draw order: {}", point.getDrawIndex());
         }
     }
 
@@ -170,7 +211,6 @@ public class PathmakerPath
 
     PathPoint getPointAtDrawIndex(int index)
     {
-        outerLoop:
         for(int regionId : pathPoints.keySet())
         {
             for (PathPoint point : pathPoints.get(regionId))

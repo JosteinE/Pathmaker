@@ -151,6 +151,11 @@ public class PathmakerOverlay extends Overlay
         for (String pathName : paths.keySet())
         {
             PathmakerPath path = paths.get(pathName);
+            if(path.hidden)
+            {
+                continue;
+            }
+
             int pathSize = path.getSize();
 
             ArrayList<Integer> loadedRegions = new ArrayList<>();

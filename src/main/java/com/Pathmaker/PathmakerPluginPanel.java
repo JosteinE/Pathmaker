@@ -29,7 +29,7 @@ public class PathmakerPluginPanel extends PluginPanel
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_TEXT_LENGTH = 11;
+    final int MAX_TEXT_LENGTH = 8; // Based on ÆÆÆÆÆÆÆÆ
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
     {

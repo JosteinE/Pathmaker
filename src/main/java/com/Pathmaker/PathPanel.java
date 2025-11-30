@@ -29,6 +29,8 @@ public class PathPanel extends JPanel
     //private static final ImageIcon BRUSH_ICON;
     private static final ImageIcon LOOP_ON_ICON;
     private static final ImageIcon LOOP_OFF_ICON;
+    private static final ImageIcon EYE_OPEN_ICON;
+    private static final ImageIcon EYE_CLOSED_ICON;
 
     private final PathmakerPlugin plugin;
     private final PathmakerPath path;
@@ -42,6 +44,7 @@ public class PathPanel extends JPanel
 
     private boolean panelExpanded = true;
     private final JButton expandToggle;
+    private final JButton visibilityToggle;
     //private final JButton deletePathButton;
     //private final JButton pathColorButton;
 
@@ -58,6 +61,8 @@ public class PathPanel extends JPanel
         EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
         LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
         LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
+        EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
+        EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
     }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
@@ -72,7 +77,7 @@ public class PathPanel extends JPanel
 
         label.setText(pathLabel);
         label.setForeground(path.color);
-        label.setPreferredSize(new Dimension(148, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
+        label.setPreferredSize(new Dimension(130, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
         expandToggle = new JButton(panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
@@ -81,6 +86,14 @@ public class PathPanel extends JPanel
         expandToggle.addActionListener(actionEvent ->
         {
             toggleCollapsed();
+        });
+
+        visibilityToggle = new JButton(path.hidden ? EYE_CLOSED_ICON : EYE_OPEN_ICON);
+        visibilityToggle.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+        visibilityToggle.setToolTipText((path.hidden ? "Show" : "Hide") + " path");
+        visibilityToggle.addActionListener(actionEvent ->
+        {
+            toggleVisibility();
         });
 
         JButton colorPickerButton = new JButton();
@@ -106,6 +119,7 @@ public class PathPanel extends JPanel
         // Add button panel on the left
         JPanel leftActionPanel = new JPanel(new BorderLayout());
         leftActionPanel.add(expandToggle, BorderLayout.WEST);
+        leftActionPanel.add(visibilityToggle, BorderLayout.CENTER);
         leftActionPanel.add(colorPickerButton, BorderLayout.EAST);
         labelPanel.add(leftActionPanel, BorderLayout.WEST);
 
@@ -237,6 +251,14 @@ public class PathPanel extends JPanel
 
         expandToggle.setIcon(panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
         expandToggle.setToolTipText((panelExpanded ? "Collapse" : "Expand") + " path");
+    }
+
+    private void toggleVisibility()
+    {
+        path.hidden = !path.hidden;
+
+        visibilityToggle.setIcon(path.hidden ? EYE_CLOSED_ICON : EYE_OPEN_ICON);
+        visibilityToggle.setToolTipText((path.hidden ? "Show" : "Hide") + " path");
     }
 
     void setPathLabel(String label)
