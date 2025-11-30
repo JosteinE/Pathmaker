@@ -191,52 +191,45 @@ public class PathPanel extends JPanel
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
         int pathSize = path.getSize();
-        for (int regionID : path.getRegionIDs())
+        for (PathPoint point : path.getDrawOrder(null))
         {
-            ArrayList<PathPoint> regionPoints = path.getPointsInRegion(regionID);
-            for (int i = 0; i < regionPoints.size(); i++)
+            JPanel pointContainer = new JPanel(new BorderLayout());
+            pointContainer.setBorder(new EmptyBorder(5, 0, 5, 0));
+            pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+
+            //
+            JLabel pointLabel = new JLabel();
+            pointLabel.setText("Point: ");
+            pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            pointLabel.setPreferredSize(new Dimension(60, 20));
+            pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            pointContainer.add(pointLabel, BorderLayout.WEST);
+
+            // Add spinner box for optionally assigning a new point index.
+            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
+            indexSpinner.setToolTipText("point index");
+            indexSpinner.addChangeListener(ce ->
             {
-                JPanel pointContainer = new JPanel(new BorderLayout());
-                pointContainer.setBorder(new EmptyBorder(5, 0, 5, 0));
-                pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+                plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
+                plugin.rebuildPanel();
+            });
+            pointContainer.add(indexSpinner, BorderLayout.CENTER);
 
-                //
-                JLabel pointLabel = new JLabel();
-                pointLabel.setText("Point: ");
-                pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                pointLabel.setPreferredSize(new Dimension(60, 20));
-                pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-                pointContainer.add(pointLabel, BorderLayout.WEST);
-
-                PathPoint point = regionPoints.get(i);
-                // Add spinner box for optionally assigning a new point index.
-                JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
-                indexSpinner.setToolTipText("point index");
-                indexSpinner.addChangeListener(ce ->
-                {
-                    plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue()-1);
+            JButton deletePathPointButton = new JButton();
+            deletePathPointButton.setIcon(new ImageIcon(crossImage));
+            deletePathPointButton.setToolTipText("Delete point");
+            deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+            deletePathPointButton.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent mouseEvent) {
+                    plugin.removePoint(getPathLabel().getText(), point);
                     plugin.rebuildPanel();
-                });
-                pointContainer.add(indexSpinner, BorderLayout.CENTER);
+                }
+            });
+            pointContainer.add(deletePathPointButton, BorderLayout.EAST);
 
-                JButton deletePathPointButton = new JButton();
-                deletePathPointButton.setIcon(new ImageIcon(crossImage));
-                deletePathPointButton.setToolTipText("Delete point");
-                deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-                deletePathPointButton.addMouseListener(new MouseAdapter()
-                {
-                    @Override
-                    public void mousePressed(MouseEvent mouseEvent)
-                    {
-                        plugin.removePoint(getPathLabel().getText(), point);
-                        plugin.rebuildPanel();
-                    }
-                });
-                pointContainer.add(deletePathPointButton, BorderLayout.EAST);
-
-                pointContainer.setVisible(panelExpanded);
-                pathContainer.add(pointContainer);
-            }
+            pointContainer.setVisible(panelExpanded);
+            pathContainer.add(pointContainer);
         }
         add(pathContainer);
     }

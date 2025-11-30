@@ -38,12 +38,15 @@ public class PathmakerPath
         pathPoint.setDrawIndex(getSize()-1);
     }
 
-    void removePathPoint(PathPoint pathPoint)
+    void removePathPoint(PathPoint point)
     {
-        int regionID = pathPoint.getRegionId();
+        int regionID = point.getRegionId();
 
+        int removedIndex = point.getDrawIndex();
+
+        log.debug("Removing point: " + removedIndex);
         // Remove pathPoint from the ArrayList<PathPoint>
-        pathPoints.get(regionID).remove(pathPoint);
+        pathPoints.get(regionID).remove(point);
 
         // Remove RegionID key if it is empty.
         if (pathPoints.get(regionID).isEmpty())
@@ -51,7 +54,22 @@ public class PathmakerPath
             pathPoints.remove(regionID);
         }
 
-        reconstructDrawOrder();
+
+        // index = 1
+
+        // r1 0
+        // r2 1 2
+
+        // r1 0
+        // r2   2
+
+        ArrayList<PathPoint> drawOrder = getDrawOrder(null);
+        for(int i = removedIndex; i < drawOrder.size(); i++)
+        {
+            drawOrder.get(i).setDrawIndex(i);
+        }
+
+        //reconstructDrawOrder();
     }
 
     // Fetch all path points and close any draw index gaps
@@ -297,6 +315,15 @@ public class PathmakerPath
             }
         }
 
+        // Get the highest index value to be used as target, mostly in case of gaps
+        int finalIndex = 0;
+        for (int relevantRegionId : loopIndexTracker.keySet())
+        {
+            int numInRegion = pathPoints.get(relevantRegionId).size();
+            int lastRegionIndex = pathPoints.get(relevantRegionId).get(numInRegion - 1).getDrawIndex();
+            finalIndex = Math.max(lastRegionIndex, finalIndex);
+        }
+
         // Iterate through the relevant list of points, collecting the points in the order of their draw index
         int lastSize = -1;
         while(drawOrder.size() < numPointsInRegion)
@@ -307,7 +334,7 @@ public class PathmakerPath
                 indexToFind += 1;
 
                 // Break it if failed to find point within the scope
-                if (indexToFind >= numPointsInRegion)
+                if (indexToFind > finalIndex)
                 {
                     log.debug("Missing draw indices {}, out of: {}", numPointsInRegion- drawOrder.size(), numPointsInRegion);
                     break;

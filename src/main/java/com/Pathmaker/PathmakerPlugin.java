@@ -428,6 +428,7 @@ public class PathmakerPlugin extends Plugin
         paths.get(pathName).removePathPoint(point);
         if (paths.get(pathName).getSize() == 0)
         {
+            log.debug("Removing path: " + pathName);
             removePath(pathName);
         }
     }
