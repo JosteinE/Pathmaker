@@ -86,11 +86,30 @@ public interface PathmakerConfig extends Config
     )
     String hoveredTile = "hoveredTile";
 
+
+    enum hoveredTileDrawMode
+    {
+        NEVER,
+        SHIFT_DOWN,
+        ALWAYS,
+    }
+    @ConfigItem(
+            keyName = "hoveredTileDrawModeSelect",
+            name = "Hovered tile mode",
+            description = "When the hovered tile elements should be drawn",
+            position = 1,
+            section = hoveredTile
+    )
+    default hoveredTileDrawMode hoveredTileDrawModeSelect()
+    {
+        return hoveredTileDrawMode.SHIFT_DOWN;
+    }
+
     @ConfigItem(
             keyName = "highlightHoveredTile",
             name = "Highlight tile",
             description = "Highlights the tile that the player is hovering over.",
-            position = 1,
+            position = 2,
             section = hoveredTile
     )
     default boolean highlightHoveredTile()
@@ -103,7 +122,7 @@ public interface PathmakerConfig extends Config
             keyName = "highlightHoveredColor",
             name = "Highlight color",
             description = "Configures the highlight color of hovered tile.",
-            position = 2,
+            position = 3,
             section = hoveredTile
     )
     default Color highlightHoveredColor()
@@ -116,7 +135,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileFillColor",
             name = "Fill color",
             description = "Configures the fill color of hovered tile.",
-            position = 3,
+            position = 4,
             section = hoveredTile
     )
     default Color hoveredTileFillColor()
@@ -126,9 +145,9 @@ public interface PathmakerConfig extends Config
 
     @ConfigItem(
             keyName = "hoveredTileBorderWidth",
-            name = "Border width",
+            name = "Tile border width",
             description = "Width of the hovered tile marker border.",
-            position = 4,
+            position = 5,
             section = hoveredTile
     )
     @Range(max = 10)
@@ -149,7 +168,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLabelModeSelect",
             name = "Tile label mode",
             description = "Label to be placed on the hovered tile.",
-            position = 5,
+            position = 6,
             section = hoveredTile
     )
     default hoveredTileLabelMode hoveredTileLabelModeSelect()
@@ -162,12 +181,25 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLabelColor",
             name = "Tile label color",
             description = "Configures the fill color of hovered tile label.",
-            position = 6,
+            position = 7,
             section = hoveredTile
     )
     default Color hoveredTileLabelColor()
     {
         return new Color(255, 255, 0, 255);
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "drawHoverLine",
+            name = "Draw line",
+            description = "Draw line to hovered tile",
+            position = 8,
+            section = hoveredTile
+    )
+    default boolean drawHoverLine()
+    {
+        return false;
     }
 
     enum hoveredTileLineOrigin
@@ -178,9 +210,9 @@ public interface PathmakerConfig extends Config
     }
     @ConfigItem(
             keyName = "hoveredTileLineModeSelect",
-            name = "Tile line origin",
-            description = "Line to be drawn to the hovered tile.",
-            position = 7,
+            name = "Line origin",
+            description = "Origin of hovered tile line.",
+            position = 9,
             section = hoveredTile
     )
     default hoveredTileLineOrigin hoveredTileLineOriginSelect()
@@ -193,7 +225,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLineColor",
             name = "Line color",
             description = "Configures the line to the hovered tile color.",
-            position = 8,
+            position = 10,
             section = hoveredTile
     )
     default Color hoveredTileLineColor()
@@ -206,30 +238,12 @@ public interface PathmakerConfig extends Config
             keyName = "hoverLineColorMatchPath",
             name = "Match active path",
             description = "Match the active path color",
-            position = 9,
+            position = 11,
             section = hoveredTile
     )
     default boolean hoverLineColorMatchPath()
     {
         return false;
-    }
-
-    enum hoveredTileLineDrawMode
-    {
-        NEVER,
-        SHIFT_DOWN,
-        ALWAYS,
-    }
-    @ConfigItem(
-            keyName = "hoveredTileLineDrawModeSelect",
-            name = "Line draw mode",
-            description = "When the hovered tile line should be drawn",
-            position = 10,
-            section = hoveredTile
-    )
-    default hoveredTileLineDrawMode hoveredTileLineDrawModeSelect()
-    {
-        return hoveredTileLineDrawMode.SHIFT_DOWN;
     }
 
     //------------------------------------------------------------//
@@ -292,18 +306,6 @@ public interface PathmakerConfig extends Config
         return new Color(0, 255, 0, 255);
     }
 
-//    @ConfigItem(
-//            keyName = "loopPath",
-//            name = "Loop path",
-//            description = "Draw from the end point to the start point.",
-//            position = 5,
-//            section = pathLine
-//    )
-//    default boolean loopPath()
-//    {
-//        return false;
-//    }
-
     @Alpha
     @ConfigItem(
             keyName = "pathLinePointColor",
@@ -355,6 +357,8 @@ public interface PathmakerConfig extends Config
         return false;
     }
 
+    /*
+    // Buttons appear, but missing func
     @ConfigItem(
             keyName = SHOW_MAP_ORB_MENU_OPTIONS,
             name = "Show map orb menu options",
@@ -366,6 +370,7 @@ public interface PathmakerConfig extends Config
     {
         return true;
     }
+     */
 
     //------------------------------------------------------------//
     // Path Container Section

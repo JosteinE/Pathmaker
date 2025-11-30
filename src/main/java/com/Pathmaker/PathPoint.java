@@ -14,18 +14,14 @@ public class PathPoint
     private int z;
 
     @Nullable
-    private Color color;
-    @Nullable
     private String label;
 
-    PathPoint(int regID, int regX, int regY, int plane)//, @Nullable Color color)
+    PathPoint(int regID, int regX, int regY, int plane)
     {
         this.regionId = regID;
         this.regionX = regX;
         this.regionY = regY;
         this.z = plane;
-        //this.color = color;
-        //this.label = label; should just be the point index in the path
     }
 
     PathPoint(WorldPoint worldPoint)
@@ -39,11 +35,6 @@ public class PathPoint
     int getRegionId()
     {
         return regionId;
-    }
-
-    void setRegionId(int regionId)
-    {
-        this.regionId = regionId;
     }
 
     int getX()
@@ -60,9 +51,15 @@ public class PathPoint
     }
 
     @Nullable
-    Color getColor()
+    void setLabel(String newLabel)
     {
-        return color;
+        this.label = newLabel;
+    }
+
+    @Nullable
+    String getLabel()
+    {
+        return label;
     }
 
     void setDrawIndex(int index)

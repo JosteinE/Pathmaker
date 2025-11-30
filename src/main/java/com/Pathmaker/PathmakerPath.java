@@ -54,22 +54,11 @@ public class PathmakerPath
             pathPoints.remove(regionID);
         }
 
-
-        // index = 1
-
-        // r1 0
-        // r2 1 2
-
-        // r1 0
-        // r2   2
-
         ArrayList<PathPoint> drawOrder = getDrawOrder(null);
         for(int i = removedIndex; i < drawOrder.size(); i++)
         {
             drawOrder.get(i).setDrawIndex(i);
         }
-
-        //reconstructDrawOrder();
     }
 
     // Fetch all path points and close any draw index gaps
@@ -171,12 +160,6 @@ public class PathmakerPath
         {
             reconstructRegionOrder(regionId);
         }
-
-        // Temp debug print
-//        for(PathPoint drawPoint : getDrawOrder(null))
-//        {
-//            log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
-//        }
     }
 
     // Sort the specified ArrayList in the order of draw indices
@@ -198,12 +181,6 @@ public class PathmakerPath
 
             if(regionOrdered){break;}
         }
-
-        // Temp debug print
-//        for (PathPoint point : pathPoints.get(regionId))
-//        {
-//            log.debug("Reconstructed array draw order: {}", point.getDrawIndex());
-//        }
     }
 
     boolean isPointInRegions(PathPoint point, int[] regionIDs)
@@ -219,7 +196,6 @@ public class PathmakerPath
 
     boolean isPointInRegions(PathPoint point, ArrayList<Integer>regionIDs)
     {
-        //return pathPoints.containsKey(regionId) && pathPoints.get(regionId).contains(point);
         return regionIDs.contains(point.getRegionId());
     }
 
@@ -365,7 +341,6 @@ public class PathmakerPath
                 }
             }
         }
-        //log.debug("Draw Order: {}", drawOrder.size());
         return drawOrder;
     }
 }

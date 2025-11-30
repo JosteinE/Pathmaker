@@ -13,6 +13,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,6 +24,9 @@ import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 
 public class PathmakerPluginPanel extends PluginPanel
 {
+    private static final ImageIcon IMPORT_ICON;
+    private static final ImageIcon EXPORT_ICON;
+
     private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
     private final JPanel pathView = new JPanel();
 
@@ -31,6 +36,12 @@ public class PathmakerPluginPanel extends PluginPanel
     FlatTextField activePath;
     final int MAX_TEXT_LENGTH = 7; // Based on ÆÆÆÆÆÆÆÆ
 
+    static
+    {
+        IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
+        EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
+    }
+
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
     {
         this.client = client;
@@ -38,18 +49,51 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Define standard client panel layout
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        //setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // Create title panel
         JPanel titlePanel = new JPanel();
-        titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+        //titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
 
         // Create label and add to title panel
         JLabel title = new JLabel();
         title.setText("Pathmaker");
+        title.setPreferredSize(new Dimension(80,20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
         title.setForeground(Color.WHITE);
         title.setToolTipText("by Fraph");
         titlePanel.add(title, BorderLayout.CENTER);
+
+        /* EXPORT / IMPORT -> To be implemented
+        JButton exportButton = new JButton();
+        exportButton.setIcon(EXPORT_ICON);
+        exportButton.setToolTipText("Export active path");
+        exportButton.setPreferredSize(new Dimension(18, 18));
+        exportButton.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent mouseEvent)
+            {
+            }
+        });
+        JButton importButton = new JButton();
+        importButton.setIcon(IMPORT_ICON);
+        importButton.setToolTipText("Import path");
+        importButton.setPreferredSize(new Dimension(18, 18));
+        importButton.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent mouseEvent)
+            {
+            }
+        });
+
+        JPanel rightActionTitlePanel = new JPanel();
+        //rightActionTitlePanel.setPreferredSize(new Dimension(40, 20));
+        rightActionTitlePanel.add(importButton, BorderLayout.WEST);
+        rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
+        titlePanel.add(rightActionTitlePanel, BorderLayout.EAST);
+
+         */
 
         // Create body panel and add titlePanel
         JPanel northPanel = new JPanel(new BorderLayout());
@@ -106,27 +150,19 @@ public class PathmakerPluginPanel extends PluginPanel
 
         // Configure path view panel
         pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
-        //pathView.setMaximumSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
-        //pathView.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));//PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight()-20));
-        pathView.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
 
         // Configure PluginErrorPanel
-        //noPathPanel.setVisible(false);
+        noPathPanel.setVisible(false);
         //noPathPanel.setPreferredSize(new Dimension(50, 30));
-        //noPathPanel.setContent("No stored paths", "Shift right-click a tile to add a path point.");
+        noPathPanel.setContent("No stored paths", "Shift right-click a tile to add a path point.");
 
         // Add body panel
-        //JPanel centerPanel = new JPanel(new BorderLayout());
-        //centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight() - 5));
-        //centerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        //centerPanel.add(noPathPanel, BorderLayout.NORTH);
-        //centerPanel.add(pathView, BorderLayout.CENTER);
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, client.getCanvasHeight() - 5));
+        centerPanel.add(noPathPanel, BorderLayout.NORTH);
+        centerPanel.add(pathView, BorderLayout.CENTER);
 
-        add(pathView);//, BorderLayout.CENTER);
-
-        // Signature panel
-        //JPanel southPanel = createLabeledPanel(BorderLayout.CENTER, "By Fraph", Color.YELLOW);
-        //add(southPanel, BorderLayout.SOUTH);
+        add(centerPanel);//, BorderLayout.CENTER);
 
         rebuild();
     }

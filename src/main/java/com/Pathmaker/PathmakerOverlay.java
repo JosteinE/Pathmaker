@@ -80,52 +80,67 @@ public class PathmakerOverlay extends Overlay
         // Highlight tiles marked by the right-click menu and draw lines between them
         drawPath(graphics, wv);
 
+        // Draw hovered tile elements
+        if (config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.ALWAYS
+                || (config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.SHIFT_DOWN
+                && plugin.hotKeyPressed))
+        {
+            drawHoveredTile(graphics, wv);
+        }
+
+        return null;
+    }
+
+    void drawHoveredTile(Graphics2D graphics, WorldView wv)
+    {
         // Fetch hovered tile
         Tile tile = wv.getSelectedSceneTile();
         hoveredTile = tile == null ? hoveredTile : tile.getLocalLocation();
 
         // Return here if the distance to hovered tile exceeds the user interactable area.
         // If endPoint height = 0, it likely means it's out of bounds
-        if(startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE)
-        {
-            return null;
+        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE) {
+            return;
         }
 
-        // Hovered tile
-        if (config.highlightHoveredTile() && tile != null && isRegionLoaded(tile.getWorldLocation().getRegionID()))
-        {
+        // Highlight hovered tile
+        if (config.highlightHoveredTile() && tile != null && isRegionLoaded(tile.getWorldLocation().getRegionID())) {
             highlightTile(graphics, hoveredTile, config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+        }
 
-            // Add label
+        // Add label
+        if (config.hoveredTileLabelModeSelect() != PathmakerConfig.hoveredTileLabelMode.NONE) {
             String hoveredTileLabel = constructHoveredTileString(tile);
-            if(!hoveredTileLabel.isEmpty())
-            {
+            if (!hoveredTileLabel.isEmpty()) {
                 addLabel(graphics, hoveredTile, 0, hoveredTileLabel, config.hoveredTileLabelColor());
             }
         }
 
         // Draw line to hovered line
-        if(config.hoveredTileLineDrawModeSelect() == PathmakerConfig.hoveredTileLineDrawMode.ALWAYS
-                || (config.hoveredTileLineDrawModeSelect() == PathmakerConfig.hoveredTileLineDrawMode.SHIFT_DOWN
-                && plugin.hotKeyPressed))
+        // Set hover line to match the active path color if true
+        if(config.drawHoverLine())
         {
-            // Set hover line to match the active path color if true
-            Color hoverLineColor = config.hoverLineColorMatchPath() ?
-                    plugin.getStoredPaths().get(plugin.getActivePathName()).color :
-                    config.hoveredTileLineColor();
+            Color hoverLineColor;
+            if(config.hoverLineColorMatchPath())
+            {
+                hoverLineColor = plugin.pathExists(plugin.getActivePathName()) ?
+                        plugin.getStoredPaths().get(plugin.getActivePathName()).color :
+                        config.pathColor();
+            }
+            else
+            {
+                hoverLineColor = config.hoveredTileLineColor();
+            }
 
             switch (config.hoveredTileLineOriginSelect()) {
                 case PATH_END: {
-
-                    if (plugin.getStoredPaths().isEmpty())
-                    {
+                    if (!plugin.pathExists((plugin.getActivePathName()))) {
                         break;
                     }
                     PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePathName());
                     PathPoint lastTile = activePath.getPointAtDrawIndex(activePath.getSize() - 1);
 
-                    if (!activePath.isPointInRegions(lastTile, client.getTopLevelWorldView().getMapRegions()))
-                    {
+                    if (!activePath.isPointInRegions(lastTile, client.getTopLevelWorldView().getMapRegions())) {
                         break;
                     }
 
@@ -140,8 +155,6 @@ public class PathmakerOverlay extends Overlay
                     break;
             }
         }
-
-        return null;
     }
 
     // Highlight tiles marked by the right-click menu and draw lines between them
@@ -297,11 +310,6 @@ public class PathmakerOverlay extends Overlay
         graphics.setColor(color);
         graphics.setStroke(new BasicStroke(lineWidth));
         graphics.draw(line);
-
-//        if (counter == 1) {
-//            drawCounter(graphics, p1.getX(), p1.getY(), 0);
-//        }
-//        drawCounter(graphics, p2.getX(), p2.getY(), counter);
     }
 
     String constructHoveredTileString(Tile tile)

@@ -5,16 +5,13 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.ImageIcon;
 import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.util.ImageUtil;
-import java.awt.event.MouseAdapter;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 
 public class PathPanel extends JPanel
@@ -25,8 +22,6 @@ public class PathPanel extends JPanel
 
     private static final ImageIcon EXPAND_ICON;
     private static final ImageIcon COLLAPSE_ICON;
-    //private static final ImageIcon DELETE_ICON;
-    //private static final ImageIcon BRUSH_ICON;
     private static final ImageIcon LOOP_ON_ICON;
     private static final ImageIcon LOOP_OFF_ICON;
     private static final ImageIcon EYE_OPEN_ICON;
@@ -36,26 +31,19 @@ public class PathPanel extends JPanel
     private final PathmakerPath path;
 
     private final JPanel pathContainer = new JPanel();
-    //private final JButton expandToggle;
     private final JButton label = new JButton();
-    private final JLabel deletePath = new JLabel();
 
     private final int ICON_WIDTH = 18;
 
     private boolean panelExpanded = true;
     private final JButton expandToggle;
     private final JButton visibilityToggle;
-    //private final JButton deletePathButton;
-    //private final JButton pathColorButton;
 
     private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
     private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
     static
     {
-        //BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
-        //DELETE_ICON = new ImageIcon(crossImage);
-        //BRUSH_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png"));
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
         COLLAPSE_ICON = new ImageIcon(upArrowImage);
         EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
@@ -73,7 +61,6 @@ public class PathPanel extends JPanel
 
         JPanel labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        //labelPanel.setBorder(NAME_BOTTOM_BORDER);
 
         label.setText(pathLabel);
         label.setForeground(path.color);
@@ -139,6 +126,7 @@ public class PathPanel extends JPanel
                 if (confirm == 0)
                 {
                     plugin.removePath(label.getText());
+                    plugin.rebuildPanel();
                 }
             }
         });
@@ -164,27 +152,6 @@ public class PathPanel extends JPanel
         rightActionPanel.add(loopButton, BorderLayout.WEST);
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
-
-//        pathColorButton = new JButton();
-//        pathColorButton.setToolTipText("Edit path colour");
-//        pathColorButton.setForeground(pathColorButton.getColour() == null ? plugin.defaultColour : line.getColour());
-//        pathColorButton.setBorder(line.getWidth() == 0 ? null : new MatteBorder(0, 0, 3, 0, line.getColour()));
-//        pathColorButton.setIcon(line.getWidth() == 0 ? NO_SETTINGS_ICON : SETTINGS_ICON);
-//        pathColorButton.addMouseListener(new MouseAdapter()
-//        {
-//            @Override
-//            public void mousePressed(MouseEvent mouseEvent)
-//            {
-//                RuneliteColorPicker colourPicker = getColourPicker(line.getColour() == null ? plugin.defaultColour : line.getColour());
-//                colourPicker.setOnColorChange(c ->
-//                {
-//                    line.setColour(c);
-//                    colour.setBorder(line.getWidth() == 0 ? null : new MatteBorder(0, 0, 3, 0, line.getColour()));
-//                    colour.setIcon(line.getWidth() == 0 ? NO_SETTINGS_ICON : SETTINGS_ICON);
-//                });
-//                colourPicker.setVisible(true);
-//            }
-//        });
 
         pathContainer.setLayout(new BoxLayout(pathContainer, BoxLayout.Y_AXIS));
         pathContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -223,7 +190,7 @@ public class PathPanel extends JPanel
                 @Override
                 public void mousePressed(MouseEvent mouseEvent) {
                     plugin.removePoint(getPathLabel().getText(), point);
-                    plugin.rebuildPanel();
+                    // Rebuilding in removePoint (because of the in-game shift+click dropdown menu)
                 }
             });
             pointContainer.add(deletePathPointButton, BorderLayout.EAST);
@@ -272,7 +239,6 @@ public class PathPanel extends JPanel
                 label.getText() + " path color",
                 false);
         colorPicker.setLocationRelativeTo(this);
-        //colourPicker.setOnClose(c -> plugin.saveMarkers());
         return colorPicker;
     }
 }

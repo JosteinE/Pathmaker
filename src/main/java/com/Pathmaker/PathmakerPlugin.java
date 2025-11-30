@@ -19,6 +19,7 @@ import java.util.List;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -27,6 +28,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.client.ui.ClientToolbar;
@@ -68,9 +70,6 @@ public class PathmakerPlugin extends Plugin
     private PathmakerPanelOverlay panelOverlay;
 
     @Inject
-    private PathmakerSharingManager sharingManager;
-
-    @Inject
     private EventBus eventBus;
 
     @Inject
@@ -79,6 +78,9 @@ public class PathmakerPlugin extends Plugin
     @Getter
     @Inject
     private ColorPickerManager colorPickerManager;
+
+    @Inject
+    private ClientThread clientThread;
 
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)
@@ -95,39 +97,29 @@ public class PathmakerPlugin extends Plugin
 
         // Temp!
         //config.setStoredPaths("");
-        paths.clear();
-
-        if (config.showMapOrbMenuOptions())
-        {
-            sharingManager.addMenuOptions();
-        }
-        //loadPoints();
-        eventBus.register(sharingManager);
 
         pluginPanel = new PathmakerPluginPanel(client, this);
 
 
-        // Causes error on first launch after cache revalidation - do this later?
-        // 2025-11-30 12:28:45 CET [AWT-EventQueue-0] WARN  net.runelite.client.util.ImageUtil - Failed to load image from class: com.Pathmaker.PathmakerPlugin, path: com/Pathmaker/panel_icon.png
-        //2025-11-30 12:28:45 CET [AWT-EventQueue-0] ERROR n.r.client.plugins.PluginManager - Unable to start plugin PathmakerPlugin
-        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
-        navButton = NavigationButton.builder()
-                .tooltip("Pathmaker")
-                .icon(icon)
-                .priority(5)
-                .panel(pluginPanel)
-                .build();
-        clientToolbar.addNavigation(navButton);
+        clientThread.invokeLater(() ->
+        {
+            final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
+            navButton = NavigationButton.builder()
+                    .tooltip("Pathmaker")
+                    .icon(icon)
+                    .priority(5)
+                    .panel(pluginPanel)
+                    .build();
+            clientToolbar.addNavigation(navButton);
+        });
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-        eventBus.unregister(sharingManager);
 		log.debug("Example stopped!");
         overlayManager.remove(overlay);
         overlayManager.remove(panelOverlay);
-        sharingManager.removeMenuOptions();
         clientToolbar.removeNavigation(navButton);
 
         // Temp!
@@ -138,7 +130,6 @@ public class PathmakerPlugin extends Plugin
     public void onGameTick(GameTick gameTick)
     {
         panelOverlay.calculateCurrentSpeed();
-        //overlay.importTilesToHighlight(getTilesToHighlight());
     }
 
     // Get marked tiles within the rendered regions
@@ -148,7 +139,6 @@ public class PathmakerPlugin extends Plugin
 
         // Get rendered regionIDs
         int[] regionsToLoad = client.getTopLevelWorldView().getMapRegions();
-        //log.debug("Number of regions to load: {}", regionsToLoad.length);
         for (PathmakerPath path : paths.values())
         {
             for (int regionID : regionsToLoad)
@@ -168,26 +158,17 @@ public class PathmakerPlugin extends Plugin
     {
         if (event.getGroup().equals(PathmakerConfig.PATHMAKER_CONFIG_GROUP))
         {
-            if (event.getKey().equals(PathmakerConfig.SHOW_MAP_ORB_MENU_OPTIONS)) {
-                sharingManager.removeMenuOptions();
-                if (config.showMapOrbMenuOptions())
-                {
-                    sharingManager.addMenuOptions();
-                    //sharingManager.addClearMenuOption();
-                }
-            }
         }
-        //configManager.sendConfig();
     }
 
-	@Subscribe
-	public void onGameStateChanged(GameStateChanged gameStateChanged)
-	{
+//	@Subscribe
+//	public void onGameStateChanged(GameStateChanged gameStateChanged)
+//	{
 //		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
 //		{
 //			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.greeting(), null);
 //		}
-	}
+//	}
 
     @Subscribe
     public void onMenuEntryAdded(final MenuEntryAdded event)
@@ -222,9 +203,13 @@ public class PathmakerPlugin extends Plugin
             // If tile is not previously marked, add the "add" option.
             if (pathPoint == null || !paths.get(getActivePathName()).containsPoint(pathPoint))
             {
+                String target = paths.containsKey(getActivePathName()) ?
+                        ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), paths.get(getActivePathName()).color) :
+                        ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), config.pathColor());
+
                 client.getMenu().createMenuEntry(-1)
-                        .setOption("Add to path: " + getActivePathName())
-                        .setTarget(event.getTarget())
+                        .setOption("Add to path")
+                        .setTarget(target)
                         .setType(MenuAction.RUNELITE)
                         .onClick(e -> createOrAddToPath(new PathPoint(
                                 worldPoint.getRegionID(),
@@ -239,84 +224,31 @@ public class PathmakerPlugin extends Plugin
                 {
                     if (paths.get(pathName).containsPoint(pathPoint))
                     {
+                        String target = ColorUtil.prependColorTag(Text.removeTags(pathName), paths.get(pathName).color);
                         client.getMenu().createMenuEntry(-1)
-                                .setOption("Remove from path: " + pathName)
-                                .setTarget(event.getTarget())
+                                .setOption("Remove from path")
+                                .setTarget(target)
                                 .setType(MenuAction.RUNELITE)
                                 .onClick(e -> removePoint(pathName, pathPoint));
                     }
                 }
             }
-
-
-//        if (existingOpt.isPresent())
-//        {
-//            var existing = existingOpt.get();
-//
-//            client.createMenuEntry(-2)
-//                    .setOption("Label")
-//                    .setTarget("Tile")
-//                    .setType(MenuAction.RUNELITE)
-//                    .onClick(e -> labelTile(existing));
-//
-//            MenuEntry menuColor = client.createMenuEntry(-3)
-//                    .setOption("Color")
-//                    .setTarget("Tile")
-//                    .setType(MenuAction.RUNELITE);
-//            Menu submenu = menuColor.createSubMenu();
-//
-//            if (regionPoints.size() > 1) {
-//                submenu.createMenuEntry(-1)
-//                        .setOption("Reset all")
-//                        .setType(MenuAction.RUNELITE)
-//                        .onClick(e ->
-//                                chatboxPanelManager.openTextMenuInput("Are you sure you want to reset the color of " + regionPoints.size() + " tiles?")
-//                                        .option("Yes", () ->
-//                                        {
-//                                            var newPoints = regionPoints.stream()
-//                                                    .map(p -> new GroundMarkerPoint(p.getRegionId(), p.getRegionX(), p.getRegionY(), p.getZ(), config.markerColor(), p.getLabel()))
-//                                                    .collect(Collectors.toList());
-//                                            savePoints(regionId, newPoints);
-//                                            loadPoints();
-//                                        })
-//                                        .option("No", Runnables.doNothing())
-//                                        .build());
-//            }
-//
-//            submenu.createMenuEntry(-1)
-//                    .setOption("Pick")
-//                    .setType(MenuAction.RUNELITE)
-//                    .onClick(e ->
-//                    {
-//                        Color color = existing.getColor();
-//                        SwingUtilities.invokeLater(() ->
-//                        {
-//                            RuneliteColorPicker colorPicker = colorPickerManager.create(client,
-//                                    color, "Tile marker color", false);
-//                            colorPicker.setOnClose(c -> colorTile(existing, c));
-//                            colorPicker.setVisible(true);
-//                        });
-//                    });
-//
-//            var existingColors = points.values().stream()
-//                    .map(ColorTileMarker::getColor)
-//                    .distinct()
-//                    .collect(Collectors.toList());
-//            for (Color color : existingColors) {
-//                if (!color.equals(existing.getColor())) {
-//                    submenu.createMenuEntry(-1)
-//                            .setOption(ColorUtil.prependColorTag("Color", color))
-//                            .setType(MenuAction.RUNELITE)
-//                            .onClick(e -> colorTile(existing, color));
-//                }
-//
-//      }
         }
     }
 
     public HashMap<String, PathmakerPath> getStoredPaths()
     {
         return paths;
+    }
+
+    public PathmakerPath getActivePath()
+    {
+        return paths.get(getActivePathName());
+    }
+
+    public boolean pathExists(String pathName)
+    {
+        return paths.containsKey(pathName);
     }
 
     // Returns pathPoints from all paths within the specified region
@@ -359,10 +291,8 @@ public class PathmakerPlugin extends Plugin
     // Return PathPoint if one was previously created on the specified tile
     PathPoint getPathPointAtRegionTile(int regionId, int relativeX,  int relativeY, int plane)
     {
-        //log.debug("Starting tile fetch.");
         if(paths.isEmpty())
         {
-            //log.debug("Paths map empty, returning null");
             return null;
         }
 
@@ -383,11 +313,6 @@ public class PathmakerPlugin extends Plugin
 //                regionId, relativeX, relativeY);
         return null;
     }
-
-    //    void createOrAddToPath(int regionId, int regionX, int regionY, int plane)
-    //    {
-    //        createOrAddToPath(new PathPoint(regionId, regionX, regionY, plane));
-    //    }
 
     // Create a new path starting with the given point or add to existing path
     void createOrAddToPath(PathPoint point)
@@ -418,9 +343,7 @@ public class PathmakerPlugin extends Plugin
             //config.setStoredPaths(Text.toCSV(newStoredPaths));
         }
         paths.put(activePath, path);
-        pluginPanel.rebuild();
-//        log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
-//                point.getRegionId(), point.getX(), point.getY(), activePath);
+        rebuildPanel();
     }
 
     void removePoint(String pathName, PathPoint point)
@@ -428,15 +351,14 @@ public class PathmakerPlugin extends Plugin
         paths.get(pathName).removePathPoint(point);
         if (paths.get(pathName).getSize() == 0)
         {
-            log.debug("Removing path: " + pathName);
             removePath(pathName);
         }
+        rebuildPanel();
     }
 
     void removePath(String pathName)
     {
         paths.remove(pathName);
-        pluginPanel.rebuild();
     }
 
     String getActivePathName()
