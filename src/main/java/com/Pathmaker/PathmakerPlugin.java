@@ -365,14 +365,14 @@ public class PathmakerPlugin extends Plugin
         {
             if(point.getX() == relativeX && point.getY() == relativeY)
             {
-                log.debug("Tile found, in region id: {}, x: {}, y: {} )",
-                        regionId, relativeX, relativeY);
+//                log.debug("Tile found, in region id: {}, x: {}, y: {} )",
+//                        regionId, relativeX, relativeY);
                 return point;
             }
         }
 
-        log.debug("Tile not found, in region id: {}, x: {}, y: {} )",
-                regionId, relativeX, relativeY);
+//        log.debug("Tile not found, in region id: {}, x: {}, y: {} )",
+//                regionId, relativeX, relativeY);
         return null;
     }
 
@@ -388,7 +388,7 @@ public class PathmakerPlugin extends Plugin
 
         if(activePath == null) return;
 
-        log.debug("Checking for existing path: {}", activePath);
+        //log.debug("Checking for existing path: {}", activePath);
         PathmakerPath path;
         if(paths.containsKey(activePath))
         {
@@ -411,8 +411,8 @@ public class PathmakerPlugin extends Plugin
         }
         paths.put(activePath, path);
         pluginPanel.rebuild();
-        log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
-                point.getRegionId(), point.getX(), point.getY(), activePath);
+//        log.debug("Point ( Region: {}, X: {}, Y: {} added path to: {}",
+//                point.getRegionId(), point.getX(), point.getY(), activePath);
     }
 
     void removePoint(String pathName, PathPoint point)

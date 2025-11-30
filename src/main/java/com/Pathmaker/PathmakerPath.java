@@ -136,6 +136,9 @@ public class PathmakerPath
         return numPoints;
     }
 
+    // Return an ArrayList with the PathPoints in the order they should be drawn
+    // NB! If param loadedRegions is null, then getDrawOrder will return the tiles also
+    // NOT in loaded regions. (which you don't want to render)
     ArrayList<PathPoint> getDrawOrder(@Nullable ArrayList<Integer> loadedRegions)
     {
         ArrayList<PathPoint> drawOrder = new ArrayList<>();
@@ -150,21 +153,44 @@ public class PathmakerPath
 
         // Calculate the number of points to collect (points that are inside the loaded regions)
         int numPointsInRegion = loadedRegions == null ? getSize() : 0;
-
+        int startingIndex = 0;
         if(loadedRegions != null)
         {
-            for (int loadedRegionId : loadedRegions) {
-                if (pathPoints.containsKey(loadedRegionId)) {
+            startingIndex = getSize();
+
+            for (int loadedRegionId : loadedRegions)
+            {
+                if (pathPoints.containsKey(loadedRegionId))
+                {
                     numPointsInRegion += pathPoints.get(loadedRegionId).size();
+
+                    // Determine the starting index (may not be 0 if that tile is in an unloaded region)
+                    for (PathPoint point : pathPoints.get(loadedRegionId))
+                    {
+                        if(point.getIndex() < startingIndex)
+                        {
+                            startingIndex = point.getIndex();
+                        }
+                    }
                 }
             }
         }
 
 
+
         // Iterate through the list of points (including points in regions not currently loaded)
         // but only adding points to drawOrder if the points are in loaded regions.
+        int lastSize = -1;
+        int indexGap = 0;
         while(drawOrder.size() < numPointsInRegion)
         {
+            // If the next draw index cant be found, increase the index gap
+            if (lastSize == drawOrder.size())
+            {
+                indexGap += 1;
+            }
+
+            lastSize = drawOrder.size();
             for (int regionId : pathPoints.keySet())
             {
                 for (int i = loopIndexTracker.get(regionId); i < pathPoints.get(regionId).size(); i++)
@@ -172,9 +198,11 @@ public class PathmakerPath
                     PathPoint point = pathPoints.get(regionId).get(i);
                     int pointIndex = point.getIndex();
 
-                    if (pointIndex == drawOrder.size() && (loadedRegions == null || loadedRegions.contains(regionId)))
+                    if (pointIndex == drawOrder.size() + startingIndex + indexGap &&
+                            (loadedRegions == null || loadedRegions.contains(regionId)))
                     {
                         drawOrder.add(point);
+                        indexGap = 0;
                     }
                     else if (pointIndex > drawOrder.size())
                     {

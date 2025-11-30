@@ -74,7 +74,7 @@ public class PathmakerOverlay extends Overlay
         }
 
         // Fetch hovered tile and if successful, assign it to endPoint
-        WorldView wv = client.getLocalPlayer().getWorldView();
+        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
 
         // Highlight tiles marked by the right-click menu and draw lines between them
         drawPath(graphics, wv);
@@ -167,6 +167,13 @@ public class PathmakerOverlay extends Overlay
                 }
 
                 ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
+                if (drawOrder.isEmpty())
+                {
+                    log.debug("WorldView: {}", wv);
+                    log.debug("Environment: {}", client.getEnvironment());
+                    log.debug("IsInstance, {}", client.getTopLevelWorldView().isInstance());
+                    log.debug("getDraw2DMask, {}", client.getDraw2DMask());
+                }
 
                 // Draw both line and points
                 if (config.drawPath() && pathSize > 1 && config.drawPathPoints()) {
