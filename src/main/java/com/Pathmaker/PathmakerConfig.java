@@ -204,7 +204,6 @@ public interface PathmakerConfig extends Config
 
     enum hoveredTileLineOrigin
     {
-        NONE,
         TRUE_TILE,
         PATH_END,
     }
