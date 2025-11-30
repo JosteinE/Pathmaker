@@ -7,9 +7,6 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 import javax.inject.Inject;
 
-import com.google.protobuf.EnumValue;
-import com.google.protobuf.StringValue;
-import com.sun.jna.platform.win32.Advapi32Util;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;                  // For player position
 import net.runelite.api.coords.WorldPoint;

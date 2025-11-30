@@ -1,7 +1,6 @@
 package com.Pathmaker;
 
 import javax.annotation.Nullable;
-import java.awt.Color;
 import net.runelite.api.coords.WorldPoint;
 
 // Ref: GroundMarkerPoint - https://github.com/runelite/runelite/blob/master/runelite-client/src/main/java/net/runelite/client/plugins/groundmarkers/GroundMarkerPoint.java#L38

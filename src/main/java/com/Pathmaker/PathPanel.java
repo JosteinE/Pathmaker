@@ -1,10 +1,13 @@
 package com.Pathmaker;
 
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.awt.Component;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.Border;

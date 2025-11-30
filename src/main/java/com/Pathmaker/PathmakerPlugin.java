@@ -12,14 +12,13 @@ import net.runelite.api.coords.WorldPoint;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import java.awt.*;
+
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
-
+import java.awt.Color;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;

@@ -1,15 +1,11 @@
 package com.Pathmaker;
 
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.client.events.OverlayMenuClicked;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
-import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import java.awt.datatransfer.Clipboard;
@@ -29,7 +25,7 @@ import javax.swing.border.EmptyBorder;
 
 import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 
-
+@Slf4j
 public class PathmakerPluginPanel extends PluginPanel
 {
     private static final ImageIcon IMPORT_ICON;
@@ -106,13 +102,13 @@ public class PathmakerPluginPanel extends PluginPanel
                         // Retrieve the data as a String
                         json = (String) clipboard.getData(DataFlavor.stringFlavor);
                     } else {
-                        System.out.println("Clipboard does not contain plain text.");
+                        log.debug("Clipboard does not contain plain text.");
                         json = null;
                     }
                 }
                 catch (UnsupportedFlavorException | IOException e)
                 {
-                    System.err.println("Error reading from clipboard: " + e.getMessage());
+                    log.debug("Error reading from clipboard: " + e.getMessage());
                     json = null;
                 }
 
