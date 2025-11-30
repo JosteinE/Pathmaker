@@ -88,7 +88,7 @@ public class PathmakerPlugin extends Plugin
     private ClientThread clientThread;
 
     @Inject
-    private Gson gson;
+    public Gson gson;
 
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)

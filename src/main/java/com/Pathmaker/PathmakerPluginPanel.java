@@ -8,13 +8,21 @@ import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 import java.util.HashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -63,37 +71,66 @@ public class PathmakerPluginPanel extends PluginPanel
         title.setToolTipText("by Fraph");
         titlePanel.add(title, BorderLayout.CENTER);
 
-        /* EXPORT / IMPORT -> To be implemented
+        // EXPORT / IMPORT
         JButton exportButton = new JButton();
         exportButton.setIcon(EXPORT_ICON);
-        exportButton.setToolTipText("Export active path");
+        exportButton.setToolTipText("Export active path to clipboard");
         exportButton.setPreferredSize(new Dimension(18, 18));
         exportButton.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
+                StringSelection json = new StringSelection(plugin.gson.toJson(plugin.getStoredPaths().get(activePath.getText())));
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clipboard.setContents(json, null);
             }
         });
+
         JButton importButton = new JButton();
         importButton.setIcon(IMPORT_ICON);
-        importButton.setToolTipText("Import path");
+        importButton.setToolTipText("Import path from clipboard");
         importButton.setPreferredSize(new Dimension(18, 18));
         importButton.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
+                String json;
+                try
+                {
+                    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+                    // Check if the clipboard contains data in String format
+                    if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
+                        // Retrieve the data as a String
+                        json = (String) clipboard.getData(DataFlavor.stringFlavor);
+                    } else {
+                        System.out.println("Clipboard does not contain plain text.");
+                        json = null;
+                    }
+                }
+                catch (UnsupportedFlavorException | IOException e)
+                {
+                    System.err.println("Error reading from clipboard: " + e.getMessage());
+                    json = null;
+                }
+
+                PathmakerPath loadedPath = plugin.gson.fromJson(json, new TypeToken<PathmakerPath>(){}.getType());
+
+                if (loadedPath != null)
+                {
+                    String pathName = JOptionPane.showInputDialog("Path name");
+                    plugin.getStoredPaths().put(pathName, loadedPath);
+                    plugin.rebuildPanel();
+                }
             }
         });
 
         JPanel rightActionTitlePanel = new JPanel();
-        //rightActionTitlePanel.setPreferredSize(new Dimension(40, 20));
         rightActionTitlePanel.add(importButton, BorderLayout.WEST);
         rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
         titlePanel.add(rightActionTitlePanel, BorderLayout.EAST);
-
-         */
 
         // Create body panel and add titlePanel
         JPanel northPanel = new JPanel(new BorderLayout());

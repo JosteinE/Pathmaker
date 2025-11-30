@@ -11,6 +11,7 @@ Intuitively construct paths using plugin's side panel. New "Active Path" names w
   - Can store multiple
   - Set name
     - Click names of existing paths to set them as active
+  - Import/Export
   - Looped or non-looped
   - Set color
   - Show/hide
@@ -48,7 +49,3 @@ Intuitively construct paths using plugin's side panel. New "Active Path" names w
   - Default path color
 - **Info box**
   - Show speed (potentially useful for sailing paths)
-
-### TODO
-- Add import & export buttons
-- Fix any post-release issues
