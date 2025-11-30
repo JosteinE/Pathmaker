@@ -44,11 +44,11 @@ public class PathmakerPath
 
         int removedIndex = point.getDrawIndex();
 
-        log.debug("Removing point: " + removedIndex);
+        //log.debug("Removing point: " + removedIndex);
         // Remove pathPoint from the ArrayList<PathPoint>
         pathPoints.get(regionID).remove(point);
 
-        // Remove RegionID key if it is empty.
+        // Remove RegionID key if the ArrayList is empty.
         if (pathPoints.get(regionID).isEmpty())
         {
             pathPoints.remove(regionID);
@@ -152,7 +152,7 @@ public class PathmakerPath
         for (int i = startIndex; i <= targetIndex; i++)
         {
             PathPoint drawPoint = getPointAtDrawIndex(i);
-            log.debug("Index {} was assigned index: {}", drawPoint.getDrawIndex(), i+otherIndexMoveDir);
+            //log.debug("Index {} was assigned index: {}", drawPoint.getDrawIndex(), i+otherIndexMoveDir);
             drawPoint.setDrawIndex(i + otherIndexMoveDir);
 
             if(!regionsToReconstruct.contains(drawPoint.getRegionId()))
@@ -162,7 +162,7 @@ public class PathmakerPath
         }
 
         // Move the chosen point to the desired index
-        log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
+        //log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
         point.setDrawIndex(newIndex);
 
         // Once the points have been reassigned their draw order, reorder the affected ArrayList to match
@@ -173,10 +173,10 @@ public class PathmakerPath
         }
 
         // Temp debug print
-        for(PathPoint drawPoint : getDrawOrder(null))
-        {
-            log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
-        }
+//        for(PathPoint drawPoint : getDrawOrder(null))
+//        {
+//            log.debug("DrawIndex: {}", drawPoint.getDrawIndex());
+//        }
     }
 
     // Sort the specified ArrayList in the order of draw indices
@@ -200,10 +200,10 @@ public class PathmakerPath
         }
 
         // Temp debug print
-        for (PathPoint point : pathPoints.get(regionId))
-        {
-            log.debug("Reconstructed array draw order: {}", point.getDrawIndex());
-        }
+//        for (PathPoint point : pathPoints.get(regionId))
+//        {
+//            log.debug("Reconstructed array draw order: {}", point.getDrawIndex());
+//        }
     }
 
     boolean isPointInRegions(PathPoint point, int[] regionIDs)
@@ -270,7 +270,7 @@ public class PathmakerPath
         ArrayList<PathPoint> drawOrder = new ArrayList<>();
 
         // Calculate the number of points to collect (points that are inside the loaded regions)
-        int numPointsInRegion = loadedRegions == null ? getSize() : 0;
+        int numPointsToLoad = loadedRegions == null ? getSize() : 0;
         int indexToFind = 0;
 
         // Creating a map for tracking the last index checked in each of the RegionIDs
@@ -279,54 +279,52 @@ public class PathmakerPath
         // based on their draw order.
         final HashMap<Integer, Integer> loopIndexTracker = new HashMap<>();
 
+
+        // Get the highest index value to be used as target, mostly in case of gaps
+        int finalIndex = 0;
+
         // If loadedRegions is null then return the full list of points in draw order regardless of region
         if(loadedRegions == null)
         {
             for (int regionId : pathPoints.keySet())
             {
                 loopIndexTracker.put(regionId, 0);
+
+                int numInRegion = pathPoints.get(regionId).size();
+                int lastRegionIndex = pathPoints.get(regionId).get(numInRegion - 1).getDrawIndex();
+                finalIndex = Math.max(lastRegionIndex, finalIndex);
             }
 
         }
         else
         {
-            for (Integer loadedRegion : loadedRegions)
-            {
-                if (pathPoints.containsKey(loadedRegion))
-                {
-                    loopIndexTracker.put(loadedRegion, 0);
-                }
-            }
-
             indexToFind = getSize();
 
-            for (int relevantRegionId : loopIndexTracker.keySet())
+            for (Integer loadedRegion : loadedRegions)
             {
-                numPointsInRegion += pathPoints.get(relevantRegionId).size();
+                // Skip if region isn't loaded
+                if (!pathPoints.containsKey(loadedRegion))
+                {continue;}
+
+                // Add regionID to loop tracker
+                loopIndexTracker.put(loadedRegion, 0);
+
+                // Get final draw index
+                int numInRegion = pathPoints.get(loadedRegion).size();
+                int lastRegionIndex = pathPoints.get(loadedRegion).get(numInRegion - 1).getDrawIndex();
+                finalIndex = Math.max(lastRegionIndex, finalIndex);
+
+                numPointsToLoad += numInRegion;
 
                 // Determine the starting index (may not be 0 if that tile is in an unloaded region)
-                for (PathPoint point : pathPoints.get(relevantRegionId))
-                {
-                    if(point.getDrawIndex() < indexToFind)
-                    {
-                        indexToFind = point.getDrawIndex();
-                    }
-                }
-            }
-        }
+                indexToFind = Math.min(pathPoints.get(loadedRegion).get(0).getDrawIndex(), indexToFind);
 
-        // Get the highest index value to be used as target, mostly in case of gaps
-        int finalIndex = 0;
-        for (int relevantRegionId : loopIndexTracker.keySet())
-        {
-            int numInRegion = pathPoints.get(relevantRegionId).size();
-            int lastRegionIndex = pathPoints.get(relevantRegionId).get(numInRegion - 1).getDrawIndex();
-            finalIndex = Math.max(lastRegionIndex, finalIndex);
+            }
         }
 
         // Iterate through the relevant list of points, collecting the points in the order of their draw index
         int lastSize = -1;
-        while(drawOrder.size() < numPointsInRegion)
+        while(drawOrder.size() < numPointsToLoad)
         {
             // If the next draw index cant be found, increase the index search gap
             if (lastSize == drawOrder.size())
@@ -336,7 +334,7 @@ public class PathmakerPath
                 // Break it if failed to find point within the scope
                 if (indexToFind > finalIndex)
                 {
-                    log.debug("Missing draw indices {}, out of: {}", numPointsInRegion- drawOrder.size(), numPointsInRegion);
+                    log.debug("Missing draw indices {}, out of: {}", numPointsToLoad- drawOrder.size(), numPointsToLoad);
                     break;
                 }
             }
