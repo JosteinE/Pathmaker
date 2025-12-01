@@ -38,7 +38,7 @@ public class PathmakerPluginPanel extends PluginPanel
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_TEXT_LENGTH = 7; // Based on ÆÆÆÆÆÆÆÆ
+    final int MAX_TEXT_LENGTH = 10; // Based on ÆÆÆÆÆÆÆÆÆ (9)
 
     static
     {
@@ -168,7 +168,7 @@ public class PathmakerPluginPanel extends PluginPanel
             {
                 if (activePath.getTextField().getText().length() > MAX_TEXT_LENGTH)
                 {
-                    e.consume();
+                    activePath.setText(activePath.getText().substring(0, MAX_TEXT_LENGTH));
                 }
             }
             @Override

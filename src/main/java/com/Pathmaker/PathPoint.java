@@ -49,8 +49,7 @@ public class PathPoint
         return z;
     }
 
-    @Nullable
-    void setLabel(String newLabel)
+    void setLabel(@Nullable String newLabel)
     {
         this.label = newLabel;
     }

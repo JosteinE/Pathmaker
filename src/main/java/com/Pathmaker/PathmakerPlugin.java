@@ -25,6 +25,7 @@ import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.chatbox.ChatboxPanelManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.events.ConfigChanged;
@@ -88,6 +89,9 @@ public class PathmakerPlugin extends Plugin
 
     @Inject
     public Gson gson;
+
+    @Inject
+    private ChatboxPanelManager chatboxPanelManager;
 
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)
@@ -188,13 +192,13 @@ public class PathmakerPlugin extends Plugin
         return pathPoints;
     }
 
-    @Subscribe
-    public void onConfigChanged(ConfigChanged event)
-    {
-        if (event.getGroup().equals(PathmakerConfig.CONFIG_GROUP))
-        {
-        }
-    }
+//    @Subscribe
+//    public void onConfigChanged(ConfigChanged event)
+//    {
+//        if (event.getGroup().equals(PathmakerConfig.CONFIG_GROUP))
+//        {
+//        }
+//    }
 
 //	@Subscribe
 //	public void onGameStateChanged(GameStateChanged gameStateChanged)
@@ -238,6 +242,7 @@ public class PathmakerPlugin extends Plugin
             // If tile is not previously marked, add the "add" option.
             if (pathPoint == null || !paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
             {
+                // Set the menu option text color to match the path or default
                 String target = paths.containsKey(getActivePathName()) ?
                         ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), paths.get(getActivePathName()).color) :
                         ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), config.pathColor());
@@ -260,6 +265,39 @@ public class PathmakerPlugin extends Plugin
                     if (paths.get(pathName).containsPoint(pathPoint))
                     {
                         String target = ColorUtil.prependColorTag(Text.removeTags(pathName), paths.get(pathName).color);
+
+                        if(pathName.equals(getActivePathName()))
+                        {
+                            if(pathPoint == paths.get(pathName).getPointAtDrawIndex(0))
+                            {
+                                client.getMenu().createMenuEntry(-1)
+                                        .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop" )
+                                        .setTarget(target)
+                                        .setType(MenuAction.RUNELITE)
+                                        .onClick(e ->
+                                        {
+                                            paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
+                                            rebuildPanel();
+                                        });
+                            }
+
+                            // Add label rename option
+                            client.getMenu().createMenuEntry(-1)
+                                    .setOption("Point label")
+                                    .setTarget(target)
+                                    .setType(MenuAction.RUNELITE)
+                                    .onClick(e ->
+                                    {
+                                        String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+
+                                        chatboxPanelManager.openTextInput("Path point label")
+                                                .value(currentLabel)
+                                                .onDone(pathPoint::setLabel)
+                                                .build();
+                                        rebuildPanel();
+                                    });
+                        }
+
                         client.getMenu().createMenuEntry(-1)
                                 .setOption("Remove from path")
                                 .setTarget(target)

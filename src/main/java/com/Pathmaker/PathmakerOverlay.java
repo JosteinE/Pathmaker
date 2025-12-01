@@ -221,11 +221,46 @@ public class PathmakerOverlay extends Overlay
                 }
 
                 // Draw label
-                if (config.drawPathPointLabel())
+                if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
                 {
-                    for (PathPoint point : drawOrder)
+                    Color color = config.labelMatchPathColor() ? path.color : config.pathPointLabelColor();
+
+                    switch (config.pathPointLabelModeSelect())
                     {
-                        addLabel(graphics, wv, point, 0, "p" + (point.getDrawIndex()+1), config.hoveredTileLabelColor());
+                        case INDEX:
+                        {
+                            for (PathPoint point : drawOrder)
+                            {
+                                addLabel(graphics, wv, point, config.labelZOffset(), "p" + (point.getDrawIndex()+1), color);
+                            }
+                            break;
+                        }
+                        case LABEL:
+                        {
+                            for (PathPoint point : drawOrder)
+                            {
+                                if(point.getLabel() != null && !point.getLabel().isEmpty())
+                                {
+                                    addLabel(graphics, wv, point, config.labelZOffset(), point.getLabel(), color);
+                                }
+                            }
+                            break;
+                        }
+                        case BOTH:
+                        {
+                            for (PathPoint point : drawOrder)
+                            {
+                                String label = "p" + (point.getDrawIndex() + 1);
+                                if(point.getLabel() != null && !point.getLabel().isEmpty())
+                                {
+                                    label += ", " + point.getLabel();
+                                }
+                                addLabel(graphics, wv, point, config.labelZOffset() * 10, label, color);
+                            }
+                            break;
+                        }
+                        default:
+                            break;
                     }
                 }
             }
@@ -317,20 +352,41 @@ public class PathmakerOverlay extends Overlay
         String returnString = "";
         switch (config.hoveredTileLabelModeSelect())
         {
-            case TILE_REGION: returnString = getTileRegionString(tile); break;
-            case TILE_LOCATION: returnString = getTileLocationString(tile); break;
+            case REGION: returnString = getTileRegionString(tile); break;
+            case LOCATION: returnString = getTileLocationString(tile); break;
+            case OFFSET: returnString = getTileOffsetString(hoveredTile, config.hoveredTileLineOriginSelect() ==
+                    PathmakerConfig.hoveredTileLineOrigin.PATH_END ?
+                    getLastPointInActivePath() : startPoint);
+                break;
             case DISTANCE: returnString = getTileDistanceString(startPoint, hoveredTile); break;
             case ALL: returnString = "R: " + getTileRegionString(tile) +
                     ", L: " + getTileLocationString(tile) +
+                    ", O: "  + getTileOffsetString(hoveredTile, config.hoveredTileLineOriginSelect() ==
+                                    PathmakerConfig.hoveredTileLineOrigin.PATH_END ?
+                                    getLastPointInActivePath() : startPoint) +
                     ", D: " + getTileDistanceString(startPoint, hoveredTile); break;
             default: break;
         }
+
         return returnString;
+    }
+
+    LocalPoint getLastPointInActivePath()
+    {
+        PathmakerPath activePath = plugin.getStoredPaths().get(plugin.getActivePathName());
+        PathPoint lastPoint = activePath.getPointAtDrawIndex(activePath.getSize() - 1);
+        WorldPoint wp = WorldPoint.fromRegion(lastPoint.getRegionId(),lastPoint.getX(), lastPoint.getY(), lastPoint.getZ());
+        return LocalPoint.fromWorld(client.getTopLevelWorldView(), wp);
     }
 
     String getTileLocationString(Tile tile)
     {
         return "( " + tile.getWorldLocation().getX() + ", " + tile.getWorldLocation().getY() + " )";
+    }
+
+    String getTileOffsetString(LocalPoint start, LocalPoint end)
+    {
+        return "( " + (int) ((start.getX() - end.getX()) / tileSize) + ", " + (int) ((start.getY() - end.getY()) / tileSize) + " )";
     }
 
     String getTileDistanceString(LocalPoint from,  LocalPoint to)

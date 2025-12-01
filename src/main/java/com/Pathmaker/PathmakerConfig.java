@@ -34,7 +34,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean highlightPlayerTile()
     {
-        return true;
+        return false;
     }
 
     @Alpha
@@ -114,7 +114,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean highlightHoveredTile()
     {
-        return true;
+        return false;
     }
 
     @Alpha
@@ -159,8 +159,9 @@ public interface PathmakerConfig extends Config
     enum hoveredTileLabelMode
     {
         NONE,
-        TILE_REGION,
-        TILE_LOCATION,
+        REGION,
+        LOCATION,
+        OFFSET,
         DISTANCE,
         ALL,
     }
@@ -276,7 +277,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean drawPathPoints()
     {
-        return true;
+        return false;
     }
 
     @ConfigItem(
@@ -308,7 +309,7 @@ public interface PathmakerConfig extends Config
     @Alpha
     @ConfigItem(
             keyName = "pathLinePointColor",
-            name = "Line point tile color",
+            name = "Path point tile color",
             description = "Configures the path line point tile color.",
             position = 6,
             section = path
@@ -321,7 +322,7 @@ public interface PathmakerConfig extends Config
     @Alpha
     @ConfigItem(
             keyName = "pathLinePointFillColor",
-            name = "Line point tile fill color",
+            name = "Path point tile fill color",
             description = "Configures the path line point tile fill color.",
             position = 7,
             section = path
@@ -333,7 +334,7 @@ public interface PathmakerConfig extends Config
 
     @ConfigItem(
             keyName = "pathLinePointWidth",
-            name = "Line point border width",
+            name = "Path point border width",
             description = "Width of the path line tile border.",
             position = 8,
             section = path
@@ -344,14 +345,59 @@ public interface PathmakerConfig extends Config
         return 2;
     }
 
+    enum pathPointLabelMode
+    {
+        NONE,
+        INDEX,
+        LABEL,
+        BOTH,
+    }
     @ConfigItem(
-            keyName = "drawPathPointLabel",
-            name = "Draw point labels",
-            description = "Add point index labels.",
+            keyName = "pathPointLabelModeSelect",
+            name = "Point label",
+            description = "Add point labels.",
             position = 9,
             section = path
     )
-    default boolean drawPathPointLabel()
+    default pathPointLabelMode pathPointLabelModeSelect()
+    {
+        return pathPointLabelMode.BOTH;
+    }
+
+    @ConfigItem(
+            keyName = "labelZOffset",
+            name = "Label height offset",
+            description = "Set label height offset from tile.",
+            position = 10,
+            section = path
+    )
+    @Range(max = 10)
+    default int labelZOffset()
+    {
+        return 0;
+    }
+
+    @Alpha
+    @ConfigItem(
+            keyName = "pathPointLabelColor",
+            name = "Path point label color",
+            description = "Configures default the color of point labels.",
+            position = 11,
+            section = path
+    )
+    default Color pathPointLabelColor()
+    {
+        return Color.YELLOW;
+    }
+
+    @ConfigItem(
+            keyName = "labelMatchPathColor",
+            name = "label match path color",
+            description = "Set labels to match path color.",
+            position = 12,
+            section = path
+    )
+    default boolean labelMatchPathColor()
     {
         return false;
     }
@@ -431,7 +477,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean infoBoxEnabled()
     {
-        return true;
+        return false;
     }
 
     @ConfigItem(
@@ -443,6 +489,6 @@ public interface PathmakerConfig extends Config
     )
     default boolean infoBoxSpeed()
     {
-        return false;
+        return true;
     }
 }

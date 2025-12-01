@@ -4,6 +4,8 @@ package com.Pathmaker;
 import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -14,6 +16,7 @@ import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.ImageIcon;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 
@@ -45,6 +48,8 @@ public class PathPanel extends JPanel
     private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
     private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
+    private final int MAX_LABEL_LENGTH = 15;
+
     static
     {
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
@@ -66,8 +71,8 @@ public class PathPanel extends JPanel
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         label.setText(pathLabel);
-        label.setForeground(path.color);
-        label.setPreferredSize(new Dimension(130, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
+        label.setForeground(Color.WHITE); //path.color);
+        label.setPreferredSize(new Dimension(140, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
         expandToggle = new JButton(path.panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
@@ -168,15 +173,44 @@ public class PathPanel extends JPanel
             pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
             //
-            JLabel pointLabel = new JLabel();
-            pointLabel.setText("Point: ");
-            pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            pointLabel.setPreferredSize(new Dimension(60, 20));
-            pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            FlatTextField pointLabel = new FlatTextField();
+            String label = "Point";
+            if(point.getLabel() != null && !point.getLabel().isEmpty())
+            {
+                label = point.getLabel();
+            }
+            pointLabel.setText(label);
+            pointLabel.setForeground(Color.WHITE);
+            pointLabel.setBackground(Color.DARK_GRAY);
+            pointLabel.setPreferredSize(new Dimension(150, 20));
+            pointLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            pointLabel.addKeyListener(new KeyListener()
+            {
+                @Override
+                public void keyTyped(KeyEvent e)
+                {
+                    if (pointLabel.getTextField().getText().length() > MAX_LABEL_LENGTH)
+                    {
+                        pointLabel.setText(pointLabel.getText().substring(0, MAX_LABEL_LENGTH));
+                    }
+                    point.setLabel(pointLabel.getText() + (Character.isLetter(e.getKeyChar()) ? e.getKeyChar() : ""));
+                }
+                @Override
+                public void keyPressed(KeyEvent e){}
+                @Override
+                public void keyReleased(KeyEvent e){}
+            });
             pointContainer.add(pointLabel, BorderLayout.WEST);
 
+//            JLabel pointLabel = new JLabel();
+//            pointLabel.setText("Point: ");
+//            pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
+//            pointLabel.setPreferredSize(new Dimension(60, 20));
+//            pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+//            pointContainer.add(pointLabel, BorderLayout.WEST);
+
             // Add spinner box for optionally assigning a new point index.
-            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
+            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, -1));
             indexSpinner.setToolTipText("point index");
             indexSpinner.addChangeListener(ce ->
             {
