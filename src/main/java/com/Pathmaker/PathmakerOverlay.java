@@ -196,26 +196,37 @@ public class PathmakerOverlay extends Overlay
                 // Draw both line and points
                 if (config.drawPath() && pathSize > 1 && config.drawPathPoints()) {
                     LocalPoint lastLocalP = null;
-                    for (PathPoint point : drawOrder)
+                    for (int i = 0; i < drawOrder.size(); i++)
                     {
+                        PathPoint point = drawOrder.get(i);
+
                         LocalPoint localP = pathPointToLocal(wv, point);
                         highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
+
+                        // Only draw line if the previous point had a draw index that was directly behind this.
+                        if (i > 0 && drawOrder.get(i-1).getDrawIndex() == point.getDrawIndex() -1)
+                            drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
+
                         lastLocalP = localP;
                     }
-
-                    // Only draw line
-                } else if (config.drawPath() && pathSize > 1 ) {
+                } // Only draw line
+                else if (config.drawPath() && pathSize > 1 )
+                {
                     LocalPoint lastLocalP = null;
-                    for (PathPoint point : drawOrder) {
+                    for (int i = 0; i < drawOrder.size(); i++)
+                    {
+                        PathPoint point = drawOrder.get(i);
                         LocalPoint localP = pathPointToLocal(wv, point);
-                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
+
+                        if (i > 0 && drawOrder.get(i-1).getDrawIndex() == point.getDrawIndex() -1)
+                            drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
                         lastLocalP = localP;
                     }
-
-                    // Only Draw points
-                } else if (config.drawPathPoints()) {
-                    for (PathPoint point : drawOrder) {
+                }  // Only Draw points
+                else if (config.drawPathPoints())
+                {
+                    for (PathPoint point : drawOrder)
+                    {
                         highlightTile(graphics, wv, point, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                     }
                 }
