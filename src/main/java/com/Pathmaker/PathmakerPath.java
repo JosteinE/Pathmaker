@@ -106,53 +106,90 @@ public class PathmakerPath
         if (oldIndex == newIndex){return;}
 
         boolean newGreater = newIndex > oldIndex;
-        int startIndex = newGreater ? (oldIndex + 1) : newIndex;
-        int targetIndex = newGreater ? newIndex : (oldIndex - 1);
-        int otherIndexMoveDir = newGreater ? -1 : 1;
+
+        int indexMoveDir = newGreater ? -1 : 1;
+        int startIndex = newGreater ? oldIndex + 1 : newIndex;
+        int targetIndex = newGreater ? newIndex + 1 : oldIndex;
+
+        // !newGreater
+        // 2 -> 0
+        // start = newIndex
+        // target = oldIndex
+        // i < target
+        // idx += 1
+
+        // newGreater
+        // 0 -> 2
+        // start = oldIndex + 1
+        // target = newIndex + 1
+        // i < target
+        // idx += -1
 
 // An easier look at what's going on in the uncommented for loop below
-//        if(newIndex > oldIndex)
+//        if(newGreater)
 //        {
 //            // 3p
-//            // 1 -> 3
+//            // 0 -> 2
+//
+//            idx 1 -> 0
+//
 //            for(int i = oldIndex + 1; i <= newIndex; i++)
 //            {
-//                drawOrder.get(newIndex).setIndex(i - 1);
+//                getPointAtDrawIndex(i).setDrawIndex(i - 1);
 //            }
-//            point.setIndex(newIndex);
-//        }
-//        else if (newIndex < oldIndex)
-//        {
-//            // 3p
-//            // 3 -> 0
-//            for(int i = newIndex; i <= oldIndex - 1; i++)
-//            {
-//                drawOrder.get(newIndex).setIndex(i + 1);
-//            }
-//            point.setIndex(newIndex);
 //        }
 //        else
 //        {
-//            return;
+//            // 3p
+//            // 2 -> 0
+//            for(int i = oldIndex - 1; i >= newIndex; i--)
+//            {
+//                getPointAtDrawIndex(i).setDrawIndex(i + 1);
+//            }
 //        }
 
+        ArrayList<PathPoint> pointsToMove = new ArrayList<>();
         ArrayList<Integer> regionsToReconstruct = new ArrayList<>();
+
         regionsToReconstruct.add(point.getRegionId());
 
-        // move affected indices up/down depending on if the new specified index is greater or less than the old one.
-        for (int i = startIndex; i <= targetIndex; i++)
+        for(int i = startIndex; i < targetIndex; i ++)
         {
-            PathPoint drawPoint = getPointAtDrawIndex(i);
-            //log.debug("Index {} was assigned index: {}", drawPoint.getDrawIndex(), i+otherIndexMoveDir);
-            drawPoint.setDrawIndex(i + otherIndexMoveDir);
+            pointsToMove.add(getPointAtDrawIndex(i));
+        }
 
-            if(!regionsToReconstruct.contains(drawPoint.getRegionId()))
+        // Changing draw index above is total bait, as it confuses getPointAtDrawIndex
+        // So doing it here.
+        for(int i = 0; i < pointsToMove.size(); i ++)
+        {
+            pointsToMove.get(i).setDrawIndex(pointsToMove.get(i).getDrawIndex() + indexMoveDir); // int indexMoveDir = newGreater ? -1 : 1;
+
+            if(!regionsToReconstruct.contains(pointsToMove.get(i).getRegionId()))
             {
-                regionsToReconstruct.add(drawPoint.getRegionId());
+                regionsToReconstruct.add(pointsToMove.get(i).getRegionId());
             }
         }
 
-        // Move the chosen point to the desired index
+        point.setDrawIndex(newIndex);
+
+        // 6 -> 0
+        // i = 0
+        // e = 5 (oldIndex - 1)
+
+        // move affected indices up/down depending on if the new specified index is greater or less than the old one.
+//        for (int i = startIndex; i <= targetIndex; i++)
+//        {
+//            PathPoint drawPoint = getPointAtDrawIndex(i);
+//            //log.debug("Index {} was assigned index: {}", drawPoint.getDrawIndex(), i+otherIndexMoveDir);
+//            drawPoint.setDrawIndex(i + indexMoveDir);
+//
+//            if(!regionsToReconstruct.contains(drawPoint.getRegionId()))
+//            {
+//                regionsToReconstruct.add(drawPoint.getRegionId());
+//            }
+//        }
+
+        // Finally move the chosen point to the desired index
         //log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
         point.setDrawIndex(newIndex);
 
@@ -225,6 +262,29 @@ public class PathmakerPath
 
         log.debug("Could not find point at index: {}", index);
         return null;
+    }
+
+    public ArrayList<PathPoint> getReversedDrawOrder()
+    {
+        ArrayList<PathPoint> reverseDrawOrder = new ArrayList<>(getDrawOrder(null));
+        Collections.reverse(reverseDrawOrder);
+        return reverseDrawOrder;
+    }
+
+    public ArrayList<PathPoint> reverseDrawOrder()
+    {
+        ArrayList<PathPoint> reverseDrawOrder = getDrawOrder(null);
+        for(int i = 0; i < getSize(); i++)
+        {
+            reverseDrawOrder.get(i).setDrawIndex(getSize() - 1 - i);
+        }
+
+        for (int regionId : pathPoints.keySet())
+        {
+            Collections.reverse(pathPoints.get(regionId));
+        }
+
+        return reverseDrawOrder;
     }
 
     // Return the size of all stored points (across all relevant regions) for this path

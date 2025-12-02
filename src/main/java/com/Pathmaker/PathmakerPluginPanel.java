@@ -2,6 +2,7 @@ package com.Pathmaker;
 
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.KeyCode;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
@@ -12,9 +13,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -22,6 +20,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.AbstractDocument;
 
 import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 
@@ -158,24 +157,11 @@ public class PathmakerPluginPanel extends PluginPanel
         northPanel.add(activePathLabel, BorderLayout.WEST);
 
         activePath = new FlatTextField();
+        ((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_TEXT_LENGTH));
         activePath.setText("unnamed");
         activePath.setForeground(Color.WHITE);
         activePath.setBackground(Color.DARK_GRAY);
-        activePath.addKeyListener(new KeyListener()
-        {
-            @Override
-            public void keyTyped(KeyEvent e)
-            {
-                if (activePath.getTextField().getText().length() > MAX_TEXT_LENGTH)
-                {
-                    activePath.setText(activePath.getText().substring(0, MAX_TEXT_LENGTH));
-                }
-            }
-            @Override
-            public void keyPressed(KeyEvent e){}
-            @Override
-            public void keyReleased(KeyEvent e){}
-        });
+
         northPanel.add(activePath);
 
         // Add panel to client panel

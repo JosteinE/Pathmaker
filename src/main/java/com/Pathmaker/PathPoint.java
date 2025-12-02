@@ -12,7 +12,6 @@ public class PathPoint
     private int regionY;
     private int z;
 
-    @Nullable
     private String label;
 
     PathPoint(int regID, int regX, int regY, int plane)
@@ -49,7 +48,7 @@ public class PathPoint
         return z;
     }
 
-    void setLabel(@Nullable String newLabel)
+    void setLabel(String newLabel)
     {
         this.label = newLabel;
     }

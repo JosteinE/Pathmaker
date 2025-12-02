@@ -50,6 +50,8 @@ public class PathmakerPlugin extends Plugin
     private static final String ICON_FILE = "panel_icon.png";
     private static final String CONFIG_KEY = "paths";
 
+    public final int  MAX_LABEL_LENGTH = 15;
+
     private final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
@@ -168,7 +170,8 @@ public class PathmakerPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick gameTick)
     {
-        panelOverlay.calculateCurrentSpeed();
+        if(config.infoBoxEnabled() && config.infoBoxSpeed())
+            panelOverlay.calculateCurrentSpeed();
     }
 
     // Get marked tiles within the rendered regions
@@ -262,48 +265,62 @@ public class PathmakerPlugin extends Plugin
             {
                 for (String pathName : paths.keySet())
                 {
-                    if (paths.get(pathName).containsPoint(pathPoint))
+                    if (!paths.get(pathName).containsPoint(pathPoint))
+                    {continue;}
+
+                    // Set menu entry color
+                    String target = ColorUtil.prependColorTag(Text.removeTags(pathName), paths.get(pathName).color);
+
+                    // Only configure add loop/unloop/label if point belongs to the active group
+                    if (pathName.equals(getActivePathName()))
                     {
-                        String target = ColorUtil.prependColorTag(Text.removeTags(pathName), paths.get(pathName).color);
-
-                        if(pathName.equals(getActivePathName()))
-                        {
-                            if(pathPoint == paths.get(pathName).getPointAtDrawIndex(0))
-                            {
-                                client.getMenu().createMenuEntry(-1)
-                                        .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop" )
-                                        .setTarget(target)
-                                        .setType(MenuAction.RUNELITE)
-                                        .onClick(e ->
-                                        {
-                                            paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
-                                            rebuildPanel();
-                                        });
-                            }
-
-                            // Add label rename option
+                        // Only allow loop/unloop with points connected to the last point
+                        if ((pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2 && paths.get(pathName).loopPath) ||
+                                pathPoint.getDrawIndex() == 0) {
                             client.getMenu().createMenuEntry(-1)
-                                    .setOption("Point label")
+                                    .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop")
                                     .setTarget(target)
                                     .setType(MenuAction.RUNELITE)
                                     .onClick(e ->
                                     {
-                                        String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+                                        // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+                                        if (pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2)
+                                        {
+                                            paths.get(pathName).setNewIndex(paths.get(pathName).getPointAtDrawIndex(paths.get(pathName).getSize() - 1), 0);
+                                            paths.get(pathName).reverseDrawOrder();
+                                        }
 
-                                        chatboxPanelManager.openTextInput("Path point label")
-                                                .value(currentLabel)
-                                                .onDone(pathPoint::setLabel)
-                                                .build();
+                                        paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
                                         rebuildPanel();
                                     });
                         }
 
+                        // Add label rename option
                         client.getMenu().createMenuEntry(-1)
-                                .setOption("Remove from path")
+                                .setOption("Point label")
                                 .setTarget(target)
                                 .setType(MenuAction.RUNELITE)
-                                .onClick(e -> removePoint(pathName, pathPoint));
+                                .onClick(e ->
+                                {
+                                    String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+
+                                    chatboxPanelManager.openTextInput("Path point label")
+                                            .value(currentLabel)
+                                            .onDone(label ->
+                                            {
+                                                pathPoint.setLabel(label.substring(0, MAX_LABEL_LENGTH)); // From
+                                                rebuildPanel();
+                                            })
+                                            .build();
+                                });
                     }
+
+                    // Add remove option regardless of belonging path
+                    client.getMenu().createMenuEntry(-1)
+                            .setOption("Remove from path")
+                            .setTarget(target)
+                            .setType(MenuAction.RUNELITE)
+                            .onClick(e -> removePoint(pathName, pathPoint));
                 }
             }
         }

@@ -4,8 +4,6 @@ package com.Pathmaker;
 import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -15,11 +13,17 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.ImageIcon;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.AbstractDocument;
+
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 
+@Slf4j
 public class PathPanel extends JPanel
 {
     private static final Border NAME_BOTTOM_BORDER = new CompoundBorder(
@@ -48,10 +52,11 @@ public class PathPanel extends JPanel
     private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
     private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
-    private final int MAX_LABEL_LENGTH = 15;
+    //private final int MAX_LABEL_LENGTH = 15;
 
     static
     {
+        final int MAX_LABEL_LENGTH = 15;
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
         COLLAPSE_ICON = new ImageIcon(upArrowImage);
         EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
@@ -166,6 +171,7 @@ public class PathPanel extends JPanel
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
         int pathSize = path.getSize();
+        int maxLabelLength = plugin.MAX_LABEL_LENGTH;
         for (PathPoint point : path.getDrawOrder(null))
         {
             JPanel pointContainer = new JPanel(new BorderLayout());
@@ -174,40 +180,22 @@ public class PathPanel extends JPanel
 
             //
             FlatTextField pointLabel = new FlatTextField();
-            String label = "Point";
-            if(point.getLabel() != null && !point.getLabel().isEmpty())
-            {
-                label = point.getLabel();
-            }
+            String label = "";// = "Point";
+            label = (point.getLabel() != null && !point.getLabel().isEmpty()) ? point.getLabel() : label;
             pointLabel.setText(label);
             pointLabel.setForeground(Color.WHITE);
             pointLabel.setBackground(Color.DARK_GRAY);
             pointLabel.setPreferredSize(new Dimension(150, 20));
             pointLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            pointLabel.addKeyListener(new KeyListener()
+            ((AbstractDocument) pointLabel.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(maxLabelLength));
+            pointLabel.getDocument().addDocumentListener(new DocumentListener()
             {
-                @Override
-                public void keyTyped(KeyEvent e)
-                {
-                    if (pointLabel.getTextField().getText().length() > MAX_LABEL_LENGTH)
-                    {
-                        pointLabel.setText(pointLabel.getText().substring(0, MAX_LABEL_LENGTH));
-                    }
-                    point.setLabel(pointLabel.getText() + (Character.isLetter(e.getKeyChar()) ? e.getKeyChar() : ""));
-                }
-                @Override
-                public void keyPressed(KeyEvent e){}
-                @Override
-                public void keyReleased(KeyEvent e){}
+                public void insertUpdate(DocumentEvent e) {point.setLabel(pointLabel.getText());}
+                public void removeUpdate(DocumentEvent e) {point.setLabel(pointLabel.getText());}
+                public void changedUpdate(DocumentEvent e) {}
             });
-            pointContainer.add(pointLabel, BorderLayout.WEST);
 
-//            JLabel pointLabel = new JLabel();
-//            pointLabel.setText("Point: ");
-//            pointLabel.setHorizontalAlignment(SwingConstants.CENTER);
-//            pointLabel.setPreferredSize(new Dimension(60, 20));
-//            pointLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-//            pointContainer.add(pointLabel, BorderLayout.WEST);
+            pointContainer.add(pointLabel, BorderLayout.WEST);
 
             // Add spinner box for optionally assigning a new point index.
             JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, -1));
