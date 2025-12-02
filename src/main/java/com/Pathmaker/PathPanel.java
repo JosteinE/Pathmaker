@@ -105,7 +105,7 @@ public class PathPanel extends JPanel
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
-                RuneliteColorPicker colorPicker = getColorPicker(path.color == null ? plugin.getDefaultPathColor() : path.color);
+                RuneliteColorPicker colorPicker = getColorPicker(path.color == null ? plugin.getDefaultPathColor() : path.color, colorPickerButton);
                 colorPicker.setOnColorChange(newColor ->
                 {
                     path.color = newColor;
@@ -256,14 +256,14 @@ public class PathPanel extends JPanel
         return label;
     }
 
-    private RuneliteColorPicker getColorPicker(Color colour)
+    private RuneliteColorPicker getColorPicker(Color colour, Component relativeTo)
     {
         RuneliteColorPicker colorPicker = plugin.getColorPickerManager().create(
                 SwingUtilities.windowForComponent(this),
                 colour,
                 label.getText() + " path color",
                 false);
-        colorPicker.setLocationRelativeTo(this);
+        colorPicker.setLocationRelativeTo(relativeTo);
         return colorPicker;
     }
 }

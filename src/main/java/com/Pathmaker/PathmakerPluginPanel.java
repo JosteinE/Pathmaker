@@ -1,18 +1,19 @@
 package com.Pathmaker;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.KeyCode;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
 import net.runelite.client.util.ImageUtil;
 import com.google.gson.reflect.TypeToken;
-
-import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.datatransfer.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -21,8 +22,6 @@ import java.util.HashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.AbstractDocument;
-
-import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 
 @Slf4j
 public class PathmakerPluginPanel extends PluginPanel
@@ -43,6 +42,21 @@ public class PathmakerPluginPanel extends PluginPanel
     {
         IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
         EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
+    }
+
+    // Making a pair inner class for import/export as path names aren't stored in pathmakerPaths
+    public static class Pair<T, E>
+    {
+        @Getter
+        private final T key;
+        @Getter
+        private final E value;
+
+        Pair(T key, E value)
+        {
+            this.key = key;
+            this.value = value;
+        }
     }
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
@@ -76,7 +90,11 @@ public class PathmakerPluginPanel extends PluginPanel
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
-                StringSelection json = new StringSelection(plugin.gson.toJson(plugin.getStoredPaths().get(activePath.getText())));
+                if(!plugin.getStoredPaths().containsKey(activePath.getText())) {return;}
+
+                Pair<String, PathmakerPath> exportPath = new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
+
+                StringSelection json = new StringSelection(plugin.gson.toJson(exportPath));
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                 clipboard.setContents(json, null);
             }
@@ -91,32 +109,71 @@ public class PathmakerPluginPanel extends PluginPanel
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
-                String json;
-                try
-                {
-                    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-
-                    // Check if the clipboard contains data in String format
-                    if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
-                        // Retrieve the data as a String
-                        json = (String) clipboard.getData(DataFlavor.stringFlavor);
-                    } else {
-                        log.debug("Clipboard does not contain plain text.");
-                        json = null;
-                    }
-                }
-                catch (UnsupportedFlavorException | IOException e)
-                {
-                    log.debug("Error reading from clipboard: " + e.getMessage());
-                    json = null;
+                String json = "";
+                try {
+                    json = (String) getToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+                } catch (UnsupportedFlavorException | IllegalStateException | NullPointerException | IOException ex) {
+                    log.debug("Clipboard is unavailable or has invalid content");
                 }
 
-                PathmakerPath loadedPath = plugin.gson.fromJson(json, new TypeToken<PathmakerPath>(){}.getType());
+                if (json.isEmpty()) {return;}
+
+                JsonElement element;
+                try { element = new JsonParser().parse(json);}
+                catch (JsonParseException e)
+                {
+                    log.debug("String was not a valid JSON: {}", e.getMessage());
+                    return;
+                }
+
+                // Pair<String, PathmakerPath> MUST be a JSON object
+                // Returns if JSON is valid but not suitable for Pair<...>
+                if (!element.isJsonObject()) {return;}
+
+                log.debug("STEP 4");
+                Pair<String, PathmakerPath> loadedPath;
+                try{loadedPath = plugin.gson.fromJson(element, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());}
+                catch (JsonSyntaxException ex) {return;} // JSON is an object, but not in the structure your Pair requires
+
+
+                //Pair<String, PathmakerPath> loadedPath = plugin.gson.fromJson(json, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());
 
                 if (loadedPath != null)
                 {
-                    String pathName = JOptionPane.showInputDialog("Path name");
-                    plugin.getStoredPaths().put(pathName, loadedPath);
+                    JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
+                    centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
+                    String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
+
+                    // Return if the window was cancelled or closed
+                    if (pathName == null)
+                    {
+                        return;
+                    }
+
+                    // Show warning if imported path exists
+                    if(plugin.getStoredPaths().containsKey(pathName))
+                    {
+                        JLabel centeredWarningText = new JLabel("The path name " + pathName + " already exist.", JLabel.CENTER);
+                        JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
+
+                        centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
+                        centeredReplaceText.setHorizontalTextPosition(SwingConstants.CENTER);
+
+                        JPanel centeredTextFrame = new JPanel(new GridLayout(0, 1));
+                        centeredTextFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
+                        centeredTextFrame.add(centeredWarningText);
+                        centeredTextFrame.add(centeredReplaceText);
+
+                        int confirm = JOptionPane.showConfirmDialog(null,
+                                centeredTextFrame,"Warning", JOptionPane.YES_NO_OPTION);
+
+                        if (confirm == JOptionPane.NO_OPTION || confirm == JOptionPane.CLOSED_OPTION)
+                        {
+                            return;
+                        }
+                    }
+
+                    plugin.getStoredPaths().put(pathName, loadedPath.getValue());
                     plugin.rebuildPanel();
                 }
             }
