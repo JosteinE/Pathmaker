@@ -200,7 +200,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean drawHoverLine()
     {
-        return false;
+        return true;
     }
 
     enum hoveredTileLineOrigin
