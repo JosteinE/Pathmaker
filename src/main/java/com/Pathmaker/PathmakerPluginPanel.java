@@ -112,7 +112,7 @@ public class PathmakerPluginPanel extends PluginPanel
                 String json = "";
                 try {
                     json = (String) getToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
-                } catch (UnsupportedFlavorException | IllegalStateException | NullPointerException | IOException ex) {
+                } catch (IllegalArgumentException | UnsupportedFlavorException | IllegalStateException | NullPointerException | IOException ex) {
                     log.debug("Clipboard is unavailable or has invalid content");
                 }
 
@@ -130,13 +130,13 @@ public class PathmakerPluginPanel extends PluginPanel
                 // Returns if JSON is valid but not suitable for Pair<...>
                 if (!element.isJsonObject()) {return;}
 
-                log.debug("STEP 4");
                 Pair<String, PathmakerPath> loadedPath;
                 try{loadedPath = plugin.gson.fromJson(element, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());}
-                catch (JsonSyntaxException ex) {return;} // JSON is an object, but not in the structure your Pair requires
-
-
-                //Pair<String, PathmakerPath> loadedPath = plugin.gson.fromJson(json, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());
+                catch (JsonSyntaxException e)
+                {
+                    log.debug("JSON is an object, but not in the correct Pair structure: {}", e.getMessage());
+                    return;
+                }
 
                 if (loadedPath != null)
                 {
@@ -172,9 +172,9 @@ public class PathmakerPluginPanel extends PluginPanel
                             return;
                         }
                     }
-
                     plugin.getStoredPaths().put(pathName, loadedPath.getValue());
                     plugin.rebuildPanel();
+                    activePath.setText(pathName);
                 }
             }
         });
