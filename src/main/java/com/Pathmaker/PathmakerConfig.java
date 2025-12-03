@@ -339,10 +339,23 @@ public interface PathmakerConfig extends Config
             position = 8,
             section = path
     )
-    @Range(max = 10)
+    @Range(min = 0, max = 10)
     default int pathLinePointWidth()
     {
         return 2;
+    }
+
+    @ConfigItem(
+            keyName = "pathZOffset",
+            name = "Path draw height",
+            description = "Configure the default Z offset for paths.",
+            position = 9,
+            section = path
+    )
+    @Range(min = 0, max = 10)
+    default int pathZOffset()
+    {
+        return 0;
     }
 
     enum pathPointLabelMode
@@ -356,7 +369,7 @@ public interface PathmakerConfig extends Config
             keyName = "pathPointLabelModeSelect",
             name = "Point label",
             description = "Add point labels.",
-            position = 9,
+            position = 10,
             section = path
     )
     default pathPointLabelMode pathPointLabelModeSelect()
@@ -368,7 +381,7 @@ public interface PathmakerConfig extends Config
             keyName = "labelZOffset",
             name = "Label height offset",
             description = "Set label height offset from tile.",
-            position = 10,
+            position = 11,
             section = path
     )
     @Range(max = 10)
@@ -382,7 +395,7 @@ public interface PathmakerConfig extends Config
             keyName = "pathPointLabelColor",
             name = "Path point label color",
             description = "Configures default the color of point labels.",
-            position = 11,
+            position = 12,
             section = path
     )
     default Color pathPointLabelColor()
@@ -394,7 +407,7 @@ public interface PathmakerConfig extends Config
             keyName = "labelMatchPathColor",
             name = "label match path color",
             description = "Set labels to match path color.",
-            position = 12,
+            position = 13,
             section = path
     )
     default boolean labelMatchPathColor()

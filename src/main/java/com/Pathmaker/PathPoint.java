@@ -68,4 +68,12 @@ public class PathPoint
     {
         return pathDrawIndex;
     }
+
+    void updateRegionLocation(int region, int x, int y, int z)
+    {
+        this.regionId = region;
+        this.regionX = x;
+        this.regionY = y;
+        this.z = z;
+    }
 }

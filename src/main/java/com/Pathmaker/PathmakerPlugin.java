@@ -8,6 +8,7 @@ import javax.swing.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -219,7 +220,8 @@ public class PathmakerPlugin extends Plugin
         MenuAction menuAction = event.getMenuEntry().getType();
         hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
 
-        if (hotKeyPressed && (menuAction == MenuAction.WALK || menuAction == MenuAction.SET_HEADING))
+        if (hotKeyPressed && (menuAction == MenuAction.WALK || menuAction == MenuAction.SET_HEADING ||
+                menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT))
         {
             // Fetch game world
             int worldId = event.getMenuEntry().getWorldViewId();
@@ -234,34 +236,73 @@ public class PathmakerPlugin extends Plugin
                 return;
             }
 
-            // Fetch path points for region
-            final WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
-            PathPoint pathPoint = getPathPointAtRegionTile(
-                    worldPoint.getRegionID(),
-                    worldPoint.getRegionX(),
-                    worldPoint.getRegionY(),
-                    worldPoint.getPlane());
+            // Get the tile under cursor
+            WorldPoint actorWp = null;// = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
+            PathPoint pathPoint;
 
-            // If tile is not previously marked, add the "add" option.
-            if (pathPoint == null || !paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
+
+
+            // Attempt to get an actor (npc/entity) under the cursor
+            //final PathPoint actorPoint;
+            if(event.getMenuEntry().getActor() != null)
             {
-                // Set the menu option text color to match the path or default
-                String target = paths.containsKey(getActivePathName()) ?
-                        ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), paths.get(getActivePathName()).color) :
-                        ColorUtil.prependColorTag(Text.removeTags(getActivePathName()), config.pathColor());
-
-                client.getMenu().createMenuEntry(-1)
-                        .setOption("Add to path")
-                        .setTarget(target)
-                        .setType(MenuAction.RUNELITE)
-                        .onClick(e -> createOrAddToPath(new PathPoint(
-                                worldPoint.getRegionID(),
-                                worldPoint.getRegionX(),
-                                worldPoint.getRegionY(),
-                                worldPoint.getPlane())));
+                LocalPoint actorLp = event.getMenuEntry().getActor().getLocalLocation();
+                if(actorLp != null)
+                {
+                    actorWp = WorldPoint.fromLocalInstance(client, actorLp);
+                }
             }
 
-            if (pathPoint != null)
+            // If entry was not for an actor, default to the tile under the cursor
+            final WorldPoint worldPoint = actorWp == null ?
+                    WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation()) :
+                    actorWp;
+
+            // See if the point already exists
+            pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+
+
+            // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
+            if (pathPoint == null || !paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
+            {
+                String targetName = getActiveOrDefaultPathColorString(getActivePathName());
+
+                if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
+                {
+                    int entityID = event.getIdentifier(); //event.getMenuEntry().getTarget();
+                    final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
+
+                    client.getMenu().createMenuEntry(-1)
+                            .setOption("Add " + getActiveOrDefaultPathColorString(isNpc ? "npc" : "object") + " to ")
+                            .setTarget(getActiveOrDefaultPathColorString(targetName))
+                            .setType(MenuAction.RUNELITE)
+                            .onClick(e ->
+                            {
+                                createOrAddToPath(
+                                        new PathPointObject(worldPoint.getRegionID(),
+                                                worldPoint.getRegionX(),
+                                                worldPoint.getRegionY(),
+                                                worldPoint.getPlane(),
+                                                entityID,
+                                                isNpc));
+                            });
+                }
+                else
+                {
+                    client.getMenu().createMenuEntry(-1)
+                            .setOption("Add " + getActiveOrDefaultPathColorString("tile") + " to")
+                            .setTarget(targetName)
+                            .setType(MenuAction.RUNELITE)
+                            .onClick(e -> createOrAddToPath(new PathPoint(
+                                    worldPoint.getRegionID(),
+                                    worldPoint.getRegionX(),
+                                    worldPoint.getRegionY(),
+                                    worldPoint.getPlane())));
+                }
+            }
+
+            // On existing POINTS
+            if (pathPoint != null) // actorPoint != null ||
             {
                 for (String pathName : paths.keySet())
                 {
@@ -315,16 +356,35 @@ public class PathmakerPlugin extends Plugin
                                 });
                     }
 
-                    // Add remove option regardless of belonging path
-                    client.getMenu().createMenuEntry(-1)
-                            .setOption("Remove from path")
-                            .setTarget(target)
-                            .setType(MenuAction.RUNELITE)
-                            .onClick(e -> removePoint(pathName, pathPoint));
+                    if(pathPoint instanceof PathPointObject && (menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT))
+                    {
+                        log.debug("Adding delete option");
+                        String optionString = "Remove " + (((PathPointObject) pathPoint).isNpc() ? "npc" : "object") + " from path";
+                        // Add remove option regardless of belonging path
+                        addRemoveMenuOption(pathName, pathPoint, optionString, target);
+                    }
+                    // Making sure to avoid duplicate entries when clicking a tile that already has marked npc (event will register both actor and tile in a click)
+                    else if (!(pathPoint instanceof PathPointObject))
+                    {
+                        String optionString = "Remove tile from path";
+                        // Add remove option regardless of belonging path
+                        addRemoveMenuOption(pathName, pathPoint, optionString, target);
+                    }
                 }
             }
         }
     }
+
+    void addRemoveMenuOption(String pathName, PathPoint pathPoint, String optionString, String target)
+    {
+        // Add remove option regardless of belonging path
+        client.getMenu().createMenuEntry(-1)
+                .setOption(optionString)
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> removePoint(pathName, pathPoint));
+    }
+
 
     public HashMap<String, PathmakerPath> getStoredPaths()
     {
@@ -446,6 +506,14 @@ public class PathmakerPlugin extends Plugin
     String getActivePathName()
     {
         return pluginPanel.activePath.getText();
+    }
+
+    // Default colour if active path contains no points
+    String getActiveOrDefaultPathColorString(String string)
+    {
+        return (paths.containsKey(getActivePathName()) ?
+                ColorUtil.prependColorTag(Text.removeTags(string), paths.get(getActivePathName()).color) :
+                ColorUtil.prependColorTag(Text.removeTags(string), config.pathColor()));
     }
 
     void rebuildPanel()

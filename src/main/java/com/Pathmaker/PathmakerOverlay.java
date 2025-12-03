@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import javax.inject.Inject;
+import javax.swing.text.html.parser.Entity;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;                  // For player position
@@ -13,8 +14,6 @@ import net.runelite.api.coords.WorldPoint;
 
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
@@ -22,33 +21,31 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
+import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
+
 
 @Slf4j
 public class PathmakerOverlay extends Overlay
 {
     private static final int MAX_DRAW_DISTANCE = 32;
 
-    // The integer represents RegionID
-    //private final ArrayList<PathPoint> tilesToHighlight = new ArrayList<>();
-
     private final Client client;
     private final PathmakerPlugin plugin;
     private final PathmakerConfig config;
+    private final ModelOutlineRenderer modelOutlineRenderer;
 
     private final float tileSize = 128;
 
     private LocalPoint startPoint;
     private LocalPoint hoveredTile;
 
-
-    // For ref: net.runelite.client.ui.overlay.OverlayRenderer
-
     @Inject
-    private PathmakerOverlay(Client client, PathmakerPlugin plugin, PathmakerConfig config)//, WorldView worldview)
+    private PathmakerOverlay(Client client, PathmakerPlugin plugin, PathmakerConfig config, ModelOutlineRenderer modelOutlineRenderer)//, WorldView worldview)
     {
         this.client = client;
         this.plugin = plugin;
         this.config = config;
+        this.modelOutlineRenderer = modelOutlineRenderer;
 
         //this.worldview = worldview;
         setPosition(OverlayPosition.DYNAMIC);
@@ -158,7 +155,8 @@ public class PathmakerOverlay extends Overlay
     }
 
     // Highlight tiles marked by the right-click menu and draw lines between them
-    void drawPath(Graphics2D graphics, WorldView wv) {
+    void drawPath(Graphics2D graphics, WorldView wv)
+    {
         HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
 
         for (String pathName : paths.keySet())
@@ -193,41 +191,25 @@ public class PathmakerOverlay extends Overlay
                     log.debug("getDraw2DMask, {}", client.getDraw2DMask());
                 }
 
-                // Draw both line and points
-                if (config.drawPath() && pathSize > 1 && config.drawPathPoints()) {
+                if (config.drawPath() || config.drawPathPoints())
+                {
                     LocalPoint lastLocalP = null;
-                    for (int i = 0; i < drawOrder.size(); i++)
-                    {
+                    for (int i = 0; i < drawOrder.size(); i++) {
                         PathPoint point = drawOrder.get(i);
 
+                        // Draw outlines first, as this also lets us conveniently update the stored point locations
+                        if(point instanceof PathPointObject)
+                            drawOutline((PathPointObject) point, wv, 2, Color.GREEN, 200);
+
                         LocalPoint localP = pathPointToLocal(wv, point);
-                        highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                        if(config.drawPathPoints())
+                            highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
 
                         // Only draw line if the previous point had a draw index that was directly behind this.
-                        if (i > 0 && drawOrder.get(i-1).getDrawIndex() == point.getDrawIndex() -1)
+                        if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
                             drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
 
                         lastLocalP = localP;
-                    }
-                } // Only draw line
-                else if (config.drawPath() && pathSize > 1 )
-                {
-                    LocalPoint lastLocalP = null;
-                    for (int i = 0; i < drawOrder.size(); i++)
-                    {
-                        PathPoint point = drawOrder.get(i);
-                        LocalPoint localP = pathPointToLocal(wv, point);
-
-                        if (i > 0 && drawOrder.get(i-1).getDrawIndex() == point.getDrawIndex() -1)
-                            drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
-                        lastLocalP = localP;
-                    }
-                }  // Only Draw points
-                else if (config.drawPathPoints())
-                {
-                    for (PathPoint point : drawOrder)
-                    {
-                        highlightTile(graphics, wv, point, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                     }
                 }
 
@@ -343,8 +325,8 @@ public class PathmakerOverlay extends Overlay
         final int startHeight = Perspective.getTileHeight(client, startLoc, z);
         final int endHeight = Perspective.getTileHeight(client, endLoc, z);
 
-        Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight);
-        Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight);
+        Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight + config.pathZOffset());
+        Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight + config.pathZOffset());
 
         if (p1 == null || p2 == null)
         {
@@ -357,6 +339,117 @@ public class PathmakerOverlay extends Overlay
         graphics.setStroke(new BasicStroke(lineWidth));
         graphics.draw(line);
     }
+
+    // 0 tileObject, 1 npc
+    void drawOutline(PathPointObject point, WorldView wv, int width, Color color, int feather)
+    {
+        if (point == null) {return;}
+
+        if(point.isNpc())
+        {
+            NPC npc = wv.npcs().byIndex(point.getEntityId());
+
+            if(npc == null){return;}
+
+            modelOutlineRenderer.drawOutline(npc,width,color,feather);
+            WorldPoint wp = npc.getWorldLocation();
+            point.updateRegionLocation(wp.getRegionID(), wp.getRegionX(), wp.getRegionY(), wv.getPlane());
+        }
+        else
+        {
+            TileObject tileObject = point.getObject();
+            if(tileObject == null)
+                tileObject = point.loadObject(findTileObject(wv, point));
+
+            if (tileObject instanceof GameObject) {modelOutlineRenderer.drawOutline((GameObject) point.getObject(),width,color,feather);} // Boxes, trees
+            else if (tileObject instanceof GroundObject) {modelOutlineRenderer.drawOutline((GroundObject) point.getObject(),width,color,feather);} // Grass
+            else if (tileObject instanceof ItemLayer) {modelOutlineRenderer.drawOutline((ItemLayer) point.getObject(),width,color,feather);}  // Items held by tile
+            else if (tileObject instanceof DecorativeObject) {modelOutlineRenderer.drawOutline((DecorativeObject) point.getObject(),width,color,feather);}
+            else if (tileObject instanceof WallObject) {modelOutlineRenderer.drawOutline((WallObject) point.getObject(),width,color,feather);}
+
+            modelOutlineRenderer.drawOutline(point.getObject(),width,color,feather);
+        }
+    }
+
+    TileObject findTileObject(WorldView wv, PathPointObject point)
+    {
+        LocalPoint localPoint = pathPointToLocal(wv, point);
+        if (localPoint == null) return null;
+
+        Scene scene = wv.getScene();
+        Tile[][][] tiles = scene.getTiles();
+
+        Tile tile = tiles[wv.getPlane()][localPoint.getSceneX()][localPoint.getSceneY()];
+        if (tile == null) return null;
+
+
+        for (GameObject obj : tile.getGameObjects())
+        {
+            if (obj != null && obj.getId() == point.getEntityId()) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+
+//        try {
+//            if (!point.isDrawing) {
+//                point.isDrawing = true;
+//                if (point.isNPC() && point.loadNpc(client))
+//                {
+//                    NPC npc = client.getTopLevelWorldView().npcs().byIndex(point.id);
+//                    try {
+//                        modelOutlineRenderer.drawOutline(npc, width, color, feather);
+//                    } catch (IllegalArgumentException | NullPointerException | ExceptionInInitializerError e) {
+//                        log.debug("Failed to draw outline. {}", e.getMessage());
+//                    }
+//                }
+//                else
+//                {
+//                    try
+//                    {
+//                        drawModelOutline.invoke(modelOutlineRenderer, wv, point.getModel(), localPoint.getX(), localPoint.getY(), Perspective.getTileHeight(client, localPoint, point.getZ()), point.getOrientation(), width, color, feather);
+//                    }
+//                    catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NullPointerException | ExceptionInInitializerError e)
+//                    {log.debug("Failed to draw outline. {}", e.getMessage());}
+//                }
+//            }
+//        } finally {
+//            point.isDrawing = false;
+//        }
+
+//  point.drawOutline(drawModelOutline, client, modelOutlineRenderer, wv, pathPointToLocal(wv, point), width, color, feather);
+//                // WorldView.class, Model.class, int.class, int.class, int.class, int.class, int.class, Color.class, int.class
+//                modelOutlineRenderer, wv, point.getModel(), localPoint.getX(), localPoint.getY(), Perspective.getTileHeight(client, localPoint, point.getZ()), point.getOrientation(), width, color, feather);
+//
+//        try {drawModelOutline.invoke (modelOutlineRenderer, wv, point.getModel(), localPoint.getX(), localPoint.getY(), Perspective.getTileHeight(client, localPoint, point.getZ()), point.getOrientation(), width, color, feather);}
+//        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NullPointerException | ExceptionInInitializerError e)
+//        {log.debug("Failed to draw outline. {}", e.getMessage());return;}
+//
+//        point.drawOutline(client, modelOutlineRenderer, wv, pathPointToLocal(wv, point), width, color, feather);
+
+
+        // Invoke the private method
+//        try {drawModelOutline.invoke(modelOutlineRenderer, wv, point.getModel(), localPoint.getX(), localPoint.getY(), Perspective.getTileHeight(client, localPoint, point.getZ()), point.getOrientation(), width, color, feather);}
+//        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NullPointerException | ExceptionInInitializerError e)
+//        {log.debug("Failed to draw outline. {}", e.getMessage());return;}
+
+//        if(!drawingEntities)
+//        {
+//            try
+//            {
+//                drawingEntities = true;
+//                if (point instanceof PathPointNPC)
+//                    modelOutlineRenderer.drawOutline((NPC) ((PathPointNPC) point).getNPC(), width, color, feather);
+//                if (point instanceof PathPointObject)
+//                    modelOutlineRenderer.drawOutline((TileObject) ((PathPointObject) point).getTileObject(), width, color, feather);
+//            }
+//          finally
+//            {
+//                drawingEntities = false;
+//            }
+//        }
 
     String constructHoveredTileString(Tile tile)
     {
