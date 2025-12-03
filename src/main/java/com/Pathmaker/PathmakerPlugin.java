@@ -269,8 +269,10 @@ public class PathmakerPlugin extends Plugin
 
                 if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
                 {
-                    int entityID = event.getIdentifier(); //event.getMenuEntry().getTarget();
+                    int entityID = event.getIdentifier();
                     final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
+
+                    // WATCH OUT FOR MOVING TARGETS AND THEIR REGIONS!!!
 
                     client.getMenu().createMenuEntry(-1)
                             .setOption("Add " + getActiveOrDefaultPathColorString(isNpc ? "npc" : "object") + " to ")
@@ -514,6 +516,15 @@ public class PathmakerPlugin extends Plugin
         return (paths.containsKey(getActivePathName()) ?
                 ColorUtil.prependColorTag(Text.removeTags(string), paths.get(getActivePathName()).color) :
                 ColorUtil.prependColorTag(Text.removeTags(string), config.pathColor()));
+    }
+
+    // For moving points
+    void updatePointLocation(PathPoint point, int newRegionId, int x, int y, int z)
+    {
+        if(point.getRegionId() != newRegionId)
+            paths.get(getActivePathName()).updatePointRegion(point, newRegionId);
+
+        point.updateRegionLocation(newRegionId, x, y, z);
     }
 
     void rebuildPanel()

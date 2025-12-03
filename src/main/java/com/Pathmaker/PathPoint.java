@@ -71,6 +71,7 @@ public class PathPoint
 
     void updateRegionLocation(int region, int x, int y, int z)
     {
+        // DONT FORGET TO ALSO UPDATE BELONGING PathmakerPath
         this.regionId = region;
         this.regionX = x;
         this.regionY = y;

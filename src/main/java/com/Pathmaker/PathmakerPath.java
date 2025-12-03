@@ -42,24 +42,29 @@ public class PathmakerPath
 
     void removePathPoint(PathPoint point)
     {
-        int regionID = point.getRegionId();
-
         int removedIndex = point.getDrawIndex();
 
-        //log.debug("Removing point: " + removedIndex);
-        // Remove pathPoint from the ArrayList<PathPoint>
-        pathPoints.get(regionID).remove(point);
-
-        // Remove RegionID key if the ArrayList is empty.
-        if (pathPoints.get(regionID).isEmpty())
-        {
-            pathPoints.remove(regionID);
-        }
+        innerRemovePathPoint(point);
 
         ArrayList<PathPoint> drawOrder = getDrawOrder(null);
         for(int i = removedIndex; i < drawOrder.size(); i++)
         {
             drawOrder.get(i).setDrawIndex(i);
+        }
+    }
+
+    // ONLY use this if moving tiles between regions! Removes point without reordering the draw order
+    private void innerRemovePathPoint(PathPoint point)
+    {
+        int regionId = point.getRegionId();
+
+        // Remove pathPoint from the ArrayList<PathPoint>
+        pathPoints.get(regionId).remove(point);
+
+        // Remove RegionID key if the ArrayList is empty.
+        if (pathPoints.get(regionId).isEmpty())
+        {
+            pathPoints.remove(regionId);
         }
     }
 
@@ -79,6 +84,15 @@ public class PathmakerPath
                 drawOrder.get(i).setDrawIndex(i);
             }
         }
+    }
+
+    // Remove point from old and add to new region. Reordering for iteration convenience.
+    // The point xyz is moved independently.
+    void updatePointRegion(PathPoint point, int newRegionId)
+    {
+        innerRemovePathPoint(point);
+        getPointsInRegion(newRegionId).add(point);
+        reconstructRegionDrawOrder(newRegionId);
     }
 
     // Return the relevant region IDs for this path
@@ -179,12 +193,12 @@ public class PathmakerPath
         // as this will make it easier for our getDrawOrder later
         for (int regionId : regionsToReconstruct)
         {
-            reconstructRegionOrder(regionId);
+            reconstructRegionDrawOrder(regionId);
         }
     }
 
     // Sort the specified ArrayList in the order of draw indices
-    void reconstructRegionOrder(int regionId)
+    void reconstructRegionDrawOrder(int regionId)
     {
         if (pathPoints.get(regionId).size() < 2) {return;}
 

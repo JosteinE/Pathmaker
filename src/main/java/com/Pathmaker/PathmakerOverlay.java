@@ -352,8 +352,12 @@ public class PathmakerOverlay extends Overlay
             if(npc == null){return;}
 
             modelOutlineRenderer.drawOutline(npc,width,color,feather);
-            WorldPoint wp = npc.getWorldLocation();
-            point.updateRegionLocation(wp.getRegionID(), wp.getRegionX(), wp.getRegionY(), wv.getPlane());
+            plugin.updatePointLocation(
+                    point,
+                    npc.getWorldLocation().getRegionID(),
+                    npc.getWorldLocation().getRegionX(),
+                    npc.getWorldLocation().getRegionY(),
+                    wv.getPlane());
         }
         else
         {
