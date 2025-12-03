@@ -227,12 +227,14 @@ public class PathmakerPlugin extends Plugin
             int worldId = event.getMenuEntry().getWorldViewId();
             WorldView wv = client.getWorldView(worldId);
             if (wv == null) {
+                log.debug("No world view found for getMenuEntry().getWorldViewId " + worldId);
                 return;
             }
 
             // Fetch selected tile
             final Tile selectedSceneTile = wv.getSelectedSceneTile();
-            if (selectedSceneTile == null) {
+            if (selectedSceneTile == null)
+            {
                 return;
             }
 
@@ -246,11 +248,12 @@ public class PathmakerPlugin extends Plugin
             //final PathPoint actorPoint;
             if(event.getMenuEntry().getActor() != null)
             {
-                LocalPoint actorLp = event.getMenuEntry().getActor().getLocalLocation();
-                if(actorLp != null)
-                {
-                    actorWp = WorldPoint.fromLocalInstance(client, actorLp);
-                }
+                //LocalPoint actorLp = event.getMenuEntry().getActor().getLocalLocation();
+                actorWp = event.getMenuEntry().getActor().getWorldLocation();
+//                if(actorWp != null) // (actorLp != null)
+//                {
+//                    actorWp = WorldPoint.fromLocalInstance(client, actorLp);
+//                }
             }
 
             // If entry was not for an actor, default to the tile under the cursor
@@ -263,7 +266,7 @@ public class PathmakerPlugin extends Plugin
 
 
             // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
-            if (pathPoint == null || !paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
+            if (!paths.containsKey(getActivePathName()) || !paths.get(getActivePathName()).containsPoint(pathPoint))
             {
                 String targetName = getActiveOrDefaultPathColorString(getActivePathName());
 
@@ -358,15 +361,14 @@ public class PathmakerPlugin extends Plugin
                                 });
                     }
 
-                    if(pathPoint instanceof PathPointObject && (menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT))
+                    if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
                     {
-                        log.debug("Adding delete option");
                         String optionString = "Remove " + (((PathPointObject) pathPoint).isNpc() ? "npc" : "object") + " from path";
                         // Add remove option regardless of belonging path
                         addRemoveMenuOption(pathName, pathPoint, optionString, target);
                     }
                     // Making sure to avoid duplicate entries when clicking a tile that already has marked npc (event will register both actor and tile in a click)
-                    else if (!(pathPoint instanceof PathPointObject))
+                    else
                     {
                         String optionString = "Remove tile from path";
                         // Add remove option regardless of belonging path
@@ -522,7 +524,10 @@ public class PathmakerPlugin extends Plugin
     void updatePointLocation(PathPoint point, int newRegionId, int x, int y, int z)
     {
         if(point.getRegionId() != newRegionId)
+        {
             paths.get(getActivePathName()).updatePointRegion(point, newRegionId);
+            //log.debug("Entity moved into a new region!");
+        }
 
         point.updateRegionLocation(newRegionId, x, y, z);
     }

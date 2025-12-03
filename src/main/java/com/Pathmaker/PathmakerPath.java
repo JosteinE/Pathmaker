@@ -29,15 +29,20 @@ public class PathmakerPath
     // Add point to existing path
     void addPathPoint(PathPoint pathPoint)
     {
-        int regionID = pathPoint.getRegionId();
+        addPathPoint(pathPoint, pathPoint.getRegionId());
+    }
 
+    void addPathPoint(PathPoint pathPoint, int regionId)
+    {
         // Add the tile's regionID as key for the belonging tile(s) if it doesn't already exist.
-        if (!pathPoints.containsKey(regionID))
+        if (!pathPoints.containsKey(regionId))
         {
-            pathPoints.put(regionID, new ArrayList<PathPoint>());
+            pathPoints.put(regionId, new ArrayList<PathPoint>());
         }
-        pathPoints.get(regionID).add(pathPoint);
-        pathPoint.setDrawIndex(getSize()-1);
+        pathPoints.get(regionId).add(pathPoint);
+
+        if(pathPoint.getDrawIndex() == -1)
+            pathPoint.setDrawIndex(getSize()-1);
     }
 
     void removePathPoint(PathPoint point)
@@ -60,6 +65,7 @@ public class PathmakerPath
 
         // Remove pathPoint from the ArrayList<PathPoint>
         pathPoints.get(regionId).remove(point);
+        pathPoints.get(regionId).trimToSize();
 
         // Remove RegionID key if the ArrayList is empty.
         if (pathPoints.get(regionId).isEmpty())
@@ -90,8 +96,9 @@ public class PathmakerPath
     // The point xyz is moved independently.
     void updatePointRegion(PathPoint point, int newRegionId)
     {
+        int oldRegionId = point.getRegionId();
         innerRemovePathPoint(point);
-        getPointsInRegion(newRegionId).add(point);
+        addPathPoint(point, newRegionId);
         reconstructRegionDrawOrder(newRegionId);
     }
 
@@ -183,10 +190,6 @@ public class PathmakerPath
         }
 
         // Assign the specified index to the specified point
-        point.setDrawIndex(newIndex);
-
-        // Finally move the chosen point to the desired index
-        //log.debug("Index {} was assigned index: {}", point.getDrawIndex(), newIndex);
         point.setDrawIndex(newIndex);
 
         // Once the points have been reassigned their draw order, reorder the affected ArrayList to match
