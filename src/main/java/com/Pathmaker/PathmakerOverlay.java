@@ -199,7 +199,7 @@ public class PathmakerOverlay extends Overlay
 
                         // Draw outlines first, as this also lets us conveniently update the stored point locations
                         if(point instanceof PathPointObject)
-                            drawOutline((PathPointObject) point, wv, 2, Color.GREEN, 200);
+                            drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
 
                         LocalPoint localP = pathPointToLocal(wv, point);
                         if(config.drawPathPoints())
