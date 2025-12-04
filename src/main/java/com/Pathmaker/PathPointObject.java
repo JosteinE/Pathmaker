@@ -11,7 +11,7 @@ import java.awt.*;
 public class PathPointObject extends PathPoint
 {
     // Should be assigned / unassigned as the player enters the area
-    private TileObject tileObject;
+    //private TileObject tileObject;
 
     private final int id;
     private final boolean isNpc;
@@ -62,26 +62,27 @@ public class PathPointObject extends PathPoint
         return id;
     }
 
-    TileObject getObject()
-    {
-        return tileObject;
-    }
-
     boolean isNpc()
     {
         return isNpc;
     }
 
-    TileObject loadObject(TileObject object)
-    {
-        this.tileObject = object;
-        return this.tileObject;
-    }
-
-    void unloadObject()
-    {
-        this.tileObject = null;
-    }
+//    TileObject getObject()
+//    {
+//        return tileObject;
+//    }
+//
+//
+//    TileObject loadObject(TileObject object)
+//    {
+//        this.tileObject = object;
+//        return this.tileObject;
+//    }
+//
+//    void unloadObject()
+//    {
+//        this.tileObject = null;
+//    }
 
 //    void loadNpc (NPC npc)
 //    {
