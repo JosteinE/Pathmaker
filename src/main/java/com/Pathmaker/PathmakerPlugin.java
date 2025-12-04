@@ -63,6 +63,15 @@ public class PathmakerPlugin extends Plugin
 
     boolean hotKeyPressed = false;
 
+    enum ObjectType
+    {
+        GROUND,
+        GAME,
+        ITEM,
+        WALL,
+        DECORATIVE,
+    }
+
 	@Inject
 	private Client client;
 
@@ -250,28 +259,59 @@ public class PathmakerPlugin extends Plugin
             String targetPathName = getActiveOrDefaultPathColorString(getActivePathName());
             final WorldPoint worldPoint;
 
-            // Attempt to get an actor (npc/entity) under the cursor
-            //final PathPoint actorPoint;
+            // Attempt to get an actor (npc) under the cursor
             if(event.getMenuEntry().getActor() != null)
             {
-                //LocalPoint actorLp = event.getMenuEntry().getActor().getLocalLocation();
                 worldPoint = event.getMenuEntry().getActor().getWorldLocation();
                 targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getActor().getName());
             }
-            else
+            else // If not an actor it's a tile OR an object
             {
-                String target = event.getMenuEntry().getTarget();
+                if(menuAction == MenuAction.EXAMINE_OBJECT)
+                {
+                    // BIG shoutout to the ObjectIndicatorsPlugin for this implementation.
+                    // Spent most of the day just fighting chatGPT, and it was not at all fruitful.
+
+                    final int sceneX = event.getMenuEntry().getParam0();
+                    final int sceneY = event.getMenuEntry().getParam1();
+
+                    Tile tile = getTile(wv, sceneX, sceneY);
+
+                    int targetId = event.getMenuEntry().getIdentifier();
+                    GameObject obj = null;
+                    if(tile != null)
+                    {
+                        obj = (GameObject) getTileObject(tile, targetId);
+                    }
+                    else
+                        log.debug("Tile null at sceneX {}, sceneY {}", sceneX, sceneY);
+
+                    if (obj != null)
+                    {
+                        worldPoint = WorldPoint.fromLocalInstance(client, obj.getLocalLocation());
+                    }
+                    else
+                    {
+                        worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
+                        log.debug("Object not found at sceneX {}, sceneY {}", sceneX, sceneY);
+                    }
+                }
+                else
+                {
+                    worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
+                }
+
+                String target = event.getMenuEntry().getTarget(); // Returns an empty string if not an object
                 targetEntityString = getActiveOrDefaultPathColorString(target.isEmpty() ? "Tile" : target);
-                worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
             }
 
             // See if the point already exists
             pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
 
-
             // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
-            if (!paths.containsKey(getActivePathName()) || pathPoint == null)
+            if (pathPoint == null)
             {
+                // Skip if the entityID has already been registered
                 if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
                 {
                     int entityID = event.getIdentifier();
@@ -279,21 +319,26 @@ public class PathmakerPlugin extends Plugin
 
                     // WATCH OUT FOR MOVING TARGETS AND THEIR REGIONS!!!
 
-
-                    client.getMenu().createMenuEntry(-1)
-                            .setOption("Add " + targetEntityString + " to")
-                            .setTarget(targetPathName)
-                            .setType(MenuAction.RUNELITE)
-                            .onClick(e ->
-                            {
-                                createOrAddToPath(
-                                        new PathPointObject(worldPoint.getRegionID(),
-                                                worldPoint.getRegionX(),
-                                                worldPoint.getRegionY(),
-                                                worldPoint.getPlane(),
-                                                entityID,
-                                                isNpc));
-                            });
+                    // Skip if the entity is already registered
+                    if (!paths.isEmpty() ||
+                            !paths.containsKey(getActivePathName()) ||
+                            !paths.get(getActivePathName()).containsEntity(wv.getMapRegions(), isNpc, entityID))
+                    {
+                        client.getMenu().createMenuEntry(-1)
+                                .setOption("Add " + targetEntityString + " to")
+                                .setTarget(targetPathName)
+                                .setType(MenuAction.RUNELITE)
+                                .onClick(e ->
+                                {
+                                    createOrAddToPath(
+                                            new PathPointObject(worldPoint.getRegionID(),
+                                                    worldPoint.getRegionX(),
+                                                    worldPoint.getRegionY(),
+                                                    worldPoint.getPlane(),
+                                                    entityID,
+                                                    isNpc));
+                                });
+                    }
                 }
                 else
                 {
@@ -314,8 +359,8 @@ public class PathmakerPlugin extends Plugin
             {
                 for (String pathName : paths.keySet())
                 {
-                    if (!paths.get(pathName).containsPoint(pathPoint))
-                    {continue;}
+//                    if (!paths.get(pathName).containsPoint(pathPoint))
+//                    {continue;}
 
                     // Set menu entry color
                     targetPathName = ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
@@ -325,7 +370,7 @@ public class PathmakerPlugin extends Plugin
                     {
                         // Only allow loop/unloop with points connected to the last point
                         if ((pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2 && paths.get(pathName).loopPath) ||
-                                pathPoint.getDrawIndex() == 0) {
+                                pathPoint.getDrawIndex() == 0 && paths.get(pathName).getSize() > 2) {
                             client.getMenu().createMenuEntry(-1)
                                     .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop")
                                     .setTarget(targetPathName)
@@ -366,22 +411,7 @@ public class PathmakerPlugin extends Plugin
                                 });
                     }
 
-                    if (!(pathPoint instanceof PathPointObject) || menuAction == MenuAction.EXAMINE_NPC ||  menuAction == MenuAction.EXAMINE_OBJECT)
-                        addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
-
-//                    if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
-//                    {
-//                        String optionString = "Remove " + targetEntityString + " from";
-//                        // Add remove option regardless of belonging path
-//                        addRemoveMenuOption(pathName, pathPoint, optionString, targetPathName);
-//                    }
-//                    // Making sure to avoid duplicate entries when clicking a tile that already has marked npc (event will register both actor and tile in a click)
-//                    else
-//                    {
-//                        String optionString = "Remove tile from path";
-//                        // Add remove option regardless of belonging path
-//                        addRemoveMenuOption(pathName, pathPoint, optionString, targetPathName);
-//                    }
+                    addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
                 }
             }
         }
@@ -546,52 +576,79 @@ public class PathmakerPlugin extends Plugin
         save();
     }
 
-    // Convert PathPoint (region point) to local
-    LocalPoint pathPointToLocal(WorldView wv, PathPoint point)
+    Tile getTile(WorldView wv, WorldPoint wp)
     {
-        WorldPoint wp = WorldPoint.fromRegion(point.getRegionId(), point.getX(), point.getY(), point.getZ());
-        return LocalPoint.fromWorld(wv, wp);
-    }
-
-    // In the future, account for other types of TileObjects, specified as an enum
-    GameObject[] findGameObjectsOnTile(WorldView wv, LocalPoint lp)
-    {
+        LocalPoint lp = LocalPoint.fromWorld(client, wp); // Careful not to use wv here (wp then needs to be game world?)
         if (lp == null) return null;
 
-        Scene scene = wv.getScene();
-        Tile[][][] tiles = scene.getTiles();
+        return getTile(wv, lp);
+    }
 
-        Tile tile = tiles[wv.getPlane()][lp.getSceneX()][lp.getSceneY()];
+    Tile getTile(WorldView wv, LocalPoint lp)
+    {
+        return getTile(wv, lp.getSceneX(), lp.getSceneY());
+    }
+
+    Tile getTile(WorldView wv, int x, int y)
+    {
+        return wv.getScene().getTiles()[wv.getPlane()][x][y];
+    }
+
+    TileObject getTileObject(WorldView wv, PathPointObject point)
+    {
+
+        WorldPoint wp = WorldPoint.fromRegion(point.getRegionId(), point.getX(), point.getY(), wv.getPlane());
+        return getTileObject(getTile(wv, wp), point.getEntityId());
+    }
+
+    // THANK YOU ObjectIndicatorsPlugin for this!
+    TileObject getTileObject(Tile tile, int id)
+    {
         if (tile == null) return null;
 
-        return tile.getGameObjects();
-    }
+        // Get all objects on tile
+        final GameObject[] tileGameObjects = tile.getGameObjects();
+        final DecorativeObject tileDecorativeObject = tile.getDecorativeObject();
+        final WallObject tileWallObject = tile.getWallObject();
+        final GroundObject groundObject = tile.getGroundObject();
 
-    // In the future, account for other types of TileObjects, specified as an enum
-    TileObject findPointGameObjectAtPoint(WorldView wv, PathPointObject point)
-    {
-        GameObject[] gObjectsOnTile = findGameObjectsOnTile(wv, (pathPointToLocal(wv, point)));
-
-        for (GameObject obj : gObjectsOnTile)
+        // Return the object with a matching ID
+        if (isObjectIdEqual(tileWallObject, id)) return tileWallObject;
+        if (isObjectIdEqual(tileDecorativeObject, id)) return tileDecorativeObject;
+        if (isObjectIdEqual(groundObject, id)) return groundObject;
+        for (GameObject object : tileGameObjects)
         {
-            if (obj != null && obj.getId() == point.getEntityId()) {
-                return obj;
+            if (isObjectIdEqual(object, id))
+            {
+                return object;
             }
         }
+
+        log.debug("No Object found with id " + id);
         return null;
     }
 
-    TileObject getEntityAtPoint(WorldView wv, PathPointObject point)
+    // THANK YOU ObjectIndicatorsPlugin for this!
+    boolean isObjectIdEqual(TileObject tileObject, int id)
     {
-        GameObject[] gObjectsOnTile = findGameObjectsOnTile(wv, (pathPointToLocal(wv, point)));
+        if (tileObject == null) return false;
+        if (tileObject.getId() == id) return true;
 
-        for (GameObject obj : gObjectsOnTile)
+        // Menu action EXAMINE_OBJECT sends the transformed object id, not the base id, unlike
+        // all of the GAME_OBJECT_OPTION actions, so check the id against the impostor ids
+        final ObjectComposition comp = client.getObjectDefinition(tileObject.getId());
+
+        if (comp.getImpostorIds() != null)
         {
-            if (obj != null && obj.getId() == point.getEntityId()) {
-                return obj;
+            for (int impostorId : comp.getImpostorIds())
+            {
+                if (impostorId == id)
+                {
+                    return true;
+                }
             }
         }
-        return null;
+        return false;
     }
 
     NPC getNpcAtPoint(WorldView wv, int npcId)
@@ -602,28 +659,28 @@ public class PathmakerPlugin extends Plugin
     // note
     // client.getNpcDefinition(1).getFootprintSize()
     // client.getNpcDefinition(point.getEntityId()).getFootprintSize()
-    List<WorldPoint> getEnityOccupyingTiles(WorldView wv, PathPointObject point)
-    {
-        if(point.isNpc())
-            return wv.npcs().byIndex(point.getEntityId()).getWorldArea().toWorldPointList();
-
-        // WIP FOR objects
-        List<WorldPoint> returnList = new ArrayList<WorldPoint>(){};
-        returnList.add(findPointGameObjectAtPoint(wv, point).getWorldLocation());
-        return returnList;
-    }
+//    List<WorldPoint> getEnityOccupyingTiles(WorldView wv, PathPointObject point)
+//    {
+//        if(point.isNpc())
+//            return wv.npcs().byIndex(point.getEntityId()).getWorldArea().toWorldPointList();
+//
+//        // WIP FOR objects
+//        List<WorldPoint> returnList = new ArrayList<WorldPoint>(){};
+//        returnList.add(findPointGameObjectAtPoint(wv, point).getWorldLocation());
+//        return returnList;
+//    }
 
     Polygon getEntityPolygon(WorldView wv, PathPointObject point)
     {
         if (point.isNpc()) return getNpcAtPoint(wv, point.getEntityId()).getCanvasTilePoly();
 
-        TileObject entity = findPointGameObjectAtPoint(wv, point);
+        TileObject object = getTileObject(getTile(wv, point.getWorldPoint()),point.getEntityId());
 
-        if (entity instanceof GameObject) return ((GameObject) entity).getCanvasTilePoly();
-        else if (entity instanceof DecorativeObject) return ((DecorativeObject) entity).getCanvasTilePoly();
-        else if (entity instanceof GroundObject) return ((GroundObject) entity).getCanvasTilePoly();
-        else if (entity instanceof WallObject) return ((WallObject) entity).getCanvasTilePoly();
-        else if (entity instanceof ItemLayer) return ((ItemLayer) entity).getCanvasTilePoly();
+        if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
+        else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();
+        else if (object instanceof GroundObject) return ((GroundObject) object).getCanvasTilePoly();
+        else if (object instanceof WallObject) return ((WallObject) object).getCanvasTilePoly();
+        else if (object instanceof ItemLayer) return ((ItemLayer) object).getCanvasTilePoly();
         else log.debug("getEntityPolygon returned null."); return null;
     }
 

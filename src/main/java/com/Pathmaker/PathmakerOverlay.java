@@ -372,7 +372,7 @@ public class PathmakerOverlay extends Overlay
         }
         else
         {
-            modelOutlineRenderer.drawOutline(plugin.findPointGameObjectAtPoint(wv, point),width,color,feather);
+            modelOutlineRenderer.drawOutline(plugin.getTileObject(wv, point),width,color,feather);
         }
     }
 

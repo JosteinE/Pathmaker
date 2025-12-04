@@ -48,6 +48,11 @@ public class PathPoint
         return z;
     }
 
+    WorldPoint getWorldPoint()
+    {
+        return WorldPoint.fromRegion(regionId, regionX, regionY, z);
+    }
+
     void setLabel(String newLabel)
     {
         this.label = newLabel;
