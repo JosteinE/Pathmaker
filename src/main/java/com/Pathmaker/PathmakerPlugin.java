@@ -278,22 +278,20 @@ public class PathmakerPlugin extends Plugin
                     Tile tile = getTile(wv, sceneX, sceneY);
 
                     int targetId = event.getMenuEntry().getIdentifier();
-                    GameObject obj = null;
+
+
+                    TileObject tileObject = null;
                     if(tile != null)
                     {
-                        obj = (GameObject) getTileObject(tile, targetId);
+                        tileObject = getTileObject(tile, targetId);
                     }
-                    else
-                        log.debug("Tile null at sceneX {}, sceneY {}", sceneX, sceneY);
-
-                    if (obj != null)
+                    if (tileObject != null)
                     {
-                        worldPoint = WorldPoint.fromLocalInstance(client, obj.getLocalLocation());
+                        worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
                     }
                     else
                     {
                         worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
-                        log.debug("Object not found at sceneX {}, sceneY {}", sceneX, sceneY);
                     }
                 }
                 else
@@ -578,27 +576,26 @@ public class PathmakerPlugin extends Plugin
 
     Tile getTile(WorldView wv, WorldPoint wp)
     {
-        LocalPoint lp = LocalPoint.fromWorld(client, wp); // Careful not to use wv here (wp then needs to be game world?)
+        LocalPoint lp = LocalPoint.fromWorld(client, wp);
         if (lp == null) return null;
 
-        return getTile(wv, lp);
-    }
-
-    Tile getTile(WorldView wv, LocalPoint lp)
-    {
         return getTile(wv, lp.getSceneX(), lp.getSceneY());
     }
 
-    Tile getTile(WorldView wv, int x, int y)
+    Tile getTile(WorldView wv, int localSceneX, int localSceneY)
     {
-        return wv.getScene().getTiles()[wv.getPlane()][x][y];
+        return wv.getScene().getTiles()[wv.getPlane()][localSceneX][localSceneY];
     }
 
     TileObject getTileObject(WorldView wv, PathPointObject point)
     {
-
         WorldPoint wp = WorldPoint.fromRegion(point.getRegionId(), point.getX(), point.getY(), wv.getPlane());
-        return getTileObject(getTile(wv, wp), point.getEntityId());
+        return getTileObject(wv, wp, point.getEntityId());
+    }
+
+    TileObject getTileObject(WorldView wv, WorldPoint wp, int objectId)
+    {
+        return getTileObject(getTile(wv, wp), objectId);
     }
 
     // THANK YOU ObjectIndicatorsPlugin for this!
@@ -651,11 +648,6 @@ public class PathmakerPlugin extends Plugin
         return false;
     }
 
-    NPC getNpcAtPoint(WorldView wv, int npcId)
-    {
-        return wv.npcs().byIndex(npcId);
-    }
-
     // note
     // client.getNpcDefinition(1).getFootprintSize()
     // client.getNpcDefinition(point.getEntityId()).getFootprintSize()
@@ -672,16 +664,22 @@ public class PathmakerPlugin extends Plugin
 
     Polygon getEntityPolygon(WorldView wv, PathPointObject point)
     {
-        if (point.isNpc()) return getNpcAtPoint(wv, point.getEntityId()).getCanvasTilePoly();
+        if(point.isNpc())
+        {
+            NPC npc = wv.npcs().byIndex(point.getEntityId());
+            if(npc != null) return npc.getCanvasTilePoly();
+        }
+        else
+        {
+            TileObject object = getTileObject(getTile(wv, point.getWorldPoint()), point.getEntityId());
+            if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
+            else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();
+            else if (object instanceof GroundObject) return ((GroundObject) object).getCanvasTilePoly();
+            else if (object instanceof WallObject) return ((WallObject) object).getCanvasTilePoly();
+            else if (object instanceof ItemLayer) return ((ItemLayer) object).getCanvasTilePoly();
+        }
 
-        TileObject object = getTileObject(getTile(wv, point.getWorldPoint()),point.getEntityId());
-
-        if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
-        else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();
-        else if (object instanceof GroundObject) return ((GroundObject) object).getCanvasTilePoly();
-        else if (object instanceof WallObject) return ((WallObject) object).getCanvasTilePoly();
-        else if (object instanceof ItemLayer) return ((ItemLayer) object).getCanvasTilePoly();
-        else log.debug("getEntityPolygon returned null."); return null;
+        return null;
     }
 
     WorldPoint getEntityCenter(WorldView wv, PathPointObject point)

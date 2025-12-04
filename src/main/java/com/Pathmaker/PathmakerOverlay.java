@@ -162,6 +162,7 @@ public class PathmakerOverlay extends Overlay
         for (String pathName : paths.keySet())
         {
             PathmakerPath path = paths.get(pathName);
+
             if(path.hidden)
             {
                 continue;
@@ -178,7 +179,8 @@ public class PathmakerOverlay extends Overlay
             for (int loadedRegionID : loadedRegions)
             {
                 // Skip if path does not contain points in the given region
-                if (!path.hasPointsInRegion(loadedRegionID)) {
+                if (!path.hasPointsInRegion(loadedRegionID))
+                {
                     continue;
                 }
 
@@ -205,6 +207,8 @@ public class PathmakerOverlay extends Overlay
                             localP = pathPointToLocal(wv, point);
                             highlightTile(graphics, plugin.getEntityPolygon(wv, (PathPointObject) point), config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                         }
+
+                        // Draw non-entity tile highlights
                         else if(config.drawPathPoints())
                         {
                             localP = pathPointToLocal(wv, point);
@@ -303,10 +307,9 @@ public class PathmakerOverlay extends Overlay
 
     boolean highlightTile(final Graphics2D graphics, final Polygon poly, final Color color, final double borderWidth, final Color fillColor)
     {
-        // poly will be null i the tile is within a loaded region, but outside the camera's frustum.
+        // poly will be null i the tile is within a loaded region, but outside the camera's frustum or not loaded (i.e. despawning npcs)
         if (poly == null)
         {
-            log.debug("Failed to highlight tile, POLY is null");
             return false;
         }
 
@@ -355,7 +358,7 @@ public class PathmakerOverlay extends Overlay
 
         if(point.isNpc())
         {
-            NPC npc = plugin.getNpcAtPoint(wv, point.getEntityId());
+            NPC npc = wv.npcs().byIndex(point.getEntityId());
             if(npc == null){return;}
 
             final WorldPoint worldNpc = npc.getWorldLocation();
