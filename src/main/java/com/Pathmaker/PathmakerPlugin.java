@@ -26,6 +26,7 @@ import java.awt.Polygon;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.api.events.WorldViewLoaded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -123,8 +124,6 @@ public class PathmakerPlugin extends Plugin
 
         pluginPanel = new PathmakerPluginPanel(client, this);
 
-        load();
-
         clientThread.invokeLater(() ->
         {
             final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
@@ -148,6 +147,12 @@ public class PathmakerPlugin extends Plugin
         paths.clear();
     }
 
+    @Subscribe
+    public void onWorldViewLoaded(WorldViewLoaded event)
+    {
+        load(event.getWorldView());
+    }
+
     void save()
     {
         configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
@@ -156,7 +161,7 @@ public class PathmakerPlugin extends Plugin
         configManager.sendConfig();
     }
 
-    private void load()
+    private void load(WorldView wv)
     {
         paths.clear();
         String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
@@ -233,184 +238,169 @@ public class PathmakerPlugin extends Plugin
         MenuAction menuAction = event.getMenuEntry().getType();
         hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
 
-        if (hotKeyPressed && (menuAction == MenuAction.WALK || menuAction == MenuAction.SET_HEADING ||
-                menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT))
+        if (!hotKeyPressed || (menuAction != MenuAction.WALK && menuAction != MenuAction.SET_HEADING &&
+                menuAction != MenuAction.EXAMINE_NPC && menuAction != MenuAction.EXAMINE_OBJECT))
         {
-            // Fetch game world
-            int worldId = event.getMenuEntry().getWorldViewId();
-            WorldView wv = client.getWorldView(worldId);
-            if (wv == null) {
-                log.debug("No world view found for getMenuEntry().getWorldViewId " + worldId);
-                return;
-            }
+            return;
+        }
 
-            // Fetch selected tile
-            final Tile selectedSceneTile = wv.getSelectedSceneTile();
-            if (selectedSceneTile == null)
+        // Fetch game world
+        int worldId = event.getMenuEntry().getWorldViewId();
+        WorldView wv = client.getWorldView(worldId);
+        if (wv == null)
+        {
+            log.debug("No world view found for getMenuEntry().getWorldViewId " + worldId);
+            return;
+        }
+
+        // Fetch selected tile
+        final Tile selectedSceneTile = wv.getSelectedSceneTile();
+        if (selectedSceneTile == null)
+        {
+            return;
+        }
+
+        // Get the tile under cursor
+        PathPoint pathPoint;
+
+        String targetEntityString;
+        String targetPathName = getActiveOrDefaultPathColorString(getActivePathName());
+        final WorldPoint worldPoint;
+
+        // Attempt to get an actor (npc) under the cursor
+        if (event.getMenuEntry().getNpc() != null)
+        {
+            worldPoint = event.getMenuEntry().getNpc().getWorldLocation();
+            targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getNpc().getName());
+        }
+        else // If not an actor it's a tile OR an object
+        {
+            if (menuAction == MenuAction.EXAMINE_OBJECT)
             {
-                return;
-            }
+                // BIG shoutout to the ObjectIndicatorsPlugin for this implementation.
+                // Spent most of the day just fighting chatGPT, and it was not at all fruitful.
 
-            // Get the tile under cursor
-            WorldPoint actorWp = null;// = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
-            PathPoint pathPoint;
+                final int sceneX = event.getMenuEntry().getParam0();
+                final int sceneY = event.getMenuEntry().getParam1();
 
-            String targetEntityString;
-            String targetPathName = getActiveOrDefaultPathColorString(getActivePathName());
-            final WorldPoint worldPoint;
+                Tile tile = getTile(wv, sceneX, sceneY);
 
-            // Attempt to get an actor (npc) under the cursor
-            if(event.getMenuEntry().getActor() != null)
-            {
-                worldPoint = event.getMenuEntry().getActor().getWorldLocation();
-                targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getActor().getName());
-            }
-            else // If not an actor it's a tile OR an object
-            {
-                if(menuAction == MenuAction.EXAMINE_OBJECT)
+                int targetId = event.getMenuEntry().getIdentifier();
+
+
+                TileObject tileObject = null;
+                if (tile != null)
                 {
-                    // BIG shoutout to the ObjectIndicatorsPlugin for this implementation.
-                    // Spent most of the day just fighting chatGPT, and it was not at all fruitful.
-
-                    final int sceneX = event.getMenuEntry().getParam0();
-                    final int sceneY = event.getMenuEntry().getParam1();
-
-                    Tile tile = getTile(wv, sceneX, sceneY);
-
-                    int targetId = event.getMenuEntry().getIdentifier();
-
-
-                    TileObject tileObject = null;
-                    if(tile != null)
-                    {
-                        tileObject = getTileObject(tile, targetId);
-                    }
-                    if (tileObject != null)
-                    {
-                        worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
-                    }
-                    else
-                    {
-                        worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
-                    }
+                    tileObject = getTileObject(tile, targetId);
                 }
-                else
+                if (tileObject != null)
+                {
+                    worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
+                } else
                 {
                     worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
                 }
-
-                String target = event.getMenuEntry().getTarget(); // Returns an empty string if not an object
-                targetEntityString = getActiveOrDefaultPathColorString(target.isEmpty() ? "Tile" : target);
+            }
+            else
+            {
+                worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
             }
 
-            // See if the point already exists
-            pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+            String target = event.getMenuEntry().getTarget(); // Returns an empty string if not an object
+            targetEntityString = getActiveOrDefaultPathColorString(target.isEmpty() ? "Tile" : target);
+        }
 
-            // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
-            if (pathPoint == null)
+        // See if the point already exists
+        pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+
+        // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
+        if (pathPoint == null)
+        {
+            final PathPoint newPoint;
+
+            // Skip if the entityID has already been registered
+            if (menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
             {
-                // Skip if the entityID has already been registered
-                if(menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
-                {
-                    int entityID = event.getIdentifier();
-                    final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
+                int entityID = event.getIdentifier();
+                final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
-                    // WATCH OUT FOR MOVING TARGETS AND THEIR REGIONS!!!
-
-                    // Skip if the entity is already registered
-                    if (!paths.isEmpty() ||
-                            !paths.containsKey(getActivePathName()) ||
-                            !paths.get(getActivePathName()).containsEntity(wv.getMapRegions(), isNpc, entityID))
-                    {
-                        client.getMenu().createMenuEntry(-1)
-                                .setOption("Add " + targetEntityString + " to")
-                                .setTarget(targetPathName)
-                                .setType(MenuAction.RUNELITE)
-                                .onClick(e ->
-                                {
-                                    createOrAddToPath(
-                                            new PathPointObject(worldPoint.getRegionID(),
-                                                    worldPoint.getRegionX(),
-                                                    worldPoint.getRegionY(),
-                                                    worldPoint.getPlane(),
-                                                    entityID,
-                                                    isNpc));
-                                });
-                    }
-                }
-                else
-                {
-                    client.getMenu().createMenuEntry(-1)
-                            .setOption("Add " + targetEntityString + " to")
-                            .setTarget(targetPathName)
-                            .setType(MenuAction.RUNELITE)
-                            .onClick(e -> createOrAddToPath(new PathPoint(
-                                    worldPoint.getRegionID(),
-                                    worldPoint.getRegionX(),
-                                    worldPoint.getRegionY(),
-                                    worldPoint.getPlane())));
-                }
+                newPoint = new PathPointObject(worldPoint.getRegionID(), worldPoint.getRegionX(),
+                        worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
+            }
+            else
+            {
+                newPoint = new PathPoint(worldPoint.getRegionID(), worldPoint.getRegionX(),
+                        worldPoint.getRegionY(), worldPoint.getPlane());
             }
 
-            // On existing POINTS
-            if (pathPoint != null) // actorPoint != null ||
+            if(newPoint != null)
             {
-                for (String pathName : paths.keySet())
-                {
+                client.getMenu().createMenuEntry(-1)
+                        .setOption("Add " + targetEntityString + " to")
+                        .setTarget(targetPathName)
+                        .setType(MenuAction.RUNELITE)
+                        .onClick(e -> createOrAddToPath(newPoint));
+            }
+        }
+
+        // On existing POINTS
+        if (pathPoint != null) // actorPoint != null ||
+        {
+            for (String pathName : paths.keySet())
+            {
 //                    if (!paths.get(pathName).containsPoint(pathPoint))
 //                    {continue;}
 
-                    // Set menu entry color
-                    targetPathName = ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
+                // Set menu entry color
+                targetPathName = ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
 
-                    // Only configure add loop/unloop/label if point belongs to the active group
-                    if (pathName.equals(getActivePathName()))
+                // Only configure add loop/unloop/label if point belongs to the active group
+                if (pathName.equals(getActivePathName()))
+                {
+                    // Only allow loop/unloop with points connected to the last point
+                    if ((pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2 && paths.get(pathName).loopPath) ||
+                            pathPoint.getDrawIndex() == 0 && paths.get(pathName).getSize() > 2)
                     {
-                        // Only allow loop/unloop with points connected to the last point
-                        if ((pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2 && paths.get(pathName).loopPath) ||
-                                pathPoint.getDrawIndex() == 0 && paths.get(pathName).getSize() > 2) {
-                            client.getMenu().createMenuEntry(-1)
-                                    .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop")
-                                    .setTarget(targetPathName)
-                                    .setType(MenuAction.RUNELITE)
-                                    .onClick(e ->
-                                    {
-                                        // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
-                                        if (pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2)
-                                        {
-                                            paths.get(pathName).setNewIndex(paths.get(pathName).getPointAtDrawIndex(paths.get(pathName).getSize() - 1), 0);
-                                            paths.get(pathName).reverseDrawOrder();
-                                        }
-
-                                        paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
-                                        rebuildPanel();
-                                    });
-                        }
-
-                        // Add label rename option
                         client.getMenu().createMenuEntry(-1)
-                                .setOption("Set " + targetEntityString + " label")
+                                .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop")
                                 .setTarget(targetPathName)
                                 .setType(MenuAction.RUNELITE)
                                 .onClick(e ->
                                 {
-                                    String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+                                    // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+                                    if (pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2) {
+                                        paths.get(pathName).setNewIndex(paths.get(pathName).getPointAtDrawIndex(paths.get(pathName).getSize() - 1), 0);
+                                        paths.get(pathName).reverseDrawOrder();
+                                    }
 
-                                    chatboxPanelManager.openTextInput(targetEntityString + " label")
-                                            .value(currentLabel)
-                                            .onDone(label ->
-                                            {
-                                                if(label.length() > MAX_LABEL_LENGTH)
-                                                    label = label.substring(0, MAX_LABEL_LENGTH);
-                                                pathPoint.setLabel(label); // From
-                                                rebuildPanel();
-                                            })
-                                            .build();
+                                    paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
+                                    rebuildPanel();
                                 });
                     }
 
-                    addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
+                    // Add label rename option
+                    client.getMenu().createMenuEntry(-1)
+                            .setOption("Set " + targetEntityString + " label")
+                            .setTarget(targetPathName)
+                            .setType(MenuAction.RUNELITE)
+                            .onClick(e ->
+                            {
+                                String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+
+                                chatboxPanelManager.openTextInput(targetEntityString + " label")
+                                        .value(currentLabel)
+                                        .onDone(label ->
+                                        {
+                                            if (label.length() > MAX_LABEL_LENGTH)
+                                                label = label.substring(0, MAX_LABEL_LENGTH);
+                                            pathPoint.setLabel(label); // From
+                                            rebuildPanel();
+                                        })
+                                        .build();
+                            });
                 }
+
+                addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
             }
         }
     }
@@ -682,13 +672,12 @@ public class PathmakerPlugin extends Plugin
         return null;
     }
 
-    WorldPoint getEntityCenter(WorldView wv, PathPointObject point)
+    LocalPoint getEntityCenter(WorldView wv, PathPointObject point)
     {
         Polygon poly = getEntityPolygon(wv, point);
         if (poly == null || poly.getBounds() == null) return null;
 
         Rectangle bounds = poly.getBounds();
-        LocalPoint centerLp = new LocalPoint((int) bounds.getCenterX(), (int) bounds.getCenterY(), wv);
-        return WorldPoint.fromLocalInstance(wv.getScene(), centerLp, wv.getPlane());
+        return new LocalPoint((int) bounds.getCenterX(), (int) bounds.getCenterY(), wv);
     }
 }

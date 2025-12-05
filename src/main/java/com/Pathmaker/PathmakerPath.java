@@ -119,6 +119,12 @@ public class PathmakerPath
         return  pathPoints.containsKey(regionID);
     }
 
+    boolean hasPointInRegion(int regionID, PathPoint point)
+    {
+        if(!pathPoints.containsKey(regionID)) return false;
+        return pathPoints.get(regionID).contains(point);
+    }
+
 
     // 2 -> 0
     // !newGreater
@@ -246,32 +252,29 @@ public class PathmakerPath
         return false;
     }
 
-    ArrayList<Integer> getStoredLoadedRegionIds(int[] loadedRegions)
+    boolean containsEntity(int[] loadedRegions, boolean isNpc, int id)
     {
-        ArrayList<Integer> storedLoadedRegions = new ArrayList<>();
-
         for (int regionId : loadedRegions)
         {
-            if  (pathPoints.containsKey(regionId))
-                storedLoadedRegions.add(regionId);
+            if (containsEntity(regionId, isNpc, id))
+            {
+                return true;
+            }
         }
-        return storedLoadedRegions;
+        return false;
     }
 
     // Only checking points within the loaded regions.
-    boolean containsEntity(int[] loadedRegions, boolean isNpc, int id)
+    boolean containsEntity(int region, boolean isNpc, int id)
     {
-        ArrayList<Integer> storedLoadedRegions = getStoredLoadedRegionIds(loadedRegions);
+        if (!pathPoints.containsKey(region)) return false;
 
-        for (int regionId : storedLoadedRegions)
+        for (PathPoint regionPoint : pathPoints.get(region))
         {
-            for (PathPoint regionPoint : pathPoints.get(regionId))
-            {
-                if (regionPoint instanceof PathPointObject &&
+            if (regionPoint instanceof PathPointObject &&
                         ((PathPointObject) regionPoint).getEntityId() == id &&
                         ((PathPointObject) regionPoint).isNpc() == isNpc)
-                    return true;
-            }
+                return true;
         }
         return false;
     }

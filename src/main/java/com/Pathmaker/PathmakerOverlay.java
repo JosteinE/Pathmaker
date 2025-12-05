@@ -196,17 +196,20 @@ public class PathmakerOverlay extends Overlay
                 if (config.drawPath() || config.drawPathPoints())
                 {
                     LocalPoint lastLocalP = null;
-                    for (int i = 0; i < drawOrder.size(); i++) {
+                    for (int i = 0; i < drawOrder.size(); i++)
+                    {
                         PathPoint point = drawOrder.get(i);
                         LocalPoint localP = pathPointToLocal(wv, point);
-
+                        LocalPoint centerLocation;
                         // Draw outlines first, as this also lets us conveniently update the stored point locations
                         if(point instanceof PathPointObject)
                         {
                             drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
                             localP = pathPointToLocal(wv, point);
                             highlightTile(graphics, plugin.getEntityPolygon(wv, (PathPointObject) point), config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                            //centerLocation = plugin.getEntityCenter(wv, (PathPointObject) point);
                         }
+
 
                         // Draw non-entity tile highlights
                         else if(config.drawPathPoints())
@@ -221,49 +224,11 @@ public class PathmakerOverlay extends Overlay
 
                         lastLocalP = localP;
                     }
-                }
 
-                // Draw label
-                if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
-                {
-                    Color color = config.labelMatchPathColor() ? path.color : config.pathPointLabelColor();
-
-                    switch (config.pathPointLabelModeSelect())
+                    // Iterating through the points here again
+                    if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
                     {
-                        case INDEX:
-                        {
-                            for (PathPoint point : drawOrder)
-                            {
-                                addLabel(graphics, wv, point, config.labelZOffset(), "p" + (point.getDrawIndex()+1), color);
-                            }
-                            break;
-                        }
-                        case LABEL:
-                        {
-                            for (PathPoint point : drawOrder)
-                            {
-                                if(point.getLabel() != null && !point.getLabel().isEmpty())
-                                {
-                                    addLabel(graphics, wv, point, config.labelZOffset(), point.getLabel(), color);
-                                }
-                            }
-                            break;
-                        }
-                        case BOTH:
-                        {
-                            for (PathPoint point : drawOrder)
-                            {
-                                String label = "p" + (point.getDrawIndex() + 1);
-                                if(point.getLabel() != null && !point.getLabel().isEmpty())
-                                {
-                                    label += ", " + point.getLabel();
-                                }
-                                addLabel(graphics, wv, point, config.labelZOffset() * 10, label, color);
-                            }
-                            break;
-                        }
-                        default:
-                            break;
+                        drawLabel(graphics, wv, drawOrder, path.color);
                     }
                 }
             }
@@ -377,6 +342,41 @@ public class PathmakerOverlay extends Overlay
         {
             modelOutlineRenderer.drawOutline(plugin.getTileObject(wv, point),width,color,feather);
         }
+    }
+
+    // Draw label
+    void drawLabel(Graphics2D graphics, WorldView wv, ArrayList<PathPoint> drawOrder, Color pathColor)
+    {
+            Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
+
+            switch (config.pathPointLabelModeSelect()) {
+                case INDEX: {
+                    for (PathPoint point : drawOrder) {
+                        addLabel(graphics, wv, point, config.labelZOffset(), "p" + (point.getDrawIndex() + 1), color);
+                    }
+                    break;
+                }
+                case LABEL: {
+                    for (PathPoint point : drawOrder) {
+                        if (point.getLabel() != null && !point.getLabel().isEmpty()) {
+                            addLabel(graphics, wv, point, config.labelZOffset(), point.getLabel(), color);
+                        }
+                    }
+                    break;
+                }
+                case BOTH: {
+                    for (PathPoint point : drawOrder) {
+                        String label = "p" + (point.getDrawIndex() + 1);
+                        if (point.getLabel() != null && !point.getLabel().isEmpty()) {
+                            label += ", " + point.getLabel();
+                        }
+                        addLabel(graphics, wv, point, config.labelZOffset() * 10, label, color);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
     }
 
     String constructHoveredTileString(Tile tile)
