@@ -15,6 +15,9 @@ public class PathPointObject extends PathPoint
 
     private final int id;
     private final boolean isNpc;
+    //private int inradius;
+    private int toCenterVectorX = 64;
+    private int toCenterVectorY = 64;
 
     PathPointObject(@Nonnull TileObject tileObject)
     {
@@ -25,7 +28,7 @@ public class PathPointObject extends PathPoint
         id = tileObject.getId();
     }
 
-    PathPointObject(@Nonnull NPC npc, int id)//, Client client)
+    PathPointObject(@Nonnull NPC npc, int id)
     {
         super(npc.getWorldLocation().getRegionID(),
                 npc.getWorldLocation().getRegionX(),
@@ -36,7 +39,7 @@ public class PathPointObject extends PathPoint
         this.id = id;
     }
 
-    PathPointObject(int r, int x, int y, int z, int id, boolean isNpc)//, Client client)
+    PathPointObject(int r, int x, int y, int z, int id, boolean isNpc)
     {
         super(r, x, y, z);
 
@@ -44,6 +47,21 @@ public class PathPointObject extends PathPoint
         this.id = id;
     }
 
+    // footprint * TileSize / 2
+    void setToCenterVector(int x, int y)
+    {
+        this.toCenterVectorX = x;
+        this.toCenterVectorY = y;
+    }
+
+    int getToCenterVectorX()
+    {
+        return this.toCenterVectorX;
+    }
+    int getToCenterVectorY()
+    {
+        return this.toCenterVectorY;
+    }
 
 //    private Renderable getRenderableObject(TileObject tileObject)
 //    {

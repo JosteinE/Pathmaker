@@ -8,6 +8,7 @@ import javax.swing.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import com.google.gson.Gson;
@@ -57,6 +58,8 @@ public class PathmakerPlugin extends Plugin
     private static final String CONFIG_KEY = "paths";
 
     public final int  MAX_LABEL_LENGTH = 15;
+    public final int  TILE_SIZE = 128; // Not in net.runelite.api.Constants?
+    public final int  TILE_SIZE_HALF = TILE_SIZE / 2;
 
     private final HashMap<String, PathmakerPath> paths = new HashMap<>();
     private PathmakerPluginPanel pluginPanel;
@@ -266,12 +269,15 @@ public class PathmakerPlugin extends Plugin
         String targetEntityString;
         String targetPathName = getActiveOrDefaultPathColorString(getActivePathName());
         final WorldPoint worldPoint;
+        Point toCenterVec = new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
 
         // Attempt to get an actor (npc) under the cursor
         if (event.getMenuEntry().getNpc() != null)
         {
+            NPC npc = event.getMenuEntry().getNpc();
             worldPoint = event.getMenuEntry().getNpc().getWorldLocation();
             targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getNpc().getName());
+            toCenterVec = getNpcToCenterVector(wv, npc.getId());
         }
         else // If not an actor it's a tile OR an object
         {
@@ -296,6 +302,8 @@ public class PathmakerPlugin extends Plugin
                 if (tileObject != null)
                 {
                     worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
+                    toCenterVec = getObjectToCenterVector(wv, worldPoint, event.getIdentifier());
+
                 } else
                 {
                     worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
@@ -326,6 +334,9 @@ public class PathmakerPlugin extends Plugin
 
                 newPoint = new PathPointObject(worldPoint.getRegionID(), worldPoint.getRegionX(),
                         worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
+
+                if(toCenterVec != null)
+                    ((PathPointObject) newPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
             }
             else
             {
@@ -604,7 +615,8 @@ public class PathmakerPlugin extends Plugin
             }
         }
 
-        log.debug("No Object found with id " + id);
+        // Occurs also if an object within the loaded regions despawns (ie, tree chopped)
+        //log.debug("No Object found with id " + id);
         return null;
     }
 
@@ -647,14 +659,19 @@ public class PathmakerPlugin extends Plugin
 
     Polygon getEntityPolygon(WorldView wv, PathPointObject point)
     {
-        if(point.isNpc())
+        return getEntityPolygon(wv, point.getWorldPoint(), point.isNpc(), point.getEntityId());
+    }
+
+    Polygon getEntityPolygon(WorldView wv, WorldPoint wp, boolean isNpc, int entityId)
+    {
+        if(isNpc)
         {
-            NPC npc = wv.npcs().byIndex(point.getEntityId());
+            NPC npc = wv.npcs().byIndex(entityId);
             if(npc != null) return npc.getCanvasTilePoly();
         }
         else
         {
-            TileObject object = getTileObject(getTile(wv, point.getWorldPoint()), point.getEntityId());
+            TileObject object = getTileObject(getTile(wv, wp), entityId);
 
             if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
             else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();
@@ -666,12 +683,60 @@ public class PathmakerPlugin extends Plugin
         return null;
     }
 
-    LocalPoint getEntityCenter(WorldView wv, PathPointObject point)
-    {
-        Polygon poly = getEntityPolygon(wv, point);
-        if (poly == null || poly.getBounds() == null) return null;
 
-        Rectangle bounds = poly.getBounds();
-        return new LocalPoint((int) bounds.getCenterX(), (int) bounds.getCenterY(), wv);
+    // NB LocalPoint is the center of a given tile
+
+    // For npcs their origin is always the SW tile
+    // NE for objects
+
+    // Cow: 2x2     Tree: 2x2
+    // [ ][ ]       [ ][X]
+    // [X][ ]       [ ][ ]
+
+    Point getEntityToCenterVector(WorldView wv, WorldPoint wp, int entityId, boolean isNpc)
+    {
+        return isNpc ? getNpcToCenterVector(wv, entityId) : getObjectToCenterVector(wv, wp, entityId);
+    }
+
+//    int getNpcInradius(WorldView wv, int npcId)
+//    {
+//        return (int) (wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF);
+//    }
+
+    Point getNpcToCenterVector(WorldView wv, int npcId)
+    {
+        if (wv.npcs().byIndex(npcId) == null ) return null;
+        int size =  (wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF);
+        return new Point(size, size);
+    }
+
+//    int getObjectInradius(int objectId, WorldPoint point)
+//    {
+//        ObjectComposition comp = client.getObjectDefinition(objectId);
+//
+//        int x = comp.getSizeX() * TILE_SIZE / 2;
+//        int y = comp.getSizeY() * TILE_SIZE / 2;
+//
+//        Point p = new Point(x, y);
+//
+//        return client.getObjectDefinition(objectId).getSizeX() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
+//    }
+
+    Point getObjectToCenterVector(WorldView wv, WorldPoint wp, int entityId)
+    {
+        LocalPoint lp = LocalPoint.fromWorld(wv, wp);
+
+        if(lp == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
+
+        TileObject object = getTileObject(getTile(wv, wp),  entityId);
+        LocalPoint objLp = object.getLocalLocation();
+
+        return new Point(objLp.getX() - lp.getX(), objLp.getY() - lp.getY());
+    }
+
+    LocalPoint getEntityCenter(int inradius, LocalPoint lp)
+    {
+        lp = lp.dx(inradius); lp = lp.dy(inradius);
+        return lp;
     }
 }
