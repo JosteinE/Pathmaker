@@ -1,10 +1,6 @@
 package com.Pathmaker;
 
 import net.runelite.api.NPC;
-import net.runelite.api.TileObject;
-import net.runelite.api.coords.WorldPoint;
-
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PathPointNPC extends PathPoint

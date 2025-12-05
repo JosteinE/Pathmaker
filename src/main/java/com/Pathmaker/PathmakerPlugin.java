@@ -2,27 +2,36 @@ package com.Pathmaker;
 
 import com.google.common.base.Strings;
 import com.google.inject.Provides;
+import java.awt.Color;
 import javax.inject.Inject;
-import javax.swing.*;
 
+import javax.swing.JOptionPane;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
+import net.runelite.api.Client;
+import net.runelite.api.DecorativeObject;
+import net.runelite.api.GameObject;
+import net.runelite.api.GroundObject;
+import net.runelite.api.ItemLayer;
+import net.runelite.api.KeyCode;
+import net.runelite.api.MenuAction;
+import net.runelite.api.NPC;
+import net.runelite.api.ObjectComposition;
 import net.runelite.api.Point;
+import net.runelite.api.Tile;
+import net.runelite.api.TileObject;
+import net.runelite.api.WallObject;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.nio.file.Path;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Objects;
 import java.awt.Polygon;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -43,7 +52,6 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
-import org.w3c.dom.css.Rect;
 
 @Slf4j
 @PluginDescriptor(
@@ -275,7 +283,7 @@ public class PathmakerPlugin extends Plugin
         if (event.getMenuEntry().getNpc() != null)
         {
             NPC npc = event.getMenuEntry().getNpc();
-            worldPoint = event.getMenuEntry().getNpc().getWorldLocation();
+            worldPoint = WorldPoint.fromLocalInstance(client, event.getMenuEntry().getNpc().getLocalLocation());
             targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getNpc().getName());
             toCenterVec = getNpcToCenterVector(wv, npc.getId());
         }

@@ -8,7 +8,13 @@ import java.awt.Polygon;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
 
-import net.runelite.api.*;
+import net.runelite.api.Client;
+import net.runelite.api.NPC;
+import net.runelite.api.Perspective;
+import net.runelite.api.Point;
+import net.runelite.api.Tile;
+import net.runelite.api.TileObject;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;                  // For player position
 import net.runelite.api.coords.WorldPoint;
 
