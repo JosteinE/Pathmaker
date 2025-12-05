@@ -61,15 +61,16 @@ public class PathmakerOverlay extends Overlay
         final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
         LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(client, playerPos);
         startPoint = playerPosLocal == null ? startPoint : playerPosLocal;
+        WorldView wv = client.getTopLevelWorldView();
 
         // Current tile
         if (config.highlightPlayerTile())
         {
-            highlightTile(graphics, startPoint, config.highlightPlayerColor(), config.playerTileBorderWidth(), config.playerTileFillColor());
+            highlightTile(graphics, wv, startPoint, config.highlightPlayerColor(), config.playerTileBorderWidth(), config.playerTileFillColor());
         }
 
-        // Fetch hovered tile and if successful, assign it to endPoint
-        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
+//        // Fetch hovered tile and if successful, assign it to endPoint
+//        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
 
         // Highlight tiles marked by the right-click menu and draw lines between them
         if(!plugin.getStoredPaths().isEmpty())
@@ -102,7 +103,7 @@ public class PathmakerOverlay extends Overlay
 
         // Highlight hovered tile
         if (config.highlightHoveredTile() && tile != null && isRegionLoaded(tile.getWorldLocation().getRegionID())) {
-            highlightTile(graphics, hoveredTile, config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+            highlightTile(graphics, wv, hoveredTile, config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
         }
 
         // Add label
@@ -176,60 +177,56 @@ public class PathmakerOverlay extends Overlay
                 loadedRegions.add(regionId);
             }
 
-            for (int loadedRegionID : loadedRegions)
+
+            ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
+            if (drawOrder.isEmpty())
             {
-                // Skip if path does not contain points in the given region
-                if (!path.hasPointsInRegion(loadedRegionID))
-                {
-                    continue;
-                }
+                log.debug("WorldView: {}", wv);
+                log.debug("Environment: {}", client.getEnvironment());
+                log.debug("IsInstance, {}", client.getTopLevelWorldView().isInstance());
+                log.debug("getDraw2DMask, {}", client.getDraw2DMask());
+            }
 
-                ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
-                if (drawOrder.isEmpty())
+            if (config.drawPath() || config.drawPathPoints())
+            {
+                LocalPoint lastLocalP = null;
+                for (int i = 0; i < drawOrder.size(); i++)
                 {
-                    log.debug("WorldView: {}", wv);
-                    log.debug("Environment: {}", client.getEnvironment());
-                    log.debug("IsInstance, {}", client.getTopLevelWorldView().isInstance());
-                    log.debug("getDraw2DMask, {}", client.getDraw2DMask());
-                }
-
-                if (config.drawPath() || config.drawPathPoints())
-                {
-                    LocalPoint lastLocalP = null;
-                    for (int i = 0; i < drawOrder.size(); i++)
+                    PathPoint point = drawOrder.get(i);
+                    LocalPoint localP = pathPointToLocal(wv, point);
+                    //LocalPoint centerLocation;
+                    // Draw outlines first, as this also lets us conveniently update the stored point locations
+                    if(point instanceof PathPointObject)
                     {
-                        PathPoint point = drawOrder.get(i);
-                        LocalPoint localP = pathPointToLocal(wv, point);
-                        LocalPoint centerLocation;
-                        // Draw outlines first, as this also lets us conveniently update the stored point locations
-                        if(point instanceof PathPointObject)
+                        updateMovablePosition(wv, (PathPointObject) point);
+                        localP = pathPointToLocal(wv, point);
+
+                        drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
+
+                        if(config.drawPathPoints())
                         {
-                            drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
-                            localP = pathPointToLocal(wv, point);
-                            highlightTile(graphics, plugin.getEntityPolygon(wv, (PathPointObject) point), config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                            //centerLocation = plugin.getEntityCenter(wv, (PathPointObject) point);
+                            highlightTile(graphics, wv, plugin.getEntityPolygon(wv, (PathPointObject) point), config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                         }
-
-
-                        // Draw non-entity tile highlights
-                        else if(config.drawPathPoints())
-                        {
-                            localP = pathPointToLocal(wv, point);
-                            highlightTile(graphics, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                        }
-
-                        // Only draw line if the previous point had a draw index that was directly behind this.
-                        if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-                            drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
-
-                        lastLocalP = localP;
                     }
 
-                    // Iterating through the points here again
-                    if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
+
+                    // Draw non-entity tile highlights
+                    else if(config.drawPathPoints())
                     {
-                        drawLabel(graphics, wv, drawOrder, path.color);
+                        highlightTile(graphics, wv, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
                     }
+
+                    // Only draw line if the previous point had a draw index that was directly behind this.
+                    if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
+                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
+
+                    lastLocalP = localP;
+                }
+
+                // Iterating through the points here again
+                if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
+                {
+                    drawLabel(graphics, wv, drawOrder, path.color);
                 }
             }
 
@@ -257,26 +254,28 @@ public class PathmakerOverlay extends Overlay
 
     boolean highlightTile(final Graphics2D graphics, final WorldView wv, final PathPoint point, final Color color, final double borderWidth, final Color fillColor)
     {
-        return highlightTile(graphics, pathPointToLocal(wv, point), color, borderWidth, fillColor);
+        return highlightTile(graphics, wv, pathPointToLocal(wv, point), color, borderWidth, fillColor);
     }
 
-    boolean highlightTile(final Graphics2D graphics, final LocalPoint tile, final Color color, final double borderWidth, final Color fillColor)
+    boolean highlightTile(final Graphics2D graphics, final WorldView wv, final LocalPoint lp, final Color color, final double borderWidth, final Color fillColor)
     {
-        if (tile == null || !isLocalPointInScene(tile))
+        if (lp == null)// || !isLocalPointInScene(lp))
         {
-            log.debug("Failed to highlight tile, TILE is null.");
+            log.debug("Failed to highlight tile, LocalPoint is null.");
             return false;
         }
-        return highlightTile(graphics, Perspective.getCanvasTilePoly(client, tile), color, borderWidth, fillColor);
+        return highlightTile(graphics, wv, Perspective.getCanvasTilePoly(client, lp), color, borderWidth, fillColor);
     }
 
-    boolean highlightTile(final Graphics2D graphics, final Polygon poly, final Color color, final double borderWidth, final Color fillColor)
+    boolean highlightTile(final Graphics2D graphics, final WorldView wv, final Polygon poly, final Color color, final double borderWidth, final Color fillColor)
     {
         // poly will be null i the tile is within a loaded region, but outside the camera's frustum or not loaded (i.e. despawning npcs)
-        if (poly == null)
-        {
-            return false;
-        }
+        if (poly == null) return false;
+
+        int boundsX = (int) poly.getBounds().getLocation().getX();
+        int boundsY = (int) poly.getBounds().getLocation().getY();
+
+        if(!isLocalPointInScene(new LocalPoint(boundsX, boundsY, wv))) return false;
 
         OverlayUtil.renderPolygon(graphics, poly, color, fillColor, new BasicStroke((float) borderWidth));
         return true;
@@ -326,9 +325,34 @@ public class PathmakerOverlay extends Overlay
             NPC npc = wv.npcs().byIndex(point.getEntityId());
             if(npc == null){return;}
 
-            final WorldPoint worldNpc = npc.getWorldLocation();
+//            final WorldPoint worldNpc = npc.getWorldLocation();
 
             modelOutlineRenderer.drawOutline(npc,width,color,feather);
+
+//            // Update the stored belonging PathPoint
+//            plugin.updatePointLocation(
+//                    point,
+//                    worldNpc.getRegionID(),
+//                    worldNpc.getRegionX(),
+//                    worldNpc.getRegionY(),
+//                    wv.getPlane());
+        }
+        else
+        {
+            TileObject tileObject = plugin.getTileObject(wv, point);
+            if(tileObject == null){return;}
+            modelOutlineRenderer.drawOutline(tileObject,width,color,feather);
+        }
+    }
+
+    void updateMovablePosition(WorldView wv, PathPointObject point)
+    {
+        if(point.isNpc())
+        {
+            NPC npc = wv.npcs().byIndex(point.getEntityId());
+            if(npc == null){return;}
+
+            final WorldPoint worldNpc = npc.getWorldLocation();
 
             // Update the stored belonging PathPoint
             plugin.updatePointLocation(
@@ -337,10 +361,6 @@ public class PathmakerOverlay extends Overlay
                     worldNpc.getRegionX(),
                     worldNpc.getRegionY(),
                     wv.getPlane());
-        }
-        else
-        {
-            modelOutlineRenderer.drawOutline(plugin.getTileObject(wv, point),width,color,feather);
         }
     }
 

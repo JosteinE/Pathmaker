@@ -489,7 +489,7 @@ public class PathmakerPlugin extends Plugin
     // Create a new path starting with the given point or add to existing path
     void createOrAddToPath(PathPoint point)
     {
-        String activePath = pluginPanel.activePath.getText();//config.activePath();
+        String activePath = getActivePathName(); //pluginPanel.activePath.getText();//config.activePath();
 
         if(activePath == null) return;
 
@@ -505,8 +505,9 @@ public class PathmakerPlugin extends Plugin
             // Initialize new path with the initial point
             path = new PathmakerPath(point);
             path.color = getDefaultPathColor();
+            paths.put(activePath, path);
         }
-        paths.put(activePath, path);
+
         rebuildPanel();
     }
 
@@ -654,6 +655,7 @@ public class PathmakerPlugin extends Plugin
         else
         {
             TileObject object = getTileObject(getTile(wv, point.getWorldPoint()), point.getEntityId());
+
             if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
             else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();
             else if (object instanceof GroundObject) return ((GroundObject) object).getCanvasTilePoly();
