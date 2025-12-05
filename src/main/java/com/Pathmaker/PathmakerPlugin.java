@@ -333,73 +333,65 @@ public class PathmakerPlugin extends Plugin
                         worldPoint.getRegionY(), worldPoint.getPlane());
             }
 
-            if(newPoint != null)
-            {
-                client.getMenu().createMenuEntry(-1)
-                        .setOption("Add " + targetEntityString + " to")
-                        .setTarget(targetPathName)
-                        .setType(MenuAction.RUNELITE)
-                        .onClick(e -> createOrAddToPath(newPoint));
-            }
+            client.getMenu().createMenuEntry(-1)
+                    .setOption("Add " + targetEntityString + " to")
+                    .setTarget(targetPathName)
+                    .setType(MenuAction.RUNELITE)
+                    .onClick(e -> createOrAddToPath(newPoint));
         }
 
         // On existing POINTS
         if (pathPoint != null) // actorPoint != null ||
         {
+            String activePathName = getActivePathName();
+
+            // Only configure add loop/unloop/label if point belongs to the active group
+            // Only allow loop/unloop with points connected to the last point
+            if ((pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 && paths.get(activePathName).loopPath) ||
+                    pathPoint.getDrawIndex() == 0 && paths.get(activePathName).getSize() > 2)
+            {
+                client.getMenu().createMenuEntry(-1)
+                        .setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
+                        .setTarget(targetPathName)
+                        .setType(MenuAction.RUNELITE)
+                        .onClick(e ->
+                        {
+                            // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+                            if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2) {
+                                paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
+                                paths.get(activePathName).reverseDrawOrder();
+                            }
+
+                            paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
+                            rebuildPanel();
+                        });
+            }
+
+            // Add label rename option
+            client.getMenu().createMenuEntry(-1)
+                    .setOption("Set " + targetEntityString + " label")
+                    .setTarget(targetPathName)
+                    .setType(MenuAction.RUNELITE)
+                    .onClick(e ->
+                    {
+                        String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+
+                        chatboxPanelManager.openTextInput(targetEntityString + " label")
+                                .value(currentLabel)
+                                .onDone(label ->
+                                {
+                                    if (label.length() > MAX_LABEL_LENGTH)
+                                        label = label.substring(0, MAX_LABEL_LENGTH);
+                                    pathPoint.setLabel(label); // From
+                                    rebuildPanel();
+                                })
+                                .build();
+                    });
+
+            // Adding delete options, regardless of belonging path
             for (String pathName : paths.keySet())
             {
-//                    if (!paths.get(pathName).containsPoint(pathPoint))
-//                    {continue;}
-
-                // Set menu entry color
-                targetPathName = ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
-
-                // Only configure add loop/unloop/label if point belongs to the active group
-                if (pathName.equals(getActivePathName()))
-                {
-                    // Only allow loop/unloop with points connected to the last point
-                    if ((pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2 && paths.get(pathName).loopPath) ||
-                            pathPoint.getDrawIndex() == 0 && paths.get(pathName).getSize() > 2)
-                    {
-                        client.getMenu().createMenuEntry(-1)
-                                .setOption(paths.get(pathName).loopPath ? "Unloop" : "Loop")
-                                .setTarget(targetPathName)
-                                .setType(MenuAction.RUNELITE)
-                                .onClick(e ->
-                                {
-                                    // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
-                                    if (pathPoint.getDrawIndex() == paths.get(pathName).getSize() - 2) {
-                                        paths.get(pathName).setNewIndex(paths.get(pathName).getPointAtDrawIndex(paths.get(pathName).getSize() - 1), 0);
-                                        paths.get(pathName).reverseDrawOrder();
-                                    }
-
-                                    paths.get(pathName).loopPath = !paths.get(pathName).loopPath;
-                                    rebuildPanel();
-                                });
-                    }
-
-                    // Add label rename option
-                    client.getMenu().createMenuEntry(-1)
-                            .setOption("Set " + targetEntityString + " label")
-                            .setTarget(targetPathName)
-                            .setType(MenuAction.RUNELITE)
-                            .onClick(e ->
-                            {
-                                String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
-
-                                chatboxPanelManager.openTextInput(targetEntityString + " label")
-                                        .value(currentLabel)
-                                        .onDone(label ->
-                                        {
-                                            if (label.length() > MAX_LABEL_LENGTH)
-                                                label = label.substring(0, MAX_LABEL_LENGTH);
-                                            pathPoint.setLabel(label); // From
-                                            rebuildPanel();
-                                        })
-                                        .build();
-                            });
-                }
-
+                ColorUtil.wrapWithColorTag(Text.removeTags(activePathName), paths.get(activePathName).color);
                 addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
             }
         }
