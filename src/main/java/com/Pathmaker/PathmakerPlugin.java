@@ -194,7 +194,7 @@ public class PathmakerPlugin extends Plugin
         configManager.sendConfig();
     }
 
-	private JsonObject pathToJson(String pathName)
+	JsonObject pathToJson(String pathName)
 	{
 		if (!paths.containsKey(pathName))
 		{

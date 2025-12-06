@@ -1,6 +1,7 @@
 package com.Pathmaker;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
@@ -105,7 +106,7 @@ public class PathmakerPluginPanel extends PluginPanel
             {
                 if(!plugin.getStoredPaths().containsKey(activePath.getText())) {return;}
 
-                Pair<String, PathmakerPath> exportPath = new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
+                JsonObject exportPath = plugin.pathToJson(activePath.getText());//new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
 
                 StringSelection json = new StringSelection(plugin.gson.toJson(exportPath));
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -122,73 +123,89 @@ public class PathmakerPluginPanel extends PluginPanel
             @Override
             public void mousePressed(MouseEvent mouseEvent)
             {
-                String json = "";
-                try {
-                    json = (String) getToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
-                } catch (IllegalArgumentException | UnsupportedFlavorException | IllegalStateException | NullPointerException | IOException ex) {
-                    log.debug("Clipboard is unavailable or has invalid content");
-                }
+				String json = "";
+				try
+				{
+					json = (String) getToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+				}
+				catch (IllegalArgumentException | UnsupportedFlavorException | IllegalStateException |
+					   NullPointerException | IOException ex)
+				{
+					log.debug("Clipboard is unavailable or has invalid content");
+				}
 
-                if (json.isEmpty()) {return;}
+				if (json.isEmpty())
+				{
+					return;
+				}
 
-                JsonElement element;
-                try { element = new JsonParser().parse(json);}
-                catch (JsonParseException e)
-                {
-                    log.debug("String was not a valid JSON: {}", e.getMessage());
-                    return;
-                }
+				JsonObject element;
+				try
+				{
+					element = new JsonParser().parse(json).getAsJsonObject();
+				}
+				catch (JsonParseException e)
+				{
+					log.debug("String was not a valid JSON: {}", e.getMessage());
+					return;
+				}
 
-                // Pair<String, PathmakerPath> MUST be a JSON object
-                // Returns if JSON is valid but not suitable for Pair<...>
-                if (!element.isJsonObject()) {return;}
+				// Pair<String, PathmakerPath> MUST be a JSON object
+				// Returns if JSON is valid but not suitable for Pair<...>
+//                if (!element.isJsonObject()) {return;}
 
-                Pair<String, PathmakerPath> loadedPath;
-                try{loadedPath = plugin.gson.fromJson(element, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());}
-                catch (JsonSyntaxException e)
-                {
-                    log.debug("JSON is an object, but not in the correct Pair structure: {}", e.getMessage());
-                    return;
-                }
+//                Pair<String, PathmakerPath> loadedPath;
+//                try{loadedPath = plugin.gson.fromJson(element, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());}
+//                catch (JsonSyntaxException e)
+//                {
+//                    log.debug("JSON is an object, but not in the correct Pair structure: {}", e.getMessage());
+//                    return;
+//                }
 
-                if (loadedPath != null)
-                {
-                    JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
-                    centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
-                    String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
+				String pathName = element.keySet().iterator().next();
 
-                    // Return if the window was cancelled or closed
-                    if (pathName == null)
-                    {
-                        return;
-                    }
+				JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
+				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
+				//String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
+				pathName = JOptionPane.showInputDialog(importButton, centeredNameText, pathName);
 
-                    // Show warning if imported path exists
-                    if(plugin.getStoredPaths().containsKey(pathName))
-                    {
-                        JLabel centeredWarningText = new JLabel("The path name " + pathName + " already exist.", JLabel.CENTER);
-                        JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
+				// Return if the window was cancelled or closed
+				if (pathName == null)
+				{
+					return;
+				}
 
-                        centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
-                        centeredReplaceText.setHorizontalTextPosition(SwingConstants.CENTER);
+				// Show warning if imported path exists
+				if (plugin.getStoredPaths().containsKey(pathName))
+				{
+					JLabel centeredWarningText = new JLabel("The path name " + pathName + " already exist.", JLabel.CENTER);
+					JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
 
-                        JPanel centeredTextFrame = new JPanel(new GridLayout(0, 1));
-                        centeredTextFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
-                        centeredTextFrame.add(centeredWarningText);
-                        centeredTextFrame.add(centeredReplaceText);
+					centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
+					centeredReplaceText.setHorizontalTextPosition(SwingConstants.CENTER);
 
-                        int confirm = JOptionPane.showConfirmDialog(null,
-                                centeredTextFrame,"Warning", JOptionPane.YES_NO_OPTION);
+					JPanel centeredTextFrame = new JPanel(new GridLayout(0, 1));
+					centeredTextFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
+					centeredTextFrame.add(centeredWarningText);
+					centeredTextFrame.add(centeredReplaceText);
 
-                        if (confirm == JOptionPane.NO_OPTION || confirm == JOptionPane.CLOSED_OPTION)
-                        {
-                            return;
-                        }
-                    }
-                    plugin.getStoredPaths().put(pathName, loadedPath.getValue());
-                    plugin.rebuildPanel();
-                    activePath.setText(pathName);
-                }
+					int confirm = JOptionPane.showConfirmDialog(null,
+						centeredTextFrame, "Warning", JOptionPane.YES_NO_OPTION);
+
+					if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
+					{
+						plugin.removePath(pathName);
+						plugin.loadPathFromJson(element);
+						plugin.rebuildPanel();
+						activePath.setText(pathName);
+					}
+				}
+				else
+				{
+					plugin.loadPathFromJson(element);
+					plugin.rebuildPanel();
+					activePath.setText(pathName);
+				}
             }
         });
 
