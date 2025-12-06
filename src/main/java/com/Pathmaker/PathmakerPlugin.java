@@ -149,7 +149,8 @@ public class PathmakerPlugin extends Plugin
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
 
-        pluginPanel = new PathmakerPluginPanel(client, this);
+		reload(client.getTopLevelWorldView());
+		pluginPanel = new PathmakerPluginPanel(client, this);
 
         clientThread.invokeLater(() ->
         {
@@ -161,8 +162,6 @@ public class PathmakerPlugin extends Plugin
                     .panel(pluginPanel)
                     .build();
             clientToolbar.addNavigation(navButton);
-
-			reload(client.getTopLevelWorldView());
         });
 	}
 
@@ -509,8 +508,9 @@ public class PathmakerPlugin extends Plugin
         // See if the point already exists
         pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
 
-        // If tile is not previously marked, add the "add" option. // (event.getMenuEntry().getActor() != null && actorPoint == null) ||
-        if (pathPoint == null)
+        // If tile is not previously marked by this path, add the "add" option.
+        if (pathPoint == null || (paths.containsKey(getActivePathName()) &&
+			!paths.get(getActivePathName()).hasPointInRegion(pathPoint.getRegionId(), pathPoint)))
         {
             final PathPoint newPoint;
 
@@ -536,7 +536,14 @@ public class PathmakerPlugin extends Plugin
                     .setOption("Add " + targetEntityString + " to")
                     .setTarget(targetPathName)
                     .setType(MenuAction.RUNELITE)
-                    .onClick(e -> createOrAddToPath(Text.removeTags(targetPathName), newPoint));
+                    .onClick(e ->
+					{
+						createOrAddToPath(Text.removeTags(targetPathName), newPoint);
+						String targetLabel = Text.removeTags(targetEntityString);
+						if (!targetLabel.equals("Tile"))
+							newPoint.setLabel(targetLabel);
+						rebuildPanel(true);
+					});
         }
 
         // On existing POINTS
@@ -566,7 +573,7 @@ public class PathmakerPlugin extends Plugin
 							}
 
 							paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
-							rebuildPanel();
+							rebuildPanel(true);
 						});
 				}
 
@@ -586,18 +593,42 @@ public class PathmakerPlugin extends Plugin
 								if (label.length() > MAX_LABEL_LENGTH)
 									label = label.substring(0, MAX_LABEL_LENGTH);
 								pathPoint.setLabel(label); // From
-								rebuildPanel();
+								rebuildPanel(true);
 							})
 							.build();
 					});
 			}
 
-            // Adding delete options, regardless of belonging path
-            for (String pathName : paths.keySet())
-            {
-                ColorUtil.wrapWithColorTag(Text.removeTags(activePathName), paths.get(activePathName).color);
-                addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
-            }
+
+			// Adding delete options, regardless of belonging path
+			for (String pathName : paths.keySet())
+			{
+				ColorUtil.wrapWithColorTag(Text.removeTags(activePathName), paths.get(activePathName).color);
+				addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
+			}
+
+//			String pathName = getPathsInRegionKeys(pathPoint.getRegionId())
+
+//			addRemoveMenuOption(pathName, pathPoint, "Remove " +
+//						ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) + " from",
+//						ColorUtil.wrapWithColorTag(pathName, paths.get(pathName).color));
+//			}
+//            for (String pathName : paths.keySet())
+//            {
+//				PathmakerPath delOptPath = paths.get(pathName);
+//				if (delOptPath.hasPointInRegion(pathPoint.getRegionId(), pathPoint))
+//				{
+//					String delOptTargetName;
+//					if(pathPoint.getLabel() != null || !pathPoint.getLabel().isEmpty())
+//						delOptTargetName = pathPoint.getLabel();
+//					else
+//						delOptTargetName = "Point";
+//
+//					addRemoveMenuOption(pathName, pathPoint, "Remove " +
+//						ColorUtil.wrapWithColorTag(Text.removeTags(delOptTargetName), delOptPath.color) + " from",
+//						ColorUtil.wrapWithColorTag(Text.removeTags(pathName), delOptPath.color));
+//				}
+//            }
         }
     }
 
@@ -711,8 +742,6 @@ public class PathmakerPlugin extends Plugin
             path.color = getDefaultPathColor();
             paths.put(pathName, path);
         }
-
-        rebuildPanel();
     }
 
     void removePoint(String pathName, PathPoint point)
@@ -722,7 +751,7 @@ public class PathmakerPlugin extends Plugin
         {
             removePath(pathName);
         }
-        rebuildPanel();
+        rebuildPanel(true);
     }
 
     void removePath(String pathName)
@@ -755,10 +784,11 @@ public class PathmakerPlugin extends Plugin
         point.updateRegionLocation(newRegionId, x, y, z);
     }
 
-    void rebuildPanel()
+    void rebuildPanel(boolean savePaths)
     {
         pluginPanel.rebuild();
-        saveAll();
+		if(savePaths)
+			saveAll();
     }
 
     Tile getTile(WorldView wv, WorldPoint wp)

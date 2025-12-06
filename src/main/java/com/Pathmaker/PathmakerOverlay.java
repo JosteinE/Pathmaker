@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
 
@@ -211,6 +212,9 @@ public class PathmakerOverlay extends Overlay
             if (config.drawPath() || config.drawPathPoints())
             {
                 LocalPoint lastLocalP = null;
+				Color pathPointColor = config.pointMatchPathColor() ? path.color : config.pathLinePointColor();
+				Color pathPointFillColor = new Color(pathPointColor.getRed(), pathPointColor.getGreen(), pathPointColor.getBlue(),  pathPointColor.getAlpha() / 5);
+
                 for (int i = 0; i < drawOrder.size(); i++)
                 {
                     PathPoint point = drawOrder.get(i);
@@ -219,40 +223,44 @@ public class PathmakerOverlay extends Overlay
                     // Draw outlines first, as this also lets us conveniently update the stored point locations
                     if(point instanceof PathPointObject)
                     {
-                        updateMovablePosition(wv, (PathPointObject) point);
-                        localP = pathPointToLocal(wv, point);
+						// Updating NPC world positions AND fetching current client side position to draw on
+						localP = LocalPoint.fromWorld(wv, updateMovablePosition(wv, (PathPointObject) point));
+                        //localP = pathPointToLocal(wv, point);
 
+						if(localP != null)
+						{
                         drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
 
                         if(config.drawPathPoints())
                         {
-                            highlightTile(graphics, wv, plugin.getEntityPolygon(wv, (PathPointObject) point), config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
+                            highlightTile(graphics, wv, plugin.getEntityPolygon(wv, (PathPointObject) point), pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
                         }
+							localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
+							localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
+						}
 
-                        localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
-                        localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
-
-                        //localP = plugin.getEntityCenter(((PathPointObject) point).getInradius(), localP);
+						drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     }
-
-                    // Draw non-entity tile highlights
-                    else if(config.drawPathPoints())
-                    {
-                        highlightTile(graphics, wv, localP, config.pathLinePointColor(), config.pathLinePointWidth(), config.pathLinePointFillColor());
-                    }
+					else if(config.drawPathPoints()) // Draw non-entity tile highlights
+					{
+						highlightTile(graphics, wv, localP, pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
+						//drawLabel(graphics, wv, point, path.color);
+					}
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
                     if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
                         drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
 
+					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
+
                     lastLocalP = localP;
                 }
 
-                // Iterating through the points here again
-                if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
-                {
-                    drawLabel(graphics, wv, drawOrder, path.color);
-                }
+//				// Iterating through the points here again
+//				if (config.pathPointLabelModeSelect() != PathmakerConfig.pathPointLabelMode.NONE)
+//				{
+//					drawLabel(graphics, wv, drawOrder, path.color);
+//				}
             }
 
             // Loop path
@@ -361,82 +369,137 @@ public class PathmakerOverlay extends Overlay
         }
     }
 
-    void updateMovablePosition(WorldView wv, PathPointObject point)
+	WorldPoint updateMovablePosition(WorldView wv, PathPointObject point)
     {
         if(point.isNpc())
         {
             NPC npc = wv.npcs().byIndex(point.getEntityId());
-            if(npc == null){return;}
 
-            final WorldPoint worldNpc = npc.getWorldLocation();
+            if(npc != null)
+			{
+				final WorldPoint worldNpc = npc.getWorldLocation();
 
-            // Update the stored belonging PathPoint
-            plugin.updatePointLocation(
-                    point,
-                    worldNpc.getRegionID(),
-                    worldNpc.getRegionX(),
-                    worldNpc.getRegionY(),
-                    wv.getPlane());
+				// Update the stored belonging PathPoint
+				plugin.updatePointLocation(
+					point,
+					worldNpc.getRegionID(),
+					worldNpc.getRegionX(),
+					worldNpc.getRegionY(),
+					wv.getPlane());
+
+				return WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
+			}
         }
+		return point.getWorldPoint();
     }
 
-    // Draw label. Yes the split of loops here is intentional. More performant? Hopefully
-    void drawLabel(Graphics2D graphics, WorldView wv, ArrayList<PathPoint> drawOrder, Color pathColor)
+	// (point.getDrawIndex() + 1)
+	void drawLabel(Graphics2D graphics, WorldView wv, LocalPoint lp, int drawIndex, @Nullable String pointLabel, Color pathColor)
+	{
+		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
+
+		String label = "";
+		boolean stringEmpty = pointLabel == null || pointLabel.isEmpty();
+
+		switch (config.pathPointLabelModeSelect())
+		{
+			case NONE:
+				return;
+			case BOTH:
+			{
+				label = "p" + (drawIndex + 1) + (stringEmpty ? "" : (", " + pointLabel));
+				break;
+			}
+			case INDEX:
+			{
+				label = "p" + (drawIndex + 1);
+				break;
+			}
+			case LABEL:
+			{
+				if(stringEmpty) return;
+				label = pointLabel;
+				break;
+			}
+		}
+
+		addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
+	}
+
+    void drawLabel(Graphics2D graphics, WorldView wv, PathPoint point, Color pathColor)//ArrayList<PathPoint> drawOrder, Color pathColor)
     {
-            Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
+		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
 
-            switch (config.pathPointLabelModeSelect()) {
-                case INDEX: {
-                    for (PathPoint point : drawOrder)
-                    {
-                        LocalPoint lp = pathPointToLocal(wv, point);
-                        if(point instanceof PathPointObject)
-                        {
-                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());//plugin.getEntityCenter(((PathPointObject) point).getInradius(), lp);
-                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-                        }
+		LocalPoint lp = pathPointToLocal(wv, point);
+		if(lp == null) return;
 
-                        addLabel(graphics, wv, lp, config.labelZOffset(), "p" + (point.getDrawIndex() + 1), color);
-                    }
-                    break;
-                }
-                case LABEL: {
-                    for (PathPoint point : drawOrder)
-                    {
-                        LocalPoint lp = pathPointToLocal(wv, point);
-                        if(point instanceof PathPointObject)
-                        {
-                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-                        }
+		if(point instanceof PathPointObject)
+		{
+			lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
+			lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
+		}
 
-                        if (point.getLabel() != null && !point.getLabel().isEmpty())
-                            addLabel(graphics, wv, lp, config.labelZOffset(), point.getLabel(), color);
-                    }
-                    break;
-                }
-                case BOTH:
-                {
-                    for (PathPoint point : drawOrder)
-                    {
-                        LocalPoint lp = pathPointToLocal(wv, point);
-                        if(point instanceof PathPointObject)
-                        {
-                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-                        }
+		drawLabel(graphics, wv, lp, point.getDrawIndex(), point.getLabel(), pathColor);
 
-                        String label = "p" + (point.getDrawIndex() + 1);
-                        if (point.getLabel() != null && !point.getLabel().isEmpty())
-                            label += ", " + point.getLabel();
-
-                        addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
+		// Draw label. Yes the split of loops here is intentional. More performant? Hopefully
+//            switch (config.pathPointLabelModeSelect()) {
+//                case INDEX: {
+//                    for (PathPoint point : drawOrder)
+//                    {
+//                        LocalPoint lp = pathPointToLocal(wv, point);
+//						if(lp == null) continue;
+//
+//                        if(point instanceof PathPointObject)
+//                        {
+//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());//plugin.getEntityCenter(((PathPointObject) point).getInradius(), lp);
+//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
+//                        }
+//
+//                        addLabel(graphics, wv, lp, config.labelZOffset(), "p" + (point.getDrawIndex() + 1), color);
+//                    }
+//                    break;
+//                }
+//                case LABEL: {
+//                    for (PathPoint point : drawOrder)
+//                    {
+//                        LocalPoint lp = pathPointToLocal(wv, point);
+//						if(lp == null) continue;
+//
+//                        if(point instanceof PathPointObject)
+//                        {
+//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
+//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
+//                        }
+//
+//                        if (point.getLabel() != null && !point.getLabel().isEmpty())
+//                            addLabel(graphics, wv, lp, config.labelZOffset(), point.getLabel(), color);
+//                    }
+//                    break;
+//                }
+//                case BOTH:
+//                {
+//                    for (PathPoint point : drawOrder)
+//                    {
+//                        LocalPoint lp = pathPointToLocal(wv, point);
+//						if(lp == null) continue;
+//
+//                        if(point instanceof PathPointObject)
+//                        {
+//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
+//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
+//                        }
+//
+//                        String label = "p" + (point.getDrawIndex() + 1);
+//                        if (point.getLabel() != null && !point.getLabel().isEmpty())
+//                            label += ", " + point.getLabel();
+//
+//                        addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
+//                    }
+//                    break;
+//                }
+//                default:
+//                    break;
+//            }
     }
 
     String constructHoveredTileString(Tile tile)

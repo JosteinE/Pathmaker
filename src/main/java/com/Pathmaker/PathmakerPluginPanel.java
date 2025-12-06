@@ -197,14 +197,14 @@ public class PathmakerPluginPanel extends PluginPanel
 					{
 						plugin.removePath(inputPathName);
 						plugin.loadPathFromJson(element, inputPathName);
-						plugin.rebuildPanel();
+						plugin.rebuildPanel(true);
 						activePath.setText(inputPathName);
 					}
 				}
 				else
 				{
 					plugin.loadPathFromJson(element, inputPathName);
-					plugin.rebuildPanel();
+					plugin.rebuildPanel(true);
 					activePath.setText(inputPathName);
 				}
             }

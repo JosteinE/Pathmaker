@@ -147,7 +147,7 @@ public class PathPanel extends JPanel
                 if (confirm == 0)
                 {
                     plugin.removePath(label.getText());
-                    plugin.rebuildPanel();
+                    plugin.rebuildPanel(true);
                 }
             }
         });
@@ -211,7 +211,7 @@ public class PathPanel extends JPanel
             indexSpinner.addChangeListener(ce ->
             {
                 plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
-                plugin.rebuildPanel();
+                plugin.rebuildPanel(true);
             });
             pointContainer.add(indexSpinner, BorderLayout.CENTER);
 

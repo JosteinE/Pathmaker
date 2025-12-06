@@ -296,8 +296,8 @@ public interface PathmakerConfig extends Config
     @Alpha
     @ConfigItem(
             keyName = "pathLineColor",
-            name = "Path color",
-            description = "Configures the path line color.",
+            name = "Default path color",
+            description = "Configures the default path color.",
             position = 4,
             section = path
     )
@@ -319,18 +319,30 @@ public interface PathmakerConfig extends Config
         return new Color(0, 150, 0, 255);
     }
 
-    @Alpha
-    @ConfigItem(
-            keyName = "pathLinePointFillColor",
-            name = "Path point tile fill color",
-            description = "Configures the path line point tile fill color.",
-            position = 7,
-            section = path
-    )
-    default Color pathLinePointFillColor()
-    {
-        return new Color(0, 255, 0, 50);
-    }
+	@ConfigItem(
+		keyName = "pointMatchPathColor",
+		name = "Points match path color",
+		description = "Set path points to match path color.",
+		position = 7,
+		section = path
+	)
+	default boolean pointMatchPathColor()
+	{
+		return false;
+	}
+
+//    @Alpha
+//    @ConfigItem(
+//            keyName = "pathLinePointFillColor",
+//            name = "Path point tile fill color",
+//            description = "Configures the path line point tile fill color.",
+//            position = 8,
+//            section = path
+//    )
+//    default Color pathLinePointFillColor()
+//    {
+//        return new Color(0, 255, 0, 50);
+//    }
 
     @ConfigItem(
             keyName = "pathLinePointWidth",
