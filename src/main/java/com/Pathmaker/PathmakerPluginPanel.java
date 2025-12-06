@@ -150,6 +150,7 @@ public class PathmakerPluginPanel extends PluginPanel
 					return;
 				}
 
+				// OLD
 				// Pair<String, PathmakerPath> MUST be a JSON object
 				// Returns if JSON is valid but not suitable for Pair<...>
 //                if (!element.isJsonObject()) {return;}
@@ -162,23 +163,23 @@ public class PathmakerPluginPanel extends PluginPanel
 //                    return;
 //                }
 
-				String pathName = element.keySet().iterator().next();
+				String jsonPathName = element.keySet().iterator().next();
 
 				JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
 				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
 				//String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
-				pathName = JOptionPane.showInputDialog(importButton, centeredNameText, pathName);
+				String inputPathName = JOptionPane.showInputDialog(importButton, centeredNameText, jsonPathName);
 
 				// Return if the window was cancelled or closed
-				if (pathName == null)
+				if (inputPathName == null)
 				{
 					return;
 				}
 
 				// Show warning if imported path exists
-				if (plugin.getStoredPaths().containsKey(pathName))
+				if (plugin.getStoredPaths().containsKey(inputPathName))
 				{
-					JLabel centeredWarningText = new JLabel("The path name " + pathName + " already exist.", JLabel.CENTER);
+					JLabel centeredWarningText = new JLabel("The path name " + inputPathName + " already exist.", JLabel.CENTER);
 					JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
 
 					centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -194,17 +195,17 @@ public class PathmakerPluginPanel extends PluginPanel
 
 					if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
 					{
-						plugin.removePath(pathName);
-						plugin.loadPathFromJson(element);
+						plugin.removePath(inputPathName);
+						plugin.loadPathFromJson(element, inputPathName);
 						plugin.rebuildPanel();
-						activePath.setText(pathName);
+						activePath.setText(inputPathName);
 					}
 				}
 				else
 				{
-					plugin.loadPathFromJson(element);
+					plugin.loadPathFromJson(element, inputPathName);
 					plugin.rebuildPanel();
-					activePath.setText(pathName);
+					activePath.setText(inputPathName);
 				}
             }
         });
@@ -278,7 +279,7 @@ public class PathmakerPluginPanel extends PluginPanel
         pathView.removeAll();
 
         // HashMap<String, PathmakerPath>
-        HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
+//        HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
         for (final String pathLabel : plugin.getStoredPaths().keySet())
         {
             // Create new path entry

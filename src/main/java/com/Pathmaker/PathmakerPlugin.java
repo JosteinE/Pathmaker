@@ -8,6 +8,7 @@ import com.google.inject.Provides;
 import java.awt.Color;
 import java.lang.reflect.Type;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
@@ -161,7 +162,7 @@ public class PathmakerPlugin extends Plugin
                     .build();
             clientToolbar.addNavigation(navButton);
 
-			load(client.getTopLevelWorldView());
+			reload(client.getTopLevelWorldView());
         });
 	}
 
@@ -213,22 +214,23 @@ public class PathmakerPlugin extends Plugin
 			{
 				if (point instanceof PathPointObject)
 				{
-					log.debug("Serializing point as PathPointObject");
+//					log.debug("Serializing point as PathPointObject");
 					regionJson.add(gson.toJsonTree(point, PathPointObject.class));
 				}
 				else
 				{
-					log.debug("Serializing point as PathPoint");
+//					log.debug("Serializing point as PathPoint");
 					regionJson.add(gson.toJsonTree(point, PathPoint.class));
 				}
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
 		pathJson.add(pathName, regionsJson);
+		log.debug("Saved path: {}", pathName);
 		return pathJson;
 	}
 
-	void loadPathFromJson(JsonObject pathJson)
+	void loadPathFromJson(JsonObject pathJson, @Nullable String newPathName)
 	{
 		if (pathJson == null) return;
 
@@ -242,12 +244,9 @@ public class PathmakerPlugin extends Plugin
 			{
 				PathPoint pathPoint = null;
 
-				if(!pointElement.isJsonObject())
-					log.debug("pointElement is not JsonObject");
-
 				try
 				{
-					log.debug("Attempting to load point as PathPointObject.");
+//					log.debug("Attempting to load point as PathPointObject.");
 					pathPoint = gson.fromJson(pointElement, PathPointObject.class);
 				}
 				catch (JsonSyntaxException e){}
@@ -256,21 +255,23 @@ public class PathmakerPlugin extends Plugin
 				{
 					try
 					{
-						log.debug("Attempting to load point as PathPoint.");
+//						log.debug("Attempting to load point as PathPoint.");
 						pathPoint = gson.fromJson(pointElement, PathPoint.class);
 					}
 					catch (JsonSyntaxException e){log.debug("Deserialized PathPoint is null.");}
 				}
 
 				if (pathPoint != null)
-					createOrAddToPath(pathName, pathPoint);
+					createOrAddToPath(newPathName == null? pathName : newPathName, pathPoint);
 				else
 					log.debug("Failed to add deserialized point to path: {}", pathName);
 			}
 		}
+
+		log.debug("Loaded path json: {}", pathName);
 	}
 
-    private void load(WorldView wv)
+    private void reload(WorldView wv)
     {
         paths.clear();
         String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
@@ -288,43 +289,8 @@ public class PathmakerPlugin extends Plugin
 			for (String pathName : loadedPaths.keySet())
 			{
 				log.debug("Loading path: {}", pathName);
-				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject());
+				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject(), null);
 			}
-
-
-//			paths.putAll(loadedPaths);
-//
-//			if(!paths.isEmpty())
-//			{
-//				for (PathmakerPath path : paths.values())
-//				{
-//					for (int regionId : wv.getMapRegions())
-//					{
-//						if (path.hasPointsInRegion(regionId))
-//						{
-//							for (PathPoint point : path.getPointsInRegion(regionId))
-//							{
-//								if (point instanceof PathPointObject)
-//								{
-//									log.debug("Object found");
-//									PathPointObject pointObject = (PathPointObject) point;
-//
-//									if (pointObject.isNpc())
-//									{
-//										pointObject.setEntityId(wv.npcs().byIndex(pointObject.getEntityId()).getId());
-//									}
-//									else
-//									{
-//										TileObject object = getTileObject(wv, pointObject);
-//										if (object != null)
-//											pointObject.setEntityId(pointObject.getEntityId());
-//									}
-//								}
-//							}
-//						}
-//					}
-//				}
-//			}
         }
         catch (IllegalStateException | JsonSyntaxException ignore)
         {
@@ -332,16 +298,11 @@ public class PathmakerPlugin extends Plugin
                     "The paths you are trying to load are malformed",
                     "Warning", JOptionPane.OK_CANCEL_OPTION);
         }
-
-        rebuildPanel();
     }
-
-	//load(event.getWorldView());
 
 	@Subscribe
 	public void onWorldViewLoaded(WorldViewLoaded event)
 	{
-		load(event.getWorldView());
 		log.debug("onWorldViewLoaded");
 	}
 
@@ -581,50 +542,55 @@ public class PathmakerPlugin extends Plugin
         // On existing POINTS
         if (pathPoint != null) // actorPoint != null ||
         {
-            String activePathName = getActivePathName();
+			final String activePathName = getActivePathName();
 
-            // Only configure add loop/unloop/label if point belongs to the active group
-            // Only allow loop/unloop with points connected to the last point
-            if ((pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 && paths.get(activePathName).loopPath) ||
-                    pathPoint.getDrawIndex() == 0 && paths.get(activePathName).getSize() > 2)
-            {
-                client.getMenu().createMenuEntry(-1)
-                        .setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
-                        .setTarget(targetPathName)
-                        .setType(MenuAction.RUNELITE)
-                        .onClick(e ->
-                        {
-                            // Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
-                            if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2) {
-                                paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
-                                paths.get(activePathName).reverseDrawOrder();
-                            }
+			// Do this if it belongs to the active path
+			if(paths.containsKey(activePathName) && paths.get(activePathName).hasPointInRegion(pathPoint.getRegionId(), pathPoint))
+			{
+				// Only configure add loop/unloop/label if point belongs to the active group
+				// Only allow loop/unloop with points connected to the last point
+				if ((pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 && paths.get(activePathName).loopPath) ||
+					pathPoint.getDrawIndex() == 0 && paths.get(activePathName).getSize() > 2)
+				{
+					client.getMenu().createMenuEntry(-1)
+						.setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
+						.setTarget(targetPathName)
+						.setType(MenuAction.RUNELITE)
+						.onClick(e ->
+						{
+							// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+							if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2)
+							{
+								paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
+								paths.get(activePathName).reverseDrawOrder();
+							}
 
-                            paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
-                            rebuildPanel();
-                        });
-            }
+							paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
+							rebuildPanel();
+						});
+				}
 
-            // Add label rename option
-            client.getMenu().createMenuEntry(-1)
-                    .setOption("Set " + targetEntityString + " label")
-                    .setTarget(targetPathName)
-                    .setType(MenuAction.RUNELITE)
-                    .onClick(e ->
-                    {
-                        String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
+				// Add label rename option
+				client.getMenu().createMenuEntry(-1)
+					.setOption("Set " + targetEntityString + " label")
+					.setTarget(targetPathName)
+					.setType(MenuAction.RUNELITE)
+					.onClick(e ->
+					{
+						String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
 
-                        chatboxPanelManager.openTextInput(targetEntityString + " label")
-                                .value(currentLabel)
-                                .onDone(label ->
-                                {
-                                    if (label.length() > MAX_LABEL_LENGTH)
-                                        label = label.substring(0, MAX_LABEL_LENGTH);
-                                    pathPoint.setLabel(label); // From
-                                    rebuildPanel();
-                                })
-                                .build();
-                    });
+						chatboxPanelManager.openTextInput(targetEntityString + " label")
+							.value(currentLabel)
+							.onDone(label ->
+							{
+								if (label.length() > MAX_LABEL_LENGTH)
+									label = label.substring(0, MAX_LABEL_LENGTH);
+								pathPoint.setLabel(label); // From
+								rebuildPanel();
+							})
+							.build();
+					});
+			}
 
             // Adding delete options, regardless of belonging path
             for (String pathName : paths.keySet())
