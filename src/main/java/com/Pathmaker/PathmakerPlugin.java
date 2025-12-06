@@ -144,7 +144,7 @@ public class PathmakerPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		log.info("Starting up Pathmaker plugin");
+		//log.info("Starting up Pathmaker plugin");
 
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
@@ -225,7 +225,7 @@ public class PathmakerPlugin extends Plugin
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
 		pathJson.add(pathName, regionsJson);
-		log.debug("Saved path: {}", pathName);
+		//log.debug("Saved path: {}", pathName);
 		return pathJson;
 	}
 
@@ -267,7 +267,7 @@ public class PathmakerPlugin extends Plugin
 			}
 		}
 
-		log.debug("Loaded path json: {}", pathName);
+		//log.debug("Loaded path json: {}", pathName);
 	}
 
     private void reload(WorldView wv)
@@ -302,7 +302,7 @@ public class PathmakerPlugin extends Plugin
 	@Subscribe
 	public void onWorldViewLoaded(WorldViewLoaded event)
 	{
-		log.debug("onWorldViewLoaded");
+		//log.debug("onWorldViewLoaded");
 	}
 
 	@Subscribe
