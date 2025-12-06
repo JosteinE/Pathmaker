@@ -8,7 +8,15 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.Component;
-import javax.swing.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -139,7 +147,7 @@ public class PathPanel extends JPanel
                 if (confirm == 0)
                 {
                     plugin.removePath(label.getText());
-                    plugin.rebuildPanel();
+                    plugin.rebuildPanel(true);
                 }
             }
         });
@@ -203,7 +211,7 @@ public class PathPanel extends JPanel
             indexSpinner.addChangeListener(ce ->
             {
                 plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
-                plugin.rebuildPanel();
+                plugin.rebuildPanel(true);
             });
             pointContainer.add(indexSpinner, BorderLayout.CENTER);
 
