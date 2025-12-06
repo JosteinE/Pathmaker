@@ -1,10 +1,14 @@
 package com.Pathmaker;
 
 import com.google.common.base.Strings;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
+import java.lang.reflect.Type;
+import java.util.Set;
 import javax.inject.Inject;
-
 import javax.swing.JOptionPane;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,16 +31,26 @@ import net.runelite.api.coords.WorldPoint;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-
+import net.runelite.api.events.GameObjectSpawned;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GroundObjectSpawned;
+import net.runelite.api.events.GroundObjectDespawned;
+import net.runelite.api.events.DecorativeObjectDespawned;
+import net.runelite.api.events.DecorativeObjectSpawned;
+import net.runelite.api.events.WallObjectDespawned;
+import net.runelite.api.events.WallObjectSpawned;
+import net.runelite.api.events.ItemSpawned;
+import net.runelite.api.events.ItemDespawned;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.WorldViewLoaded;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.awt.Polygon;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
-import net.runelite.api.events.WorldViewLoaded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -59,7 +73,6 @@ import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
     description = "Draw lines between marked tiles.",
     tags = {"object,path,line,draw,tile,indicator,navigation"}
 )
-
 public class PathmakerPlugin extends Plugin
 {
     private static final String ICON_FILE = "panel_icon.png";
@@ -130,6 +143,8 @@ public class PathmakerPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
+		log.info("Starting up Pathmaker plugin");
+
         overlayManager.add(overlay);
         overlayManager.add(panelOverlay);
 
@@ -145,6 +160,8 @@ public class PathmakerPlugin extends Plugin
                     .panel(pluginPanel)
                     .build();
             clientToolbar.addNavigation(navButton);
+
+			load(client.getTopLevelWorldView());
         });
 	}
 
@@ -158,19 +175,97 @@ public class PathmakerPlugin extends Plugin
         paths.clear();
     }
 
-    @Subscribe
-    public void onWorldViewLoaded(WorldViewLoaded event)
-    {
-        load(event.getWorldView());
-    }
-
-    void save()
+    void saveAll()
     {
         configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
-        String json = gson.toJson(paths);
-        configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, json);
+
+
+		if(!paths.isEmpty())
+		{
+			JsonObject pathsJson = new JsonObject();
+			for (String pathName : paths.keySet())
+			{
+				pathsJson.add(pathName, pathToJson(pathName));
+			}
+
+			//String json = gson.toJson(paths);
+			configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, pathsJson);
+		}
         configManager.sendConfig();
     }
+
+	private JsonObject pathToJson(String pathName)
+	{
+		if (!paths.containsKey(pathName))
+		{
+			return null;
+		}
+
+		//String pathJson;
+		Set<Integer> regionIds = paths.get(pathName).getRegionIDs();
+		JsonObject pathJson = new JsonObject();
+
+		JsonObject regionsJson = new JsonObject();
+		for (int regionId : regionIds)
+		{
+			JsonArray regionJson = new JsonArray();
+			for (PathPoint point : paths.get(pathName).getPointsInRegion(regionId))
+			{
+				if (point instanceof PathPointObject)
+				{
+					log.debug("Serializing point as PathPointObject");
+					regionJson.add(gson.toJson(point,PathPointObject.class));
+				}
+				else
+				{
+					log.debug("Serializing point as PathPoint");
+					regionJson.add(gson.toJson(point, PathPoint.class));
+				}
+			}
+			regionsJson.add(String.valueOf(regionId), regionJson);
+		}
+		pathJson.add(pathName, regionsJson);
+		return pathJson;
+	}
+
+	void loadPathFromJson(JsonObject pathJson)
+	{
+		if (pathJson == null) return;
+
+		String pathName = pathJson.keySet().iterator().next();
+		JsonObject regionsJson = pathJson.get(pathName).getAsJsonObject();
+
+		for (String regionIdString : regionsJson.keySet())
+		{
+			log.debug("Loading region: {}, for path: {}", regionIdString, pathName);
+			for(JsonElement pointElement : regionsJson.get(regionIdString).getAsJsonArray())
+			{
+				PathPoint pathPoint = null;
+
+				try
+				{
+					log.debug("Attempting to load point as PathPointObject.");
+					pathPoint = gson.fromJson(pointElement, PathPointObject.class);
+				}
+				catch (JsonSyntaxException e){}
+
+				if (pathPoint == null)
+				{
+					try
+					{
+						log.debug("Attempting to load point as PathPoint.");
+						pathPoint = gson.fromJson(pointElement, PathPoint.class);
+					}
+					catch (JsonSyntaxException e){log.debug("Deserialized PathPoint is null.");}
+				}
+
+				if (pathPoint != null)
+					createOrAddToPath(pathName, pathPoint);
+				else
+					log.debug("Failed to add deserialized point to path: {}", pathName);
+			}
+		}
+	}
 
     private void load(WorldView wv)
     {
@@ -184,24 +279,145 @@ public class PathmakerPlugin extends Plugin
 
         try
         {
-            HashMap<String, PathmakerPath> loadedPaths = gson.fromJson(json, new TypeToken<HashMap<String, PathmakerPath>>(){}.getType());
-            paths.putAll(loadedPaths);
+			JsonObject loadedPaths = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
+			if (loadedPaths.isJsonNull()) return;
+
+			for (String pathName : loadedPaths.keySet())
+			{
+				log.debug("Loading path: {}", pathName);
+				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject());
+			}
+
+
+//			paths.putAll(loadedPaths);
+//
+//			if(!paths.isEmpty())
+//			{
+//				for (PathmakerPath path : paths.values())
+//				{
+//					for (int regionId : wv.getMapRegions())
+//					{
+//						if (path.hasPointsInRegion(regionId))
+//						{
+//							for (PathPoint point : path.getPointsInRegion(regionId))
+//							{
+//								if (point instanceof PathPointObject)
+//								{
+//									log.debug("Object found");
+//									PathPointObject pointObject = (PathPointObject) point;
+//
+//									if (pointObject.isNpc())
+//									{
+//										pointObject.setEntityId(wv.npcs().byIndex(pointObject.getEntityId()).getId());
+//									}
+//									else
+//									{
+//										TileObject object = getTileObject(wv, pointObject);
+//										if (object != null)
+//											pointObject.setEntityId(pointObject.getEntityId());
+//									}
+//								}
+//							}
+//						}
+//					}
+//				}
+//			}
         }
         catch (IllegalStateException | JsonSyntaxException ignore)
         {
             JOptionPane.showConfirmDialog(pluginPanel,
-                    "The paths you are trying to load from your config are malformed",
+                    "The paths you are trying to load are malformed",
                     "Warning", JOptionPane.OK_CANCEL_OPTION);
         }
 
         rebuildPanel();
     }
 
+	//load(event.getWorldView());
+
+	@Subscribe
+	public void onWorldViewLoaded(WorldViewLoaded event)
+	{
+		load(event.getWorldView());
+		log.debug("onWorldViewLoaded");
+	}
+
+	@Subscribe
+	public void onGameObjectDespawned(GameObjectDespawned event)
+	{
+//		log.debug("GameObjectDespawned");
+	}
+
+	@Subscribe
+	public void onGameObjectSpawned(GameObjectSpawned event)
+	{
+//		log.debug("GameObjectSpawned");
+	}
+
+	@Subscribe
+	public void onWallObjectDespawned(WallObjectDespawned event)
+	{
+//		log.debug("WallObjectDespawned");
+	}
+
+	@Subscribe
+	public void onWallObjectSpawned(WallObjectSpawned event)
+	{
+//		log.debug("WallObjectSpawned");
+	}
+
+	@Subscribe
+	public void onGroundObjectDespawned(GroundObjectDespawned event)
+	{
+//		log.debug("GroundObjectDespawned");
+	}
+
+	@Subscribe
+	public void onGroundObjectSpawned(GroundObjectSpawned event)
+	{
+//		log.debug("GroundObjectSpawned");
+	}
+
+	@Subscribe
+	public void onDecorativeObjectSpawned(DecorativeObjectSpawned event)
+	{
+//		log.debug("DecorativeObjectSpawned");
+	}
+
+	@Subscribe
+	public void onDecorativeObjectDespawned(DecorativeObjectDespawned event)
+	{
+//		log.debug("DecorativeObjectDespawned");
+	}
+
+	@Subscribe
+	public void onItemSpawned(ItemSpawned event)
+	{
+//		log.debug("ItemSpawned");
+	}
+
+	@Subscribe
+	public void onItemDespawned(ItemDespawned event)
+	{
+//		log.debug("ItemDespawned");
+	}
+
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned event)
+	{
+//		log.debug("NpcSpawned");
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+//		log.debug("NpcDespawned");
+	}
+
     @Subscribe
     public void onGameTick(GameTick gameTick)
     {
-        if(config.infoBoxEnabled() && config.infoBoxSpeed())
-            panelOverlay.calculateCurrentSpeed();
+		//log.debug("onGameTick");
     }
 
     // Get marked tiles within the rendered regions
@@ -225,13 +441,13 @@ public class PathmakerPlugin extends Plugin
         return pathPoints;
     }
 
-//    @Subscribe
-//    public void onConfigChanged(ConfigChanged event)
-//    {
-//        if (event.getGroup().equals(PathmakerConfig.CONFIG_GROUP))
-//        {
-//        }
-//    }
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        if (event.getGroup().equals(PathmakerConfig.CONFIG_GROUP))
+        {
+        }
+    }
 
 //	@Subscribe
 //	public void onGameStateChanged(GameStateChanged gameStateChanged)
@@ -285,7 +501,7 @@ public class PathmakerPlugin extends Plugin
             NPC npc = event.getMenuEntry().getNpc();
             worldPoint = WorldPoint.fromLocalInstance(client, event.getMenuEntry().getNpc().getLocalLocation());
             targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getNpc().getName());
-            toCenterVec = getNpcToCenterVector(wv, npc.getId());
+            toCenterVec = getNpcToCenterVector(wv, event.getMenuEntry().getIdentifier());
         }
         else // If not an actor it's a tile OR an object
         {
@@ -356,7 +572,7 @@ public class PathmakerPlugin extends Plugin
                     .setOption("Add " + targetEntityString + " to")
                     .setTarget(targetPathName)
                     .setType(MenuAction.RUNELITE)
-                    .onClick(e -> createOrAddToPath(newPoint));
+                    .onClick(e -> createOrAddToPath(Text.removeTags(targetPathName), newPoint));
         }
 
         // On existing POINTS
@@ -506,17 +722,17 @@ public class PathmakerPlugin extends Plugin
     }
 
     // Create a new path starting with the given point or add to existing path
-    void createOrAddToPath(PathPoint point)
+    void createOrAddToPath(String pathName, PathPoint point)
     {
-        String activePath = getActivePathName(); //pluginPanel.activePath.getText();//config.activePath();
+		//pluginPanel.activePath.getText();//config.activePath();
 
-        if(activePath == null) return;
+        if(pathName == null) return;
 
         //log.debug("Checking for existing path: {}", activePath);
         PathmakerPath path;
-        if(paths.containsKey(activePath))
+        if(paths.containsKey(pathName))
         {
-            path = paths.get(activePath);
+            path = paths.get(pathName);
             path.addPathPoint(point);
         }
         else
@@ -524,7 +740,7 @@ public class PathmakerPlugin extends Plugin
             // Initialize new path with the initial point
             path = new PathmakerPath(point);
             path.color = getDefaultPathColor();
-            paths.put(activePath, path);
+            paths.put(pathName, path);
         }
 
         rebuildPanel();
@@ -573,7 +789,7 @@ public class PathmakerPlugin extends Plugin
     void rebuildPanel()
     {
         pluginPanel.rebuild();
-        save();
+        saveAll();
     }
 
     Tile getTile(WorldView wv, WorldPoint wp)
@@ -713,9 +929,10 @@ public class PathmakerPlugin extends Plugin
 
     Point getNpcToCenterVector(WorldView wv, int npcId)
     {
-        if (wv.npcs().byIndex(npcId) == null ) return null;
-        int size =  (wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF);
-        return new Point(size, size);
+		NPC npc = wv.npcs().byIndex(npcId);
+		if (npc == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
+		int offset = wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF;
+		return new Point(offset, offset);
     }
 
 //    int getObjectInradius(int objectId, WorldPoint point)

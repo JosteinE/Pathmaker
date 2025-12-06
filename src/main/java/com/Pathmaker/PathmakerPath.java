@@ -438,5 +438,11 @@ public class PathmakerPath
         }
         return drawOrder;
     }
+
+	void loadPoints(HashMap<Integer, ArrayList<PathPoint>> pointsToLoad)
+	{
+		pathPoints.clear();
+		pathPoints.putAll(pointsToLoad);
+	}
 }
 

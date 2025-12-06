@@ -14,7 +14,7 @@ public class PathPointObject extends PathPoint
     // Should be assigned / unassigned as the player enters the area
     //private TileObject tileObject;
 
-    private final int id;
+    private int id = -1;
     private final boolean isNpc;
     //private int inradius;
     private int toCenterVectorX = 64;
@@ -78,8 +78,13 @@ public class PathPointObject extends PathPoint
 
     int getEntityId()
     {
-        return id;
+        return this.id;
     }
+
+	void setEntityId(int entityId)
+	{
+		this.id = entityId;
+	}
 
     boolean isNpc()
     {
