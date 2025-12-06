@@ -214,12 +214,12 @@ public class PathmakerPlugin extends Plugin
 				if (point instanceof PathPointObject)
 				{
 					log.debug("Serializing point as PathPointObject");
-					regionJson.add(gson.toJson(point,PathPointObject.class));
+					regionJson.add(gson.toJsonTree(point, PathPointObject.class));
 				}
 				else
 				{
 					log.debug("Serializing point as PathPoint");
-					regionJson.add(gson.toJson(point, PathPoint.class));
+					regionJson.add(gson.toJsonTree(point, PathPoint.class));
 				}
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
@@ -241,6 +241,9 @@ public class PathmakerPlugin extends Plugin
 			for(JsonElement pointElement : regionsJson.get(regionIdString).getAsJsonArray())
 			{
 				PathPoint pathPoint = null;
+
+				if(!pointElement.isJsonObject())
+					log.debug("pointElement is not JsonObject");
 
 				try
 				{
