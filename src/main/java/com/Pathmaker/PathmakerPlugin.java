@@ -89,14 +89,14 @@ public class PathmakerPlugin extends Plugin
 
     boolean hotKeyPressed = false;
 
-    enum ObjectType
-    {
-        GROUND,
-        GAME,
-        ITEM,
-        WALL,
-        DECORATIVE,
-    }
+//    enum ObjectType
+//    {
+//        GROUND,
+//        GAME,
+//        ITEM,
+//        WALL,
+//        DECORATIVE,
+//    }
 
 	@Inject
 	private Client client;
@@ -690,7 +690,7 @@ public class PathmakerPlugin extends Plugin
     // Return PathPoint if one was previously created on the specified tile
 	PathPoint getPathPointAtRegionTile(String path, int regionId, int regionX,  int regionY, int plane)
     {
-        if(paths.isEmpty() || !paths.containsKey(path))
+        if(paths.isEmpty() || !paths.containsKey(path) || !paths.get(path).hasPointsInRegion(regionId))
         {
             return null;
         }
@@ -851,20 +851,6 @@ public class PathmakerPlugin extends Plugin
         return false;
     }
 
-    // note
-    // client.getNpcDefinition(1).getFootprintSize()
-    // client.getNpcDefinition(point.getEntityId()).getFootprintSize()
-//    List<WorldPoint> getEnityOccupyingTiles(WorldView wv, PathPointObject point)
-//    {
-//        if(point.isNpc())
-//            return wv.npcs().byIndex(point.getEntityId()).getWorldArea().toWorldPointList();
-//
-//        // WIP FOR objects
-//        List<WorldPoint> returnList = new ArrayList<WorldPoint>(){};
-//        returnList.add(findPointGameObjectAtPoint(wv, point).getWorldLocation());
-//        return returnList;
-//    }
-
     Polygon getEntityPolygon(WorldView wv, PathPointObject point)
     {
         return getEntityPolygon(wv, point.getWorldPoint(), point.isNpc(), point.getEntityId());
@@ -894,42 +880,29 @@ public class PathmakerPlugin extends Plugin
 
     // NB LocalPoint is the center of a given tile
 
-    // For npcs their origin is always the SW tile
-    // NE for objects
 
     // Cow: 2x2     Tree: 2x2
-    // [ ][ ]       [ ][X]
-    // [X][ ]       [ ][ ]
+    // [ ][X]       [ ][X]
+    // [ ][ ]       [ ][ ]
 
     Point getEntityToCenterVector(WorldView wv, WorldPoint wp, int entityId, boolean isNpc)
     {
         return isNpc ? getNpcToCenterVector(wv, entityId) : getObjectToCenterVector(wv, wp, entityId);
     }
 
-//    int getNpcInradius(WorldView wv, int npcId)
-//    {
-//        return (int) (wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF);
-//    }
 
     Point getNpcToCenterVector(WorldView wv, int npcId)
     {
 		NPC npc = wv.npcs().byIndex(npcId);
 		if (npc == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
-		int offset = wv.npcs().byIndex(npcId).getComposition().getSize() * TILE_SIZE_HALF - TILE_SIZE_HALF;
-		return new Point(offset, offset);
-    }
 
-//    int getObjectInradius(int objectId, WorldPoint point)
-//    {
-//        ObjectComposition comp = client.getObjectDefinition(objectId);
-//
-//        int x = comp.getSizeX() * TILE_SIZE / 2;
-//        int y = comp.getSizeY() * TILE_SIZE / 2;
-//
-//        Point p = new Point(x, y);
-//
-//        return client.getObjectDefinition(objectId).getSizeX() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
-//    }
+		LocalPoint lp = npc.getLocalLocation();
+
+		int offsetX = npc.getWorldArea().getWidth() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
+		int offsetY = npc.getWorldArea().getHeight() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
+
+		return new Point(offsetX, offsetY);
+    }
 
     Point getObjectToCenterVector(WorldView wv, WorldPoint wp, int entityId)
     {
