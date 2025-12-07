@@ -159,6 +159,7 @@ public class PathmakerOverlay extends Overlay
 					if (lastPathPoint == null)
 					{
 						lastPathPoint = pathPointToLocal(wv, lastPoint);
+						if(lastPathPoint == null) break;
 
 						//Set line origin to be in the center of objects
 						if (lastPoint instanceof PathPointObject)
