@@ -106,7 +106,9 @@ public class PathmakerPluginPanel extends PluginPanel
             {
                 if(!plugin.getStoredPaths().containsKey(activePath.getText())) {return;}
 
-                JsonObject exportPath = plugin.pathToJson(activePath.getText());//new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
+                //new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
+				JsonObject exportPath = new JsonObject();
+				exportPath.add(activePath.getText(), plugin.pathToJson(activePath.getText()));
 
                 StringSelection json = new StringSelection(plugin.gson.toJson(exportPath));
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -196,14 +198,14 @@ public class PathmakerPluginPanel extends PluginPanel
 					if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
 					{
 						plugin.removePath(inputPathName);
-						plugin.loadPathFromJson(element, inputPathName);
+						plugin.loadPathFromJson(element.get(jsonPathName).getAsJsonObject(), inputPathName);
 						plugin.rebuildPanel(true);
 						activePath.setText(inputPathName);
 					}
 				}
 				else
 				{
-					plugin.loadPathFromJson(element, inputPathName);
+					plugin.loadPathFromJson(element.get(jsonPathName).getAsJsonObject(), inputPathName);
 					plugin.rebuildPanel(true);
 					activePath.setText(inputPathName);
 				}

@@ -221,21 +221,24 @@ public class PathmakerPlugin extends Plugin
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
-		pathJson.add(pathName, regionsJson);
+
+		pathJson.add("regions", regionsJson);
+		pathJson.add("color", gson.toJsonTree(paths.get(pathName).color, Color.class));
+		pathJson.add("looped", gson.toJsonTree(paths.get(pathName).loopPath, boolean.class));
+
 		//log.debug("Saved path: {}", pathName);
 		return pathJson;
 	}
 
-	void loadPathFromJson(JsonObject pathJson, @Nullable String newPathName)
+	void loadPathFromJson(JsonObject pathJson, String pathName)
 	{
 		if (pathJson == null) return;
 
-		String pathName = pathJson.keySet().iterator().next();
-		JsonObject regionsJson = pathJson.get(pathName).getAsJsonObject();
+		JsonObject regionsJson = pathJson.get("regions").getAsJsonObject();
 
 		for (String regionIdString : regionsJson.keySet())
 		{
-			log.debug("Loading region: {}, for path: {}", regionIdString, pathName);
+			//log.debug("Loading region: {}, for path: {}", regionIdString, pathName);
 			for(JsonElement pointElement : regionsJson.get(regionIdString).getAsJsonArray())
 			{
 				PathPoint pathPoint = null;
@@ -258,12 +261,14 @@ public class PathmakerPlugin extends Plugin
 				}
 
 				if (pathPoint != null)
-					createOrAddToPath(newPathName == null? pathName : newPathName, pathPoint);
+					createOrAddToPath(pathName, pathPoint);
 				else
 					log.debug("Failed to add deserialized point to path: {}", pathName);
 			}
 		}
 
+		paths.get(pathName).color = gson.fromJson(pathJson.get("color"), Color.class);
+		paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
 		//log.debug("Loaded path json: {}", pathName);
 	}
 
@@ -285,7 +290,7 @@ public class PathmakerPlugin extends Plugin
 			for (String pathName : loadedPaths.keySet())
 			{
 				log.debug("Loading path: {}", pathName);
-				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject(), null);
+				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject(), pathName);
 			}
         }
         catch (IllegalStateException | JsonSyntaxException ignore)
