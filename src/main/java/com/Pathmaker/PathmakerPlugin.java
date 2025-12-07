@@ -431,7 +431,8 @@ public class PathmakerPlugin extends Plugin
         hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
 
         if (!hotKeyPressed || (menuAction != MenuAction.WALK && menuAction != MenuAction.SET_HEADING &&
-                menuAction != MenuAction.EXAMINE_NPC && menuAction != MenuAction.EXAMINE_OBJECT))
+                menuAction != MenuAction.EXAMINE_NPC && menuAction != MenuAction.EXAMINE_OBJECT &&
+			menuAction != MenuAction.EXAMINE_ITEM_GROUND))
         {
             return;
         }
@@ -651,9 +652,9 @@ public class PathmakerPlugin extends Plugin
     }
 
     // Returns pathPoints from all paths within the specified region
-    Collection<PathPoint> getPathPointsInRegion(int regionId)
+	ArrayList<PathPoint> getPathPointsInRegion(int regionId)
     {
-        Collection<PathPoint> pathPoints = new ArrayList<PathPoint>();
+		ArrayList<PathPoint> pathPoints = new ArrayList<>();
 
         for (String pathName : getPathsInRegionKeys(regionId))
         {
@@ -896,8 +897,6 @@ public class PathmakerPlugin extends Plugin
 		NPC npc = wv.npcs().byIndex(npcId);
 		if (npc == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
 
-		LocalPoint lp = npc.getLocalLocation();
-
 		int offsetX = npc.getWorldArea().getWidth() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
 		int offsetY = npc.getWorldArea().getHeight() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
 
@@ -907,7 +906,6 @@ public class PathmakerPlugin extends Plugin
     Point getObjectToCenterVector(WorldView wv, WorldPoint wp, int entityId)
     {
         LocalPoint lp = LocalPoint.fromWorld(wv, wp);
-
         if(lp == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
 
         TileObject object = getTileObject(getTile(wv, wp),  entityId);

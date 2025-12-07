@@ -158,13 +158,13 @@ public class PathmakerOverlay extends Overlay
 
 					if (lastPathPoint == null)
 					{
-						LocalPoint lp = pathPointToLocal(wv, lastPoint);
+						lastPathPoint = pathPointToLocal(wv, lastPoint);
 
 						//Set line origin to be in the center of objects
 						if (lastPoint instanceof PathPointObject)
 						{
-							lp = lp.dx(((PathPointObject) lastPoint).getToCenterVectorX());
-							lp = lp.dy(((PathPointObject) lastPoint).getToCenterVectorY());
+							lastPathPoint = lastPathPoint.dx(((PathPointObject) lastPoint).getToCenterVectorX());
+							lastPathPoint = lastPathPoint.dy(((PathPointObject) lastPoint).getToCenterVectorY());
 						}
 					}
 
