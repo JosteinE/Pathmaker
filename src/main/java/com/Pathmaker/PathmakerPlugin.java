@@ -152,17 +152,14 @@ public class PathmakerPlugin extends Plugin
 		reload(client.getTopLevelWorldView());
 		pluginPanel = new PathmakerPluginPanel(client, this);
 
-        clientThread.invokeLater(() ->
-        {
-            final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
-            navButton = NavigationButton.builder()
-                    .tooltip("Pathmaker")
-                    .icon(icon)
-                    .priority(5)
-                    .panel(pluginPanel)
-                    .build();
-            clientToolbar.addNavigation(navButton);
-        });
+		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
+		navButton = NavigationButton.builder()
+			.tooltip("Pathmaker")
+			.icon(icon)
+			.priority(5)
+			.panel(pluginPanel)
+			.build();
+		clientToolbar.addNavigation(navButton);
 	}
 
 	@Override
@@ -506,11 +503,15 @@ public class PathmakerPlugin extends Plugin
         }
 
         // See if the point already exists
-        pathPoint = getPathPointAtRegionTile(worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+        pathPoint = getPathPointAtRegionTile(
+			getActivePathName(),
+			worldPoint.getRegionID(),
+			worldPoint.getRegionX(),
+			worldPoint.getRegionY(),
+			worldPoint.getPlane());
 
         // If tile is not previously marked by this path, add the "add" option.
-        if (pathPoint == null || (paths.containsKey(getActivePathName()) &&
-			!paths.get(getActivePathName()).hasPointInRegion(pathPoint.getRegionId(), pathPoint)))
+        if (pathPoint == null)
         {
             final PathPoint newPoint;
 
@@ -520,7 +521,7 @@ public class PathmakerPlugin extends Plugin
                 int entityID = event.getIdentifier();
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
-                newPoint = new PathPointObject(worldPoint.getRegionID(), worldPoint.getRegionX(),
+                newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
                         worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
 
                 if(toCenterVec != null)
@@ -528,7 +529,7 @@ public class PathmakerPlugin extends Plugin
             }
             else
             {
-                newPoint = new PathPoint(worldPoint.getRegionID(), worldPoint.getRegionX(),
+                newPoint = new PathPoint(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
                         worldPoint.getRegionY(), worldPoint.getPlane());
             }
 
@@ -547,12 +548,12 @@ public class PathmakerPlugin extends Plugin
         }
 
         // On existing POINTS
-        if (pathPoint != null) // actorPoint != null ||
+        else // actorPoint != null ||
         {
 			final String activePathName = getActivePathName();
 
 			// Do this if it belongs to the active path
-			if(paths.containsKey(activePathName) && paths.get(activePathName).hasPointInRegion(pathPoint.getRegionId(), pathPoint))
+			if(pathPoint.getPathOwnerName().equals(activePathName))
 			{
 				// Only configure add loop/unloop/label if point belongs to the active group
 				// Only allow loop/unloop with points connected to the last point
@@ -598,38 +599,24 @@ public class PathmakerPlugin extends Plugin
 							.build();
 					});
 			}
-
-
-			// Adding delete options, regardless of belonging path
-			for (String pathName : paths.keySet())
-			{
-				ColorUtil.wrapWithColorTag(Text.removeTags(activePathName), paths.get(activePathName).color);
-				addRemoveMenuOption(pathName, pathPoint, "Remove " + targetEntityString + " from", targetPathName);
-			}
-
-//			String pathName = getPathsInRegionKeys(pathPoint.getRegionId())
-
-//			addRemoveMenuOption(pathName, pathPoint, "Remove " +
-//						ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) + " from",
-//						ColorUtil.wrapWithColorTag(pathName, paths.get(pathName).color));
-//			}
-//            for (String pathName : paths.keySet())
-//            {
-//				PathmakerPath delOptPath = paths.get(pathName);
-//				if (delOptPath.hasPointInRegion(pathPoint.getRegionId(), pathPoint))
-//				{
-//					String delOptTargetName;
-//					if(pathPoint.getLabel() != null || !pathPoint.getLabel().isEmpty())
-//						delOptTargetName = pathPoint.getLabel();
-//					else
-//						delOptTargetName = "Point";
-//
-//					addRemoveMenuOption(pathName, pathPoint, "Remove " +
-//						ColorUtil.wrapWithColorTag(Text.removeTags(delOptTargetName), delOptPath.color) + " from",
-//						ColorUtil.wrapWithColorTag(Text.removeTags(pathName), delOptPath.color));
-//				}
-//            }
         }
+
+		// Add remove option regardless of path
+		for(String pathName : paths.keySet())
+		{
+			PathPoint point = getPathPointAtRegionTile(pathName, worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+			if(point == null) continue;
+
+			// Eliminate double entries when a point is both the position of an entity and entity tile
+			if(!(point instanceof PathPointObject) || (!Text.removeTags(targetEntityString).equals("Tile")))
+			{
+				// Adding delete options, regardless of belonging path
+				addRemoveMenuOption(pathName, point, "Remove " +
+						ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) +
+						" from",
+					ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color));
+			}
+		}
     }
 
     void addRemoveMenuOption(String pathName, PathPoint pathPoint, String optionString, String target)
@@ -696,29 +683,22 @@ public class PathmakerPlugin extends Plugin
     }
 
     // Return PathPoint if one was previously created on the specified tile
-    PathPoint getPathPointAtRegionTile(int regionId, int relativeX,  int relativeY, int plane)
+	PathPoint getPathPointAtRegionTile(String path, int regionId, int regionX,  int regionY, int plane)
     {
-        if(paths.isEmpty())
+        if(paths.isEmpty() || !paths.containsKey(path))
         {
             return null;
         }
 
-        Collection<PathPoint> regionPoints = getPathPointsInRegion(regionId);
-
         // Iterate through each region tile to determine if the selected tile has a PathPoint
-        for (PathPoint point : regionPoints)
+        for (PathPoint point : paths.get(path).getPointsInRegion(regionId))
         {
-            if(point.getX() == relativeX && point.getY() == relativeY)
+            if(point.getX() == regionX && point.getY() == regionY)
             {
-//                log.debug("Tile found, in region id: {}, x: {}, y: {} )",
-//                        regionId, relativeX, relativeY);
-                return point;
+				return point;
             }
         }
-
-//        log.debug("Tile not found, in region id: {}, x: {}, y: {} )",
-//                regionId, relativeX, relativeY);
-        return null;
+		return null;
     }
 
     // Create a new path starting with the given point or add to existing path

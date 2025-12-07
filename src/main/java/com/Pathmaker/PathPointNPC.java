@@ -7,9 +7,9 @@ public class PathPointNPC extends PathPoint
 {
     private final NPC npc;
 
-    PathPointNPC(NPC npc)
+    PathPointNPC(String path, NPC npc)
     {
-        super(npc.getWorldLocation().getRegionID(), npc.getWorldLocation().getRegionX(),
+        super(path, npc.getWorldLocation().getRegionID(), npc.getWorldLocation().getRegionX(),
                 npc.getWorldLocation().getRegionY(), npc.getWorldLocation().getPlane());
         this.npc = npc;
     }

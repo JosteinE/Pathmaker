@@ -20,18 +20,18 @@ public class PathPointObject extends PathPoint
     private int toCenterVectorX = 64;
     private int toCenterVectorY = 64;
 
-    PathPointObject(@Nonnull TileObject tileObject)
+    PathPointObject(String path, @Nonnull TileObject tileObject)
     {
-        super(tileObject.getWorldLocation().getRegionID(), tileObject.getWorldLocation().getRegionX(),
+        super(path, tileObject.getWorldLocation().getRegionID(), tileObject.getWorldLocation().getRegionX(),
                 tileObject.getWorldLocation().getRegionY(), tileObject.getWorldView().getPlane());
 
         isNpc = false;
         id = tileObject.getId();
     }
 
-    PathPointObject(@Nonnull NPC npc, int id)
+    PathPointObject(String path, @Nonnull NPC npc, int id)
     {
-        super(npc.getWorldLocation().getRegionID(),
+        super(path, npc.getWorldLocation().getRegionID(),
                 npc.getWorldLocation().getRegionX(),
                 npc.getWorldLocation().getRegionY(),
                 npc.getWorldView().getPlane());
@@ -40,9 +40,9 @@ public class PathPointObject extends PathPoint
         this.id = id;
     }
 
-    PathPointObject(int r, int x, int y, int z, int id, boolean isNpc)
+    PathPointObject(String p, int r, int x, int y, int z, int id, boolean isNpc)
     {
-        super(r, x, y, z);
+        super(p, r, x, y, z);
 
         this.isNpc = isNpc;
         this.id = id;

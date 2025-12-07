@@ -12,23 +12,31 @@ public class PathPoint
     private int regionY;
     private int z;
 
+	private final String pathOwner;
     private String label;
 
-    PathPoint(int regID, int regX, int regY, int plane)
+    PathPoint(String path, int regID, int regX, int regY, int plane)
     {
+		this.pathOwner = path;
         this.regionId = regID;
         this.regionX = regX;
         this.regionY = regY;
         this.z = plane;
     }
 
-    PathPoint(WorldPoint worldPoint)
+    PathPoint(String path, WorldPoint worldPoint)
     {
+		this.pathOwner = path;
         this.regionId = worldPoint.getRegionID();
         this.regionX = worldPoint.getRegionX();
         this.regionY = worldPoint.getRegionY();
         this.z = worldPoint.getPlane();
     }
+
+	String getPathOwnerName()
+	{
+		return this.pathOwner;
+	}
 
     int getRegionId()
     {
