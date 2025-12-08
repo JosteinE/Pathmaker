@@ -378,7 +378,7 @@ public class PathmakerOverlay extends Overlay
 
             if(npc != null)
 			{
-				final WorldPoint worldNpc = npc.getWorldLocation();
+				final WorldPoint worldNpc = WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
 
 				// Update the stored belonging PathPoint
 				plugin.updatePointLocation(
@@ -388,7 +388,7 @@ public class PathmakerOverlay extends Overlay
 					worldNpc.getRegionY(),
 					wv.getPlane());
 
-				return WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
+				return worldNpc;
 			}
         }
 		return point.getWorldPoint();
@@ -427,20 +427,20 @@ public class PathmakerOverlay extends Overlay
 		addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
 	}
 
-    void drawLabel(Graphics2D graphics, WorldView wv, PathPoint point, Color pathColor)//ArrayList<PathPoint> drawOrder, Color pathColor)
-    {
-		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
-
-		LocalPoint lp = pathPointToLocal(wv, point);
-		if(lp == null) return;
-
-		if(point instanceof PathPointObject)
-		{
-			lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-			lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-		}
-
-		drawLabel(graphics, wv, lp, point.getDrawIndex(), point.getLabel(), pathColor);
+//    void drawLabel(Graphics2D graphics, WorldView wv, PathPoint point, Color pathColor)//ArrayList<PathPoint> drawOrder, Color pathColor)
+//    {
+//		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
+//
+//		LocalPoint lp = pathPointToLocal(wv, point);
+//		if(lp == null) return;
+//
+//		if(point instanceof PathPointObject)
+//		{
+//			lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
+//			lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
+//		}
+//
+//		drawLabel(graphics, wv, lp, point.getDrawIndex(), point.getLabel(), pathColor);
 
 		// Draw label. Yes the split of loops here is intentional. More performant? Hopefully
 //            switch (config.pathPointLabelModeSelect()) {
@@ -501,7 +501,7 @@ public class PathmakerOverlay extends Overlay
 //                default:
 //                    break;
 //            }
-    }
+//    }
 
     String constructHoveredTileString(Tile tile)
     {
