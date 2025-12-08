@@ -21,7 +21,7 @@ public interface PathmakerConfig extends Config
     @ConfigSection(
             name = "Player tile",
             description = "Player tile configuration.",
-            position = 2
+            position = 3
     )
     String playerTile = "playerTile";
 
@@ -82,7 +82,7 @@ public interface PathmakerConfig extends Config
     @ConfigSection(
             name = "Hovered tile",
             description = "Cursor hovered tile configuration.",
-            position = 1
+            position = 2
     )
     String hoveredTile = "hoveredTile";
 
@@ -252,7 +252,7 @@ public interface PathmakerConfig extends Config
     @ConfigSection(
             name = "Path",
             description = "Path configuration.",
-            position = 3
+            position = 1
     )
     String path = "path";
 
@@ -489,7 +489,7 @@ public interface PathmakerConfig extends Config
     @ConfigSection(
             name = "Info Box",
             description = "Info Box configuration.",
-            position = 5
+            position = 4
     )
     String infoBox = "infoBox";
 
