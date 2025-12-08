@@ -208,16 +208,11 @@ public class PathmakerPlugin extends Plugin
 			JsonArray regionJson = new JsonArray();
 			for (PathPoint point : paths.get(pathName).getPointsInRegion(regionId))
 			{
-				if (point instanceof PathPointObject)
-				{
-//					log.debug("Serializing point as PathPointObject");
-					regionJson.add(gson.toJsonTree(point, PathPointObject.class));
-				}
-				else
-				{
-//					log.debug("Serializing point as PathPoint");
-					regionJson.add(gson.toJsonTree(point, PathPoint.class));
-				}
+//				JsonObject pointJson = new JsonObject();
+				boolean entityIsObject = point instanceof PathPointObject;
+//				pointJson.add(entityIsObject ? "object" : "tile",
+//					gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
+				regionJson.add(gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
@@ -245,23 +240,17 @@ public class PathmakerPlugin extends Plugin
 
 				try
 				{
-//					log.debug("Attempting to load point as PathPointObject.");
-					pathPoint = gson.fromJson(pointElement, PathPointObject.class);
+					pathPoint = gson.fromJson(pointElement,
+						pointElement.getAsJsonObject().has("id") ?
+							PathPointObject.class :
+							PathPoint.class);
 				}
-				catch (JsonSyntaxException e){}
-
-				if (pathPoint == null)
-				{
-					try
-					{
-//						log.debug("Attempting to load point as PathPoint.");
-						pathPoint = gson.fromJson(pointElement, PathPoint.class);
-					}
-					catch (JsonSyntaxException e){log.debug("Deserialized PathPoint is null.");}
-				}
+				catch (JsonSyntaxException e){log.debug("Deserialized PathPoint is null.");}
 
 				if (pathPoint != null)
+				{
 					createOrAddToPath(pathName, pathPoint);
+				}
 				else
 					log.debug("Failed to add deserialized point to path: {}", pathName);
 			}

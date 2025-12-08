@@ -328,7 +328,7 @@ public interface PathmakerConfig extends Config
 	)
 	default boolean pointMatchPathColor()
 	{
-		return false;
+		return true;
 	}
 
 //    @Alpha
