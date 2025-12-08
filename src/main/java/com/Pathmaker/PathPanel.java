@@ -85,6 +85,7 @@ public class PathPanel extends JPanel
 
         label.setText(pathLabel);
         label.setForeground(Color.WHITE); //path.color);
+		label.setToolTipText(pathLabel);
         label.setPreferredSize(new Dimension(140, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
@@ -133,7 +134,7 @@ public class PathPanel extends JPanel
 
         JButton deletePathButton = new JButton();
         deletePathButton.setIcon(new ImageIcon(ImageUtil.recolorImage(crossImage, Color.RED)));
-        deletePathButton.setToolTipText("Delete point");
+        deletePathButton.setToolTipText("Delete path");
         deletePathButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
         String warningMsg = "Are you sure you want to permanently delete path: " + label.getText() + "?";
         deletePathButton.addMouseListener(new MouseAdapter()
@@ -179,7 +180,6 @@ public class PathPanel extends JPanel
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
         int pathSize = path.getSize();
-        int maxLabelLength = plugin.MAX_LABEL_LENGTH;
         for (PathPoint point : path.getDrawOrder(null))
         {
             JPanel pointContainer = new JPanel(new BorderLayout());
@@ -195,7 +195,7 @@ public class PathPanel extends JPanel
             pointLabel.setBackground(Color.DARK_GRAY);
             pointLabel.setPreferredSize(new Dimension(150, 20));
             pointLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            ((AbstractDocument) pointLabel.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(maxLabelLength));
+            ((AbstractDocument) pointLabel.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(plugin.MAX_POINT_LABEL_LENGTH));
             pointLabel.getDocument().addDocumentListener(new DocumentListener()
             {
                 public void insertUpdate(DocumentEvent e) {point.setLabel(pointLabel.getText());}

@@ -50,7 +50,7 @@ public class PathmakerPluginPanel extends PluginPanel
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_TEXT_LENGTH = 10; // Based on ÆÆÆÆÆÆÆÆÆ (9)
+    final int MAX_PATH_NAME_LENGTH = 20; // Based on ÆÆÆÆÆÆÆÆÆ (9)
 
     static
     {
@@ -247,7 +247,7 @@ public class PathmakerPluginPanel extends PluginPanel
         northPanel.add(activePathLabel, BorderLayout.WEST);
 
         activePath = new FlatTextField();
-        ((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_TEXT_LENGTH));
+        ((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_PATH_NAME_LENGTH));
         activePath.setText("unnamed");
         activePath.setForeground(Color.WHITE);
         activePath.setBackground(Color.DARK_GRAY);

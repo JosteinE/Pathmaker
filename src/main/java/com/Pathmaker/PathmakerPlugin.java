@@ -79,7 +79,7 @@ public class PathmakerPlugin extends Plugin
     private static final String ICON_FILE = "panel_icon.png";
     private static final String CONFIG_KEY = "paths";
 
-    public final int  MAX_LABEL_LENGTH = 15;
+    public final int  MAX_POINT_LABEL_LENGTH = 50;
     public final int  TILE_SIZE = 128; // Not in net.runelite.api.Constants?
     public final int  TILE_SIZE_HALF = TILE_SIZE / 2;
 
@@ -586,8 +586,8 @@ public class PathmakerPlugin extends Plugin
 							.value(currentLabel)
 							.onDone(label ->
 							{
-								if (label.length() > MAX_LABEL_LENGTH)
-									label = label.substring(0, MAX_LABEL_LENGTH);
+								if (label.length() > MAX_POINT_LABEL_LENGTH)
+									label = label.substring(0, MAX_POINT_LABEL_LENGTH);
 								pathPoint.setLabel(label); // From
 								rebuildPanel(true);
 							})
