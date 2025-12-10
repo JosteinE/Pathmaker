@@ -50,24 +50,24 @@ public interface PathmakerConfig extends Config
         return Color.CYAN;
     }
 
-    @Alpha
-    @ConfigItem(
-            keyName = "currentTileFillColor",
-            name = "Fill color",
-            description = "Configures the fill color of current true tile.",
-            position = 3,
-            section = playerTile
-    )
-    default Color playerTileFillColor()
-    {
-        return new Color(0, 0, 0, 50);
-    }
+//    @Alpha
+//    @ConfigItem(
+//            keyName = "currentTileFillColor",
+//            name = "Fill color",
+//            description = "Configures the fill color of current true tile.",
+//            position = 3,
+//            section = playerTile
+//    )
+//    default Color playerTileFillColor()
+//    {
+//        return new Color(0, 0, 0, 50);
+//    }
 
     @ConfigItem(
             keyName = "currentTileBorderWidth",
             name = "Border width",
             description = "Width of the true tile marker border.",
-            position = 4,
+            position = 3,
             section = playerTile
     )
     @Range(max = 10)
@@ -114,7 +114,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean highlightHoveredTile()
     {
-        return false;
+        return true;
     }
 
     @Alpha
@@ -130,24 +130,24 @@ public interface PathmakerConfig extends Config
         return new Color(255, 0, 0, 255);
     }
 
-    @Alpha
-    @ConfigItem(
-            keyName = "hoveredTileFillColor",
-            name = "Fill color",
-            description = "Configures the fill color of hovered tile.",
-            position = 4,
-            section = hoveredTile
-    )
-    default Color hoveredTileFillColor()
-    {
-        return new Color(255, 0, 0, 50);
-    }
+//    @Alpha
+//    @ConfigItem(
+//            keyName = "hoveredTileFillColor",
+//            name = "Fill color",
+//            description = "Configures the fill color of hovered tile.",
+//            position = 4,
+//            section = hoveredTile
+//    )
+//    default Color hoveredTileFillColor()
+//    {
+//        return new Color(255, 0, 0, 50);
+//    }
 
     @ConfigItem(
             keyName = "hoveredTileBorderWidth",
             name = "Tile border width",
             description = "Width of the hovered tile marker border.",
-            position = 5,
+            position = 4,
             section = hoveredTile
     )
     @Range(max = 10)
@@ -169,7 +169,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLabelModeSelect",
             name = "Tile label mode",
             description = "Label to be placed on the hovered tile.",
-            position = 6,
+            position = 5,
             section = hoveredTile
     )
     default hoveredTileLabelMode hoveredTileLabelModeSelect()
@@ -182,7 +182,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLabelColor",
             name = "Tile label color",
             description = "Configures the fill color of hovered tile label.",
-            position = 7,
+            position = 6,
             section = hoveredTile
     )
     default Color hoveredTileLabelColor()
@@ -195,7 +195,7 @@ public interface PathmakerConfig extends Config
             keyName = "drawHoverLine",
             name = "Draw line",
             description = "Draw line to hovered tile",
-            position = 8,
+            position = 7,
             section = hoveredTile
     )
     default boolean drawHoverLine()
@@ -212,7 +212,7 @@ public interface PathmakerConfig extends Config
             keyName = "hoveredTileLineModeSelect",
             name = "Line origin",
             description = "Origin of hovered tile line.",
-            position = 9,
+            position = 8,
             section = hoveredTile
     )
     default hoveredTileLineOrigin hoveredTileLineOriginSelect()
@@ -220,25 +220,25 @@ public interface PathmakerConfig extends Config
         return hoveredTileLineOrigin.PATH_END;
     }
 
-    @Alpha
-    @ConfigItem(
-            keyName = "hoveredTileLineColor",
-            name = "Line color",
-            description = "Configures the line to the hovered tile color.",
-            position = 10,
-            section = hoveredTile
-    )
-    default Color hoveredTileLineColor()
-    {
-        return new Color(255, 0, 0, 255);
-    }
+//    @Alpha
+//    @ConfigItem(
+//            keyName = "hoveredTileLineColor",
+//            name = "Line color",
+//            description = "Configures the line to the hovered tile color.",
+//            position = 9,
+//            section = hoveredTile
+//    )
+//    default Color hoveredTileLineColor()
+//    {
+//        return new Color(255, 0, 0, 255);
+//    }
 
     @Alpha
     @ConfigItem(
             keyName = "hoverLineColorMatchPath",
             name = "Match active path",
             description = "Match the active path color",
-            position = 11,
+            position = 9,
             section = hoveredTile
     )
     default boolean hoverLineColorMatchPath()
@@ -364,7 +364,7 @@ public interface PathmakerConfig extends Config
             position = 9,
             section = path
     )
-    @Range(min = 0, max = 10)
+    @Range(min = 0, max = 20)
     default int pathZOffset()
     {
         return 0;
@@ -396,7 +396,7 @@ public interface PathmakerConfig extends Config
             position = 11,
             section = path
     )
-    @Range(max = 10)
+    @Range(max = 20)
     default int labelZOffset()
     {
         return 0;
@@ -426,6 +426,31 @@ public interface PathmakerConfig extends Config
     {
         return false;
     }
+
+	@ConfigItem(
+		keyName = "objectAndNpcOutline",
+		name = "Object and NPC outline",
+		description = "Draw an outline on objects and NPCs",
+		position = 14,
+		section = path
+	)
+	default boolean objectAndNpcOutline()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "objectAndNpcOutlineWidth",
+		name = "Outline width",
+		description = "Set the width of outlines to be drawn on objects and NPCs",
+		position = 15,
+		section = path
+	)
+	@Range(max = 10)
+	default int objectAndNpcOutlineWidth()
+	{
+		return 2;
+	}
 
     /*
     // Buttons appear, but missing func

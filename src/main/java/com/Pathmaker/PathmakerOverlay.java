@@ -75,7 +75,10 @@ public class PathmakerOverlay extends Overlay
         // Current tile
         if (config.highlightPlayerTile())
         {
-            highlightTile(graphics, wv, startPoint, config.highlightPlayerColor(), config.playerTileBorderWidth(), config.playerTileFillColor());
+			Color trueTileColor = config.highlightPlayerColor();
+			Color trueTileFillColor = getTileFillColor(trueTileColor);
+
+			highlightTile(graphics, wv, startPoint, trueTileColor, config.playerTileBorderWidth(), trueTileFillColor);
         }
 
 //        // Fetch hovered tile and if successful, assign it to endPoint
@@ -114,9 +117,25 @@ public class PathmakerOverlay extends Overlay
             return;
         }
 
+		Color hoveredTileColor;
+
+		if(config.hoverLineColorMatchPath())
+		{
+			hoveredTileColor = plugin.pathExists(plugin.getActivePathName()) ?
+				plugin.getStoredPaths().get(plugin.getActivePathName()).color :
+				config.pathColor();
+		}
+		else
+		{
+			hoveredTileColor = config.highlightHoveredColor();
+		}
+
+		Color hoveredTileFillColor = getTileFillColor(hoveredTileColor);
+
         // Highlight hovered tile
-        if (config.highlightHoveredTile() && isRegionLoaded(tile.getWorldLocation().getRegionID())) {
-            highlightTile(graphics, wv, hoveredTile, config.highlightHoveredColor(), config.hoveredTileBorderWidth(), config.hoveredTileFillColor());
+        if (config.highlightHoveredTile() && isRegionLoaded(tile.getWorldLocation().getRegionID()))
+		{
+			highlightTile(graphics, wv, hoveredTile, hoveredTileColor, config.hoveredTileBorderWidth(), hoveredTileFillColor);
         }
 
         // Add label
@@ -131,18 +150,6 @@ public class PathmakerOverlay extends Overlay
         // Set hover line to match the active path color if true
         if(config.drawHoverLine())
         {
-            Color hoverLineColor;
-            if(config.hoverLineColorMatchPath())
-            {
-                hoverLineColor = plugin.pathExists(plugin.getActivePathName()) ?
-                        plugin.getStoredPaths().get(plugin.getActivePathName()).color :
-                        config.pathColor();
-            }
-            else
-            {
-                hoverLineColor = config.hoveredTileLineColor();
-            }
-
             switch (config.hoveredTileLineOriginSelect()) {
                 case PATH_END: {
                     if (!plugin.pathExists((plugin.getActivePathName()))) {
@@ -169,11 +176,11 @@ public class PathmakerOverlay extends Overlay
 						}
 					}
 
-                    drawLine(graphics, lastPathPoint, hoveredTile, hoverLineColor, (float) config.pathLineWidth());
+                    drawLine(graphics, lastPathPoint, hoveredTile, hoveredTileColor, (float) config.pathLineWidth());
                     break;
                 }
                 case TRUE_TILE: {
-                    drawLine(graphics, startPoint, hoveredTile, hoverLineColor, (float) config.pathLineWidth());
+                    drawLine(graphics, startPoint, hoveredTile, hoveredTileColor, (float) config.pathLineWidth());
                     break;
                 }
                 default:
@@ -213,7 +220,7 @@ public class PathmakerOverlay extends Overlay
             if (config.drawPath() || config.drawPathPoints())
             {
 				Color pathPointColor = config.pointMatchPathColor() ? path.color : config.pathLinePointColor();
-				Color pathPointFillColor = new Color(pathPointColor.getRed(), pathPointColor.getGreen(), pathPointColor.getBlue(),  pathPointColor.getAlpha() / 5);
+				Color pathPointFillColor = getTileFillColor(pathPointColor);
 
                 for (int i = 0; i < drawOrder.size(); i++)
                 {
@@ -229,7 +236,8 @@ public class PathmakerOverlay extends Overlay
 
 						if(localP != null)
 						{
-							drawOutline((PathPointObject) point, wv, config.pathLineWidth(), path.color, 200);
+							if(config.objectAndNpcOutline())
+								drawOutline((PathPointObject) point, wv, config.objectAndNpcOutlineWidth(), path.color, 200);
 
 							if (config.drawPathPoints())
 							{
@@ -335,8 +343,8 @@ public class PathmakerOverlay extends Overlay
         final int startHeight = Perspective.getTileHeight(client, startLoc, z);
         final int endHeight = Perspective.getTileHeight(client, endLoc, z);
 
-        Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight + config.pathZOffset());
-        Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight + config.pathZOffset());
+        Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight - config.pathZOffset() * 10);
+        Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight - config.pathZOffset() * 10);
 
         if (p1 == null || p2 == null)
         {
@@ -602,6 +610,11 @@ public class PathmakerOverlay extends Overlay
 
         return String.valueOf((int) ((Math.max(x, y))/ tileSize)); // distance to is 1.414 to diagonal tiles
     }
+
+	Color getTileFillColor(Color tileColor)
+	{
+		return new Color(tileColor.getRed(), tileColor.getGreen(), tileColor.getBlue(),  tileColor.getAlpha() / 5);
+	}
 
     String getTileRegionString(Tile tile)
     {
