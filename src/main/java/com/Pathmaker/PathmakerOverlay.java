@@ -272,9 +272,18 @@ public class PathmakerOverlay extends Overlay
                 if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
                         path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
                 {
-                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
-                    PathPoint firstP = path.getPointAtDrawIndex(0);
-                    drawLine(graphics, wv, lastP, firstP, path.color, (float) config.pathLineWidth());
+					PathPoint startP = path.getPointAtDrawIndex(0);
+					LocalPoint startLp = pathPointToLocal(wv, path.getPointAtDrawIndex(0));
+
+					if (path.getPointAtDrawIndex(0) instanceof PathPointObject)
+					{
+
+						startLp = startLp.dx(((PathPointObject) startP).getToCenterVectorX());
+						startLp = startLp.dy(((PathPointObject) startP).getToCenterVectorY());
+					}
+//                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
+
+                    drawLine(graphics, lastLocalP, startLp, path.color, (float) config.pathLineWidth());
                 }
             }
 
@@ -544,7 +553,7 @@ public class PathmakerOverlay extends Overlay
 				}
 				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
 				{
-					returnString = getTileOffsetString(hoveredTile, startPoint);
+					returnString = getTileDistanceString(hoveredTile, startPoint);
 				}
 
 				break;

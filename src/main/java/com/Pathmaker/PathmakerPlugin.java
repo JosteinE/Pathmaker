@@ -397,6 +397,8 @@ public class PathmakerPlugin extends Plugin
     public void onGameTick(GameTick gameTick)
     {
 		//log.debug("onGameTick");
+		if(config.infoBoxEnabled() && config.infoBoxSpeed())
+			panelOverlay.calculateCurrentSpeed();
     }
 
     // Get marked tiles within the rendered regions
