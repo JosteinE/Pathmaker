@@ -508,20 +508,67 @@ public class PathmakerOverlay extends Overlay
         String returnString = "";
         switch (config.hoveredTileLabelModeSelect())
         {
-            case REGION: returnString = getTileRegionString(tile); break;
-            case LOCATION: returnString = getTileLocationString(tile); break;
-            case OFFSET: returnString = getTileOffsetString(hoveredTile, config.hoveredTileLineOriginSelect() ==
-                    PathmakerConfig.hoveredTileLineOrigin.PATH_END ?
-                    getLastPointInActivePath() : startPoint);
+            case REGION:
+				returnString = getTileRegionString(tile);
+				break;
+
+            case LOCATION:
+				returnString = getTileLocationString(tile);
+				break;
+
+            case OFFSET:
+				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+				{
+					returnString = getTileOffsetString(hoveredTile, getLastPointInActivePath());
+				}
+				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
+				{
+					returnString = getTileOffsetString(hoveredTile, startPoint);
+				}
                 break;
-            case DISTANCE: returnString = getTileDistanceString(startPoint, hoveredTile); break;
-            case ALL: returnString = "R: " + getTileRegionString(tile) +
-                    ", L: " + getTileLocationString(tile) +
-                    ", O: "  + getTileOffsetString(hoveredTile, config.hoveredTileLineOriginSelect() ==
-                                    PathmakerConfig.hoveredTileLineOrigin.PATH_END ?
-                                    getLastPointInActivePath() : startPoint) +
-                    ", D: " + getTileDistanceString(startPoint, hoveredTile); break;
-            default: break;
+
+            case DISTANCE:
+				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+				{
+					returnString = getTileDistanceString(getLastPointInActivePath(), hoveredTile);
+				}
+				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
+				{
+					returnString = getTileOffsetString(hoveredTile, startPoint);
+				}
+
+				break;
+
+            case ALL:
+				// Region & Location
+				returnString = "R: " + getTileRegionString(tile) + ", L: " + getTileLocationString(tile);
+
+				// Offset
+				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+				{
+					returnString += ", O: " + getTileOffsetString(hoveredTile, getLastPointInActivePath());
+				}
+				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
+				{
+					returnString += ", O: " + getTileOffsetString(hoveredTile, startPoint);
+				}
+
+				// Distance
+				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+				{
+					returnString += ", D: " + getTileDistanceString(getLastPointInActivePath(), hoveredTile);
+				}
+				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
+				{
+					returnString += ", D: " + getTileDistanceString(startPoint, hoveredTile);
+				}
+
+            default:
+				break;
         }
 
         return returnString;
@@ -547,7 +594,13 @@ public class PathmakerOverlay extends Overlay
 
     String getTileDistanceString(LocalPoint from,  LocalPoint to)
     {
-        return from == null ? "" : String.valueOf((int) (from.distanceTo(to) / tileSize));
+		if(from == null || to == null) return "";
+
+		int x = Math.abs(to.getX() - from.getX());
+		int y = Math.abs(to.getY() - from.getY());
+
+
+        return String.valueOf((int) ((Math.max(x, y))/ tileSize)); // distance to is 1.414 to diagonal tiles
     }
 
     String getTileRegionString(Tile tile)

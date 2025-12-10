@@ -191,6 +191,31 @@ public class PathmakerPlugin extends Plugin
         configManager.sendConfig();
     }
 
+	// TODO: make method that saves only a single path at a time
+//	void save(String pathName)
+//	{
+//		String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+//
+//		if (Strings.isNullOrEmpty(json))
+//		{
+//			return;
+//		}
+//
+//		JsonObject loadedPaths = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
+//
+//		try
+//		{
+//
+//			if (loadedPaths.isJsonNull() || !loadedPaths.has(pathName))
+//			{
+//				loadedPaths.add(pathName, pathToJson(pathName));
+//			}
+//		} catch (JsonSyntaxException ignored){}
+//
+//		configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+//		configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, loadedPaths);
+//	}
+
 	JsonObject pathToJson(String pathName)
 	{
 		if (!paths.containsKey(pathName))
