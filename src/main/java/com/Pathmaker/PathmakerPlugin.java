@@ -456,6 +456,7 @@ public class PathmakerPlugin extends Plugin
         // Fetch game world
         int worldId = event.getMenuEntry().getWorldViewId();
         WorldView wv = client.getWorldView(worldId);
+
         if (wv == null)
         {
             log.debug("No world view found for getMenuEntry().getWorldViewId " + worldId);
@@ -524,13 +525,16 @@ public class PathmakerPlugin extends Plugin
             targetEntityString = getActiveOrDefaultPathColorString(target.isEmpty() ? "Tile" : target);
         }
 
+		// Correct for sailing tiles
+		int z = wv.isTopLevel() ? wv.getPlane() : 0;
+
         // See if the point already exists
         pathPoint = getPathPointAtRegionTile(
 			getActivePathName(),
 			worldPoint.getRegionID(),
 			worldPoint.getRegionX(),
 			worldPoint.getRegionY(),
-			worldPoint.getPlane());
+			z);
 
         // If tile is not previously marked by this path, add the "add" option.
         if (pathPoint == null)
@@ -544,7 +548,7 @@ public class PathmakerPlugin extends Plugin
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
                 newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
-                        worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
+                        worldPoint.getRegionY(), z, entityID, isNpc);
 
                 if(toCenterVec != null)
                     ((PathPointObject) newPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
@@ -552,7 +556,7 @@ public class PathmakerPlugin extends Plugin
             else
             {
                 newPoint = new PathPoint(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
-                        worldPoint.getRegionY(), worldPoint.getPlane());
+                        worldPoint.getRegionY(), z);
             }
 
             client.getMenu().createMenuEntry(-1)
@@ -626,7 +630,7 @@ public class PathmakerPlugin extends Plugin
 		// Add remove option regardless of path
 		for(String pathName : paths.keySet())
 		{
-			PathPoint point = getPathPointAtRegionTile(pathName, worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
+			PathPoint point = getPathPointAtRegionTile(pathName, worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), z);
 			if(point == null) continue;
 
 			// Eliminate double entries when a point is both the position of an entity and entity tile

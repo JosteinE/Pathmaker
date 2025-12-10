@@ -67,10 +67,12 @@ public class PathmakerOverlay extends Overlay
     {
         // Fetch player position
         // Doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
+		WorldView wv = client.getLocalPlayer().getWorldView();
+
         final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
-        LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(client, playerPos);
-        startPoint = playerPosLocal == null ? startPoint : playerPosLocal;
-        WorldView wv = client.getTopLevelWorldView();
+		LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(wv, new WorldPoint(playerPos.getX(), playerPos.getY(), correctPlaneForSailing(wv)));
+
+		startPoint = playerPosLocal == null ? startPoint : playerPosLocal;
 
         // Current tile
         if (config.highlightPlayerTile())
@@ -83,6 +85,8 @@ public class PathmakerOverlay extends Overlay
 
 //        // Fetch hovered tile and if successful, assign it to endPoint
 //        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
+
+		wv = client.getTopLevelWorldView();
 
 		LocalPoint lastActivePathPoint = null;
         // Highlight tiles marked by the right-click menu and draw lines between them
@@ -113,9 +117,9 @@ public class PathmakerOverlay extends Overlay
 
         // Return here if the distance to hovered tile exceeds the user interactable area.
         // If endPoint height = 0, it likely means it's out of bounds
-        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE) {
-            return;
-        }
+//        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE) {
+//            return;
+//        }
 
 		Color hoveredTileColor;
 
@@ -142,7 +146,7 @@ public class PathmakerOverlay extends Overlay
         if (config.hoveredTileLabelModeSelect() != PathmakerConfig.hoveredTileLabelMode.NONE) {
             String hoveredTileLabel = constructHoveredTileString(tile);
             if (!hoveredTileLabel.isEmpty()) {
-                addLabel(graphics, hoveredTile, 0, hoveredTileLabel, config.hoveredTileLabelColor());
+                addLabel(graphics, wv, hoveredTile, 0, hoveredTileLabel, config.hoveredTileLabelColor());
             }
         }
 
@@ -176,11 +180,11 @@ public class PathmakerOverlay extends Overlay
 						}
 					}
 
-                    drawLine(graphics, lastPathPoint, hoveredTile, hoveredTileColor, (float) config.pathLineWidth());
+                    drawLine(graphics, lastPathPoint, hoveredTile, wv, hoveredTileColor, (float) config.pathLineWidth());
                     break;
                 }
                 case TRUE_TILE: {
-                    drawLine(graphics, startPoint, hoveredTile, hoveredTileColor, (float) config.pathLineWidth());
+                    drawLine(graphics, startPoint, hoveredTile, wv, hoveredTileColor, (float) config.pathLineWidth());
                     break;
                 }
                 default:
@@ -257,7 +261,7 @@ public class PathmakerOverlay extends Overlay
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
                     if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-                        drawLine(graphics, lastLocalP, localP, path.color, (float) config.pathLineWidth());
+                        drawLine(graphics, lastLocalP, localP, wv, path.color, (float) config.pathLineWidth());
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
 
@@ -283,7 +287,7 @@ public class PathmakerOverlay extends Overlay
 					}
 //                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
 
-                    drawLine(graphics, lastLocalP, startLp, path.color, (float) config.pathLineWidth());
+                    drawLine(graphics, lastLocalP, startLp, wv, path.color, (float) config.pathLineWidth());
                 }
             }
 
@@ -295,6 +299,11 @@ public class PathmakerOverlay extends Overlay
         }
 		return  lastActivePathPoint;
     }
+
+	int correctPlaneForSailing(WorldView wv)
+	{
+		return wv.isTopLevel() ? wv.getPlane() : 0;
+	}
 
     // Convert PathPoint (region point) to local
     LocalPoint pathPointToLocal(WorldView wv, PathPoint point)
@@ -316,7 +325,7 @@ public class PathmakerOverlay extends Overlay
             //log.debug("Failed to highlight tile, LocalPoint is null.");
             return false;
         }
-        return highlightTile(graphics, wv, Perspective.getCanvasTilePoly(client, lp), color, borderWidth, fillColor);
+        return highlightTile(graphics, wv, Perspective.getCanvasTilePoly(client, lp, correctPlaneForSailing(wv)), color, borderWidth, fillColor);
     }
 
     boolean highlightTile(final Graphics2D graphics, final WorldView wv, final Polygon poly, final Color color, final double borderWidth, final Color fillColor)
@@ -327,7 +336,8 @@ public class PathmakerOverlay extends Overlay
         int boundsX = (int) poly.getBounds().getLocation().getX();
         int boundsY = (int) poly.getBounds().getLocation().getY();
 
-        if(!isLocalPointInScene(new LocalPoint(boundsX, boundsY, wv))) return false;
+        if(!isLocalPointInScene(wv, new LocalPoint(boundsX, boundsY, wv))) return false;
+
 
         OverlayUtil.renderPolygon(graphics, poly, color, fillColor, new BasicStroke((float) borderWidth));
         return true;
@@ -337,20 +347,24 @@ public class PathmakerOverlay extends Overlay
     {
         LocalPoint lineStart = pathPointToLocal(wv, startPoint);
         LocalPoint lineEnd = pathPointToLocal(wv, endPoint);
-        drawLine(graphics, lineStart, lineEnd, color, lineWidth);
+
+		// Correct for sailing tiles
+
+        drawLine(graphics, lineStart, lineEnd, wv, color, lineWidth);
     }
 
     // Draw a line between the provided start and end points
-    private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, final Color color, float lineWidth){ //, int counter) {
+    private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, WorldView wv, final Color color, float lineWidth){ //, int counter) {
         if (startLoc == null || endLoc == null)
         {
             return;
         }
 
-        int z = client.getLocalPlayer().getWorldView().getPlane();
+        //int z = client.getLocalPlayer().getWorldView().getPlane();
+		int plane = correctPlaneForSailing(wv);
 
-        final int startHeight = Perspective.getTileHeight(client, startLoc, z);
-        final int endHeight = Perspective.getTileHeight(client, endLoc, z);
+        final int startHeight = Perspective.getTileHeight(client, startLoc, plane);
+        final int endHeight = Perspective.getTileHeight(client, endLoc, plane);
 
         Point p1 = Perspective.localToCanvas(client, startLoc.getX(), startLoc.getY(), startHeight - config.pathZOffset() * 10);
         Point p2 = Perspective.localToCanvas(client, endLoc.getX(), endLoc.getY(), endHeight - config.pathZOffset() * 10);
@@ -631,14 +645,9 @@ public class PathmakerOverlay extends Overlay
     }
 
 
-    boolean addLabel(Graphics2D graphics, WorldView wv, LocalPoint lp, int zOffset, String labelText, Color color)
+    boolean addLabel(Graphics2D graphics, WorldView wv, LocalPoint tileLoc, int zOffset, String labelText, Color color)
     {
-        return addLabel(graphics, lp, zOffset, labelText, color);
-    }
-
-    boolean addLabel(Graphics2D graphics, LocalPoint tileLoc, int zOffset, String labelText, Color color)
-    {
-        if (tileLoc == null || !isLocalPointInScene(tileLoc))
+        if (tileLoc == null || !isLocalPointInScene(wv, tileLoc))
             return false;
 
         Point canvasTextLocation = Perspective.getCanvasTextLocation(client, graphics, tileLoc, labelText, zOffset);
@@ -651,10 +660,10 @@ public class PathmakerOverlay extends Overlay
         return false;
     }
 
-    boolean isLocalPointInScene(final LocalPoint point)
+    boolean isLocalPointInScene(final WorldView wv, final LocalPoint point)
     {
-        WorldPoint wp = WorldPoint.fromLocal(client, point);
-        return WorldPoint.isInScene(client.getTopLevelWorldView(), wp.getX(), wp.getY());
+        WorldPoint wp = WorldPoint.fromLocal(wv, point.getX(), point.getY(), correctPlaneForSailing(wv));
+        return WorldPoint.isInScene(wv, wp.getX(), wp.getY());
     }
 
     boolean isRegionLoaded(int regionId)
