@@ -160,6 +160,9 @@ public class PathmakerPlugin extends Plugin
 			.panel(pluginPanel)
 			.build();
 		clientToolbar.addNavigation(navButton);
+
+		if (!paths.isEmpty())
+			pluginPanel.activePath.setText(paths.keySet().iterator().next());
 	}
 
 	@Override
@@ -299,6 +302,7 @@ public class PathmakerPlugin extends Plugin
         try
         {
 			JsonObject loadedPaths = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
+
 			if (loadedPaths.isJsonNull()) return;
 
 			for (String pathName : loadedPaths.keySet())
@@ -906,7 +910,7 @@ public class PathmakerPlugin extends Plugin
     Point getNpcToCenterVector(WorldView wv, int npcId)
     {
 		NPC npc = wv.npcs().byIndex(npcId);
-		if (npc == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
+		if (npc == null) return new Point(0, 0);
 
 		int offsetX = npc.getWorldArea().getWidth() % 2 == 0 ? -TILE_SIZE_HALF : 0;
 		int offsetY = npc.getWorldArea().getHeight() % 2 == 0 ? -TILE_SIZE_HALF : 0;

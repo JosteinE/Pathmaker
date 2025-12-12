@@ -145,7 +145,7 @@ public class PathmakerOverlay extends Overlay
 
         // Add label
         if (config.hoveredTileLabelModeSelect() != PathmakerConfig.hoveredTileLabelMode.NONE) {
-            String hoveredTileLabel = constructHoveredTileString(tile);
+            String hoveredTileLabel = constructHoveredTileString(wv, tile);
             if (!hoveredTileLabel.isEmpty()) {
                 addLabel(graphics, wv, hoveredTile, 0, hoveredTileLabel, config.hoveredTileLabelColor());
             }
@@ -535,7 +535,7 @@ public class PathmakerOverlay extends Overlay
 //            }
 //    }
 
-    String constructHoveredTileString(Tile tile)
+    String constructHoveredTileString(WorldView wv, Tile tile)
     {
         String returnString = "";
         switch (config.hoveredTileLabelModeSelect())
@@ -550,7 +550,8 @@ public class PathmakerOverlay extends Overlay
 
             case OFFSET:
 				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
-					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()) &&
+					isLocalPointInScene(wv, getLastPointInActivePath()))
 				{
 					returnString = getTileOffsetString(hoveredTile, getLastPointInActivePath());
 				}
@@ -562,7 +563,8 @@ public class PathmakerOverlay extends Overlay
 
             case DISTANCE:
 				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
-					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()) &&
+					isLocalPointInScene(wv, getLastPointInActivePath()))
 				{
 					returnString = getTileDistanceString(getLastPointInActivePath(), hoveredTile);
 				}
@@ -577,27 +579,20 @@ public class PathmakerOverlay extends Overlay
 				// Region & Location
 				returnString = "R: " + getTileRegionString(tile) + ", L: " + getTileLocationString(tile);
 
-				// Offset
+				// Offset & Distance
 				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
-					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
+					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()) &&
+					isLocalPointInScene(wv, getLastPointInActivePath()))
 				{
 					returnString += ", O: " + getTileOffsetString(hoveredTile, getLastPointInActivePath());
-				}
-				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
-				{
-					returnString += ", O: " + getTileOffsetString(hoveredTile, startPoint);
-				}
-
-				// Distance
-				if(config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.PATH_END &&
-					!plugin.getStoredPaths().isEmpty() && plugin.getStoredPaths().containsKey(plugin.getActivePathName()))
-				{
 					returnString += ", D: " + getTileDistanceString(getLastPointInActivePath(), hoveredTile);
 				}
 				else if (config.hoveredTileLineOriginSelect() == PathmakerConfig.hoveredTileLineOrigin.TRUE_TILE)
 				{
+					returnString += ", O: " + getTileOffsetString(hoveredTile, startPoint);
 					returnString += ", D: " + getTileDistanceString(startPoint, hoveredTile);
 				}
+				break;
 
             default:
 				break;
