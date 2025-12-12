@@ -430,15 +430,6 @@ public class PathmakerPlugin extends Plugin
         }
     }
 
-//	@Subscribe
-//	public void onGameStateChanged(GameStateChanged gameStateChanged)
-//	{
-//		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
-//		{
-//			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.greeting(), null);
-//		}
-//	}
-
     @Subscribe
     public void onMenuEntryAdded(final MenuEntryAdded event)
     {
@@ -917,8 +908,8 @@ public class PathmakerPlugin extends Plugin
 		NPC npc = wv.npcs().byIndex(npcId);
 		if (npc == null) return new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
 
-		int offsetX = npc.getWorldArea().getWidth() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
-		int offsetY = npc.getWorldArea().getHeight() * -TILE_SIZE_HALF + TILE_SIZE_HALF;
+		int offsetX = npc.getWorldArea().getWidth() % 2 == 0 ? -TILE_SIZE_HALF : 0;
+		int offsetY = npc.getWorldArea().getHeight() % 2 == 0 ? -TILE_SIZE_HALF : 0;
 
 		return new Point(offsetX, offsetY);
     }

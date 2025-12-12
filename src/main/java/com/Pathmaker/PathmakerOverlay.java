@@ -67,7 +67,7 @@ public class PathmakerOverlay extends Overlay
     {
         // Fetch player position
         // Doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
-		WorldView wv = client.getLocalPlayer().getWorldView();
+		WorldView wv = client.getTopLevelWorldView();
 
         final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
 		LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(wv, new WorldPoint(playerPos.getX(), playerPos.getY(), correctPlaneForSailing(wv)));
@@ -86,7 +86,7 @@ public class PathmakerOverlay extends Overlay
 //        // Fetch hovered tile and if successful, assign it to endPoint
 //        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
 
-		wv = client.getTopLevelWorldView();
+//		wv = client.getTopLevelWorldView();
 
 		LocalPoint lastActivePathPoint = null;
         // Highlight tiles marked by the right-click menu and draw lines between them
@@ -117,7 +117,8 @@ public class PathmakerOverlay extends Overlay
 
         // Return here if the distance to hovered tile exceeds the user interactable area.
         // If endPoint height = 0, it likely means it's out of bounds
-//        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE) {
+//        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE)
+//		{
 //            return;
 //        }
 
