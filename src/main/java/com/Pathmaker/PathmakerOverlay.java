@@ -9,6 +9,7 @@ import java.util.Collection;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
+import net.runelite.api.ObjectComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -229,7 +230,7 @@ public class PathmakerOverlay extends Overlay
 			if (!loadedRegions.contains(baseInstancePoint.getRegionID()))
 				loadedRegions.add(baseInstancePoint.getRegionID());
 
-			log.debug("playerRegion: {}, BaseInstanceReg: {}", playerRegion, baseInstancePoint.getRegionID());
+			//log.debug("playerRegion: {}, BaseInstanceReg: {}", playerRegion, baseInstancePoint.getRegionID());
 		}
 
         for (String pathName : paths.keySet())
@@ -266,28 +267,14 @@ public class PathmakerOverlay extends Overlay
 					else
 						wv = client.getLocalPlayer().getWorldView();
 
-//					if (client.getLocalPlayer().getWorldView().isInstance())
-//					{
-//						Collection<WorldPoint> wPs = WorldPoint.toLocalInstance(client.getLocalPlayer().getWorldView(), point.getWorldPoint());
-//						for (WorldPoint iWp : wPs)
-//						{
-//							if(loadedRegions.contains(iWp.getRegionID()))
-//							{
-//								wp = iWp;
-//								wvId = client.getLocalPlayer().getWorldView().getId();
-//								break;
-//							}
-//						}
-//					}
-
                     LocalPoint localP = LocalPoint.fromWorld(wv, wp);//pathPointToLocal(wv, point);
                     //LocalPoint centerLocation;
                     // Draw outlines first, as this also lets us conveniently update the stored point locations
                     if(point instanceof PathPointObject)
                     {
 						// Updating NPC world positions AND fetching current client side position to draw on
-						localP = LocalPoint.fromWorld(wv, updateMovablePosition(wv, (PathPointObject) point));
-                        //localP = pathPointToLocal(wv, point);
+
+						localP = updateMovablePosition(wv, (PathPointObject) point);
 
 						if(localP != null)
 						{
@@ -426,9 +413,6 @@ public class PathmakerOverlay extends Overlay
             return;
         }
 
-		//client.getCameraFocusEntity().getWorldView().getPlane()
-		//int plane = correctPlaneForSailing(wv);
-
         final int startHeight = Perspective.getTileHeight(client, startLoc, startWv.getPlane());
         final int endHeight = Perspective.getTileHeight(client, endLoc, endWv.getPlane());
 
@@ -467,15 +451,56 @@ public class PathmakerOverlay extends Overlay
         }
     }
 
-	WorldPoint updateMovablePosition(WorldView wv, PathPointObject point)
+	LocalPoint updateMovablePosition(WorldView wv, PathPointObject point)
     {
+		// LOOK TO THIS!!! NEED TO FIND NON IMPOSTOR, BUT DO SO FOR NPC TOO
+//		WorldPoint wp = null;
+//		if (wv.isInstance())
+//		{
+//			outerLoop:
+//			for (WorldPoint iWp : WorldPoint.toLocalInstance(wv, point.getWorldPoint()))
+//			{
+//				for (int region : wv.getMapRegions())
+//				{
+//					if (region == iWp.getRegionID())
+//					{
+//						wp = iWp;
+//						break outerLoop;
+//					}
+//				}
+//			}
+//		}
+//		else
+//			wp = point.getWorldPoint();
+
+
         if(point.isNpc())
         {
+
+			wv = client.getLocalPlayer().getWorldView();
             NPC npc = wv.npcs().byIndex(point.getEntityId());
+
+			if(npc == null)
+			{
+				for (NPC localNpc : wv.npcs())
+				{
+					if (localNpc.getId() == point.getBaseId())
+					{
+						npc = localNpc;
+						point.setEntityId(localNpc.getIndex());
+						//log.debug("NPC found!");
+						break;
+					}
+				}
+			}
 
             if(npc != null)
 			{
+				wv = npc.getWorldView();
 				final WorldPoint worldNpc = WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
+
+//				log.debug("point.getEntityId(): {}, npc: {}, transNpc: {}", point.getEntityId(), npc.getId(), npc.getTransformedComposition().getId());
+//				log.debug("wv: {}, npcView: {}", wv, npc.getWorldView());
 
 				// Update the stored belonging PathPoint
 				plugin.updatePointLocation(
@@ -484,12 +509,26 @@ public class PathmakerOverlay extends Overlay
 					worldNpc.getRegionID(),
 					worldNpc.getRegionX(),
 					worldNpc.getRegionY(),
-					wv.getPlane());
+					worldNpc.getPlane());
 
-				return worldNpc;
+				return npc.getLocalLocation();
 			}
         }
-		return point.getWorldPoint();
+		else
+		{
+			TileObject tileObject = plugin.getTileObject(wv, point);
+			return tileObject == null ? LocalPoint.fromWorld(client, point.getWorldPoint()) : tileObject.getLocalLocation();
+//			for (TileObject localObj : plugin.getTile(wv, point.getWorldPoint()).getGameObjects())
+//			{
+//				if (localObj.getId() == point.getEntityId())
+//				{
+//					npc = localNpc;
+//					break;
+//				}
+//			}
+		}
+
+		return LocalPoint.fromWorld(client, point.getWorldPoint());
     }
 
 	// (point.getDrawIndex() + 1)

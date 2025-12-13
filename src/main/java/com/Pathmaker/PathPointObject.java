@@ -14,22 +14,23 @@ public class PathPointObject extends PathPoint
     // Should be assigned / unassigned as the player enters the area
     //private TileObject tileObject;
 
-    private int id = -1;
+    private int id = -1; // active instance
+	private final int baseId; // for lookup
     private final boolean isNpc;
-    //private int inradius;
     private int toCenterVectorX = 64;
     private int toCenterVectorY = 64;
 
-    PathPointObject(String path, @Nonnull TileObject tileObject)
-    {
-        super(path, tileObject.getWorldLocation().getRegionID(), tileObject.getWorldLocation().getRegionX(),
-                tileObject.getWorldLocation().getRegionY(), tileObject.getWorldView().getPlane());
+	PathPointObject(String path, @Nonnull TileObject tileObject, int baseId)
+	{
+		super(path, tileObject.getWorldLocation().getRegionID(), tileObject.getWorldLocation().getRegionX(),
+			tileObject.getWorldLocation().getRegionY(), tileObject.getWorldView().getPlane());
 
-        isNpc = false;
-        id = tileObject.getId();
-    }
+		isNpc = false;
+		id = tileObject.getId();
+		this.baseId = baseId;
+	}
 
-    PathPointObject(String path, @Nonnull NPC npc, int id)
+    PathPointObject(String path, @Nonnull NPC npc, int id, int baseId)
     {
         super(path, npc.getWorldLocation().getRegionID(),
                 npc.getWorldLocation().getRegionX(),
@@ -38,14 +39,16 @@ public class PathPointObject extends PathPoint
 
         this.isNpc = true;
         this.id = id;
+		this.baseId = baseId;
     }
 
-    PathPointObject(String p, int r, int x, int y, int z, int id, boolean isNpc)
+    PathPointObject(String p, int r, int x, int y, int z, int id, int baseId, boolean isNpc)
     {
         super(p, r, x, y, z);
 
         this.isNpc = isNpc;
         this.id = id;
+		this.baseId = baseId;
     }
 
     // footprint * TileSize / 2
@@ -75,6 +78,11 @@ public class PathPointObject extends PathPoint
 //        else if (tileObject instanceof WallObject) {renderObj = ((WallObject) tileObject).getRenderable1();}
 //        return renderObj;
 //    }
+
+	int getBaseId()
+	{
+		return this.baseId;
+	}
 
     int getEntityId()
     {

@@ -497,13 +497,16 @@ public class PathmakerPlugin extends Plugin
         final WorldPoint worldPoint;
         Point toCenterVec = new Point(TILE_SIZE_HALF, TILE_SIZE_HALF);
 
+		int trueEntityId = -1;
+
         // Attempt to get an actor (npc) under the cursor
         if (event.getMenuEntry().getNpc() != null)
         {
             NPC npc = event.getMenuEntry().getNpc();
-            worldPoint = WorldPoint.fromLocalInstance(client, npc.getLocalLocation());
+            worldPoint = WorldPoint.fromLocalInstance(npc.getWorldView().getScene(), npc.getLocalLocation(), npc.getWorldView().getPlane());
             targetEntityString = getActiveOrDefaultPathColorString(npc.getName());
             toCenterVec = getNpcToCenterVector(wv, event.getMenuEntry().getIdentifier());
+			trueEntityId = npc.getId();
         }
         else // If not an actor it's a tile OR an object
         {
@@ -527,6 +530,7 @@ public class PathmakerPlugin extends Plugin
                 }
                 if (tileObject != null)
                 {
+					trueEntityId = tileObject.getId();
                     worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
                     toCenterVec = getObjectToCenterVector(wv, worldPoint, event.getIdentifier());
 
@@ -568,7 +572,7 @@ public class PathmakerPlugin extends Plugin
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
                 newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
-                        worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
+                        worldPoint.getRegionY(), worldPoint.getPlane(), entityID, trueEntityId, isNpc);
 
                 if(toCenterVec != null)
                     ((PathPointObject) newPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
