@@ -236,7 +236,7 @@ public class PathmakerOverlay extends Overlay
                     if(point instanceof PathPointObject)
                     {
 						// Updating NPC world positions AND fetching current client side position to draw on
-						localP = LocalPoint.fromWorld(wv, updateMovablePosition(wv, (PathPointObject) point));
+						localP = updateMovablePosition(wv, (PathPointObject) point);
                         //localP = pathPointToLocal(wv, point);
 
 						if(localP != null)
@@ -402,7 +402,7 @@ public class PathmakerOverlay extends Overlay
         }
     }
 
-	WorldPoint updateMovablePosition(WorldView wv, PathPointObject point)
+	LocalPoint updateMovablePosition(WorldView wv, PathPointObject point)
     {
         if(point.isNpc())
         {
@@ -420,10 +420,10 @@ public class PathmakerOverlay extends Overlay
 					worldNpc.getRegionY(),
 					wv.getPlane());
 
-				return worldNpc;
+				return npc.getLocalLocation();
 			}
         }
-		return point.getWorldPoint();
+		return LocalPoint.fromWorld(wv, point.getWorldPoint());
     }
 
 	// (point.getDrawIndex() + 1)
