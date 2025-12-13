@@ -22,6 +22,7 @@ import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
 import net.runelite.api.NPC;
 import net.runelite.api.ObjectComposition;
+import net.runelite.api.Player;
 import net.runelite.api.Point;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
@@ -401,6 +402,28 @@ public class PathmakerPlugin extends Plugin
     public void onGameTick(GameTick gameTick)
     {
 		//log.debug("onGameTick");
+
+//		log.debug("SceneWV: {}, PlayerWV: {}, PlayerSceneWV: {}",
+//			client.getTopLevelWorldView().getScene().getWorldViewId(),
+//			client.getLocalPlayer().getWorldView().getId(),
+//			client.getLocalPlayer().getWorldView().getScene().getWorldViewId());
+
+
+//		log.debug("RegionID: {}, RegionNOInstanceID: {}",
+//			client.getLocalPlayer().getWorldLocation().getRegionID(),
+//			WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation()).getRegionID());
+
+//		for (PathmakerPath path : paths.values())
+//		{
+//			for(int regionIds : path.getRegionIDs())
+//			{
+//				for(PathPoint point : path.getPointsInRegion(regionIds))
+//				{
+//					log.debug("RegionID: {}, X: {}, Y: {}, Z: {}", point.getRegionId(), point.getX(),point.getY(),point.getZ());
+//				}
+//			}
+//		}
+
 		if(config.infoBoxEnabled() && config.infoBoxSpeed())
 			panelOverlay.calculateCurrentSpeed();
     }
@@ -452,6 +475,7 @@ public class PathmakerPlugin extends Plugin
         int worldId = event.getMenuEntry().getWorldViewId();
         WorldView wv = client.getWorldView(worldId);
 
+
         if (wv == null)
         {
             log.debug("No world view found for getMenuEntry().getWorldViewId " + worldId);
@@ -477,8 +501,8 @@ public class PathmakerPlugin extends Plugin
         if (event.getMenuEntry().getNpc() != null)
         {
             NPC npc = event.getMenuEntry().getNpc();
-            worldPoint = WorldPoint.fromLocalInstance(client, event.getMenuEntry().getNpc().getLocalLocation());
-            targetEntityString = getActiveOrDefaultPathColorString(event.getMenuEntry().getNpc().getName());
+            worldPoint = WorldPoint.fromLocalInstance(client, npc.getLocalLocation());
+            targetEntityString = getActiveOrDefaultPathColorString(npc.getName());
             toCenterVec = getNpcToCenterVector(wv, event.getMenuEntry().getIdentifier());
         }
         else // If not an actor it's a tile OR an object
@@ -511,7 +535,8 @@ public class PathmakerPlugin extends Plugin
                     worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
                 }
             }
-            else
+            else // Note "toLocalInstance"
+				// https://github.com/runelite/runelite/blob/ebe56b9a3b817476658981c46d7fad003daaf523/runelite-client/src/main/java/net/runelite/client/plugins/groundmarkers/GroundMarkerPlugin.java#L208
             {
                 worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
             }
@@ -521,7 +546,7 @@ public class PathmakerPlugin extends Plugin
         }
 
 		// Correct for sailing tiles
-		int z = wv.isTopLevel() ? wv.getPlane() : 0;
+		//int z = wv.isTopLevel() ? wv.getPlane() : 0;
 
         // See if the point already exists
         pathPoint = getPathPointAtRegionTile(
@@ -529,7 +554,7 @@ public class PathmakerPlugin extends Plugin
 			worldPoint.getRegionID(),
 			worldPoint.getRegionX(),
 			worldPoint.getRegionY(),
-			z);
+			worldPoint.getPlane());
 
         // If tile is not previously marked by this path, add the "add" option.
         if (pathPoint == null)
@@ -543,7 +568,7 @@ public class PathmakerPlugin extends Plugin
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
                 newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
-                        worldPoint.getRegionY(), z, entityID, isNpc);
+                        worldPoint.getRegionY(), worldPoint.getPlane(), entityID, isNpc);
 
                 if(toCenterVec != null)
                     ((PathPointObject) newPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
@@ -551,7 +576,7 @@ public class PathmakerPlugin extends Plugin
             else
             {
                 newPoint = new PathPoint(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
-                        worldPoint.getRegionY(), z);
+                        worldPoint.getRegionY(), worldPoint.getPlane());
             }
 
             client.getMenu().createMenuEntry(-1)
@@ -625,7 +650,7 @@ public class PathmakerPlugin extends Plugin
 		// Add remove option regardless of path
 		for(String pathName : paths.keySet())
 		{
-			PathPoint point = getPathPointAtRegionTile(pathName, worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), z);
+			PathPoint point = getPathPointAtRegionTile(pathName, worldPoint.getRegionID(), worldPoint.getRegionX(), worldPoint.getRegionY(), worldPoint.getPlane());
 			if(point == null) continue;
 
 			// Eliminate double entries when a point is both the position of an entity and entity tile
@@ -774,11 +799,11 @@ public class PathmakerPlugin extends Plugin
     }
 
     // For moving points
-    void updatePointLocation(PathPoint point, int newRegionId, int x, int y, int z)
+    void updatePointLocation(String pathName, PathPoint point, int newRegionId, int x, int y, int z)
     {
         if(point.getRegionId() != newRegionId)
         {
-            paths.get(getActivePathName()).updatePointRegion(point, newRegionId);
+            paths.get(pathName).updatePointRegion(point, newRegionId);
             //log.debug("Entity moved into a new region!");
         }
 
