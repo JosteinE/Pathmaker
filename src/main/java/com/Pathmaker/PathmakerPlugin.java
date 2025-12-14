@@ -845,6 +845,11 @@ public class PathmakerPlugin extends Plugin
         return getTileObject(getTile(wv, wp), objectId);
     }
 
+	TileObject getTileObject(WorldView wv, LocalPoint lp, int objectId)
+	{
+		return getTileObject(getTile(wv, lp.getSceneX(), lp.getSceneY()), objectId);
+	}
+
     // THANK YOU ObjectIndicatorsPlugin for this!
     TileObject getTileObject(Tile tile, int id)
     {
@@ -898,10 +903,10 @@ public class PathmakerPlugin extends Plugin
 
     Polygon getEntityPolygon(WorldView wv, PathPointObject point)
     {
-        return getEntityPolygon(wv, point.getWorldPoint(), point.isNpc(), point.getEntityId());
+        return getEntityPolygon(wv, LocalPoint.fromWorld(wv, point.getWorldPoint()), point.isNpc(), point.getEntityId());
     }
 
-    Polygon getEntityPolygon(WorldView wv, WorldPoint wp, boolean isNpc, int entityId)
+    Polygon getEntityPolygon(WorldView wv, LocalPoint lp, boolean isNpc, int entityId)
     {
         if(isNpc)
         {
@@ -910,7 +915,7 @@ public class PathmakerPlugin extends Plugin
         }
         else
         {
-            TileObject object = getTileObject(getTile(wv, wp), entityId);
+            TileObject object = getTileObject(getTile(wv, lp.getSceneX(), lp.getSceneY()), entityId);
 
             if (object instanceof GameObject) return ((GameObject) object).getCanvasTilePoly();
             else if (object instanceof DecorativeObject) return ((DecorativeObject) object).getCanvasTilePoly();

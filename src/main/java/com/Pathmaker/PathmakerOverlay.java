@@ -277,16 +277,20 @@ public class PathmakerOverlay extends Overlay
                     {
 						// Updating NPC world positions AND fetching current client side position to draw on
 
+						boolean isNpc = ((PathPointObject) point).isNpc();
+						int entityId = ((PathPointObject) point).getEntityId();
+
+
 						localP = updateMovablePosition(wv, (PathPointObject) point);
 
 						if(localP != null)
 						{
 							if(config.objectAndNpcOutline())
-								drawOutline((PathPointObject) point, wv, config.objectAndNpcOutlineWidth(), path.color, 200);
+								drawOutline(wv, localP, isNpc, entityId, config.objectAndNpcOutlineWidth(), path.color, 200);
 
 							if (config.drawPathPoints())
 							{
-								highlightTile(graphics, wv, plugin.getEntityPolygon(wv, (PathPointObject) point), pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
+								highlightTile(graphics, wv, plugin.getEntityPolygon(wv, localP, isNpc, entityId), pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
 							}
 							localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
 							localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
@@ -435,20 +439,20 @@ public class PathmakerOverlay extends Overlay
     }
 
     // 0 tileObject, 1 npc
-    void drawOutline(PathPointObject point, WorldView wv, int width, Color color, int feather)
+    void drawOutline(WorldView wv, LocalPoint lp, Boolean isNpc, int entityId, int width, Color color, int feather)
     {
-        if (point == null) {return;}
+//        if (point == null) {return;}
 
-        if(point.isNpc())
+        if(isNpc)
         {
-            NPC npc = wv.npcs().byIndex(point.getEntityId());
+            NPC npc = wv.npcs().byIndex(entityId);
             if(npc == null){return;}
 
             modelOutlineRenderer.drawOutline(npc,width,color,feather);
         }
         else
         {
-            TileObject tileObject = plugin.getTileObject(wv, point);
+            TileObject tileObject = plugin.getTileObject(wv, lp, entityId);
             if(tileObject == null){return;}
             modelOutlineRenderer.drawOutline(tileObject,width,color,feather);
         }
@@ -520,21 +524,18 @@ public class PathmakerOverlay extends Overlay
 		else if (wv.getScene().isInstance())
 		{
 			Collection<WorldPoint> iWps = WorldPoint.toLocalInstance(wv, point.getWorldPoint());
-			if (iWps.isEmpty())
+
+			if (!iWps.isEmpty())
 			{
-				log.debug("iWps.isEmpty()");
-				return LocalPoint.fromWorld(wv, point.getWorldPoint());
+				WorldPoint wp  = iWps.iterator().next();
+				LocalPoint lp = LocalPoint.fromWorld(wv, wp);
+
+				if (lp != null)
+					return lp;
 			}
-			else if (iWps.size() == 1)
-			{
-				log.debug("iWps.size() == 1");
-				return LocalPoint.fromWorld(wv, iWps.iterator().next());
-			}
-			else
-				return LocalPoint.fromWorld(wv, point.getWorldPoint());
 		}
 
-		return LocalPoint.fromWorld(client, point.getWorldPoint());
+		return LocalPoint.fromWorld(wv, point.getWorldPoint());
     }
 
 	// (point.getDrawIndex() + 1)
