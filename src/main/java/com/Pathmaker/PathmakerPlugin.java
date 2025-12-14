@@ -505,7 +505,7 @@ public class PathmakerPlugin extends Plugin
             NPC npc = event.getMenuEntry().getNpc();
             worldPoint = WorldPoint.fromLocalInstance(npc.getWorldView().getScene(), npc.getLocalLocation(), npc.getWorldView().getPlane());
             targetEntityString = getActiveOrDefaultPathColorString(npc.getName());
-            toCenterVec = getNpcToCenterVector(wv, event.getMenuEntry().getIdentifier());
+            toCenterVec = getNpcToCenterVector(wv, npc.getId());
 			trueEntityId = npc.getId();
         }
         else // If not an actor it's a tile OR an object
@@ -568,7 +568,7 @@ public class PathmakerPlugin extends Plugin
             // Skip if the entityID has already been registered
             if (menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
             {
-                int entityID = event.getIdentifier();
+				int entityID = event.getIdentifier();
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
                 newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
