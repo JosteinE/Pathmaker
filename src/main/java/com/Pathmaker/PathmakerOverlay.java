@@ -341,7 +341,6 @@ public class PathmakerOverlay extends Overlay
 
 					if (path.getPointAtDrawIndex(0) instanceof PathPointObject)
 					{
-
 						startLp = startLp.dx(((PathPointObject) startP).getToCenterVectorX());
 						startLp = startLp.dy(((PathPointObject) startP).getToCenterVectorY());
 					}
@@ -396,7 +395,7 @@ public class PathmakerOverlay extends Overlay
         int boundsX = (int) poly.getBounds().getLocation().getX();
         int boundsY = (int) poly.getBounds().getLocation().getY();
 
-        //if(!isLocalPointInScene(wv, new LocalPoint(boundsX, boundsY, wv))) return false;
+        if(!isLocalPointInScene(wv, new LocalPoint(boundsX, boundsY, wv))) return false;
 
 
         OverlayUtil.renderPolygon(graphics, poly, color, fillColor, new BasicStroke((float) borderWidth));
@@ -460,31 +459,8 @@ public class PathmakerOverlay extends Overlay
 
 	LocalPoint updateMovablePosition(WorldView wv, PathPointObject point)
     {
-		// LOOK TO THIS!!! NEED TO FIND NON IMPOSTOR, BUT DO SO FOR NPC TOO
-//		WorldPoint wp = null;
-//		if (wv.isInstance())
-//		{
-//			outerLoop:
-//			for (WorldPoint iWp : WorldPoint.toLocalInstance(wv, point.getWorldPoint()))
-//			{
-//				for (int region : wv.getMapRegions())
-//				{
-//					if (region == iWp.getRegionID())
-//					{
-//						wp = iWp;
-//						break outerLoop;
-//					}
-//				}
-//			}
-//		}
-//		else
-//			wp = point.getWorldPoint();
-
-
         if(point.isNpc())
         {
-
-			wv = client.getLocalPlayer().getWorldView();
             NPC npc = wv.npcs().byIndex(point.getEntityId());
 
 			if(npc == null)
@@ -495,7 +471,10 @@ public class PathmakerOverlay extends Overlay
 					{
 						npc = localNpc;
 						point.setEntityId(localNpc.getIndex());
-						//log.debug("NPC found!");
+
+						Point toCenterVec = plugin.getEntityToCenterVector(wv,npc.getWorldLocation(), localNpc.getId(), true);
+						point.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
+
 						break;
 					}
 				}
@@ -503,7 +482,6 @@ public class PathmakerOverlay extends Overlay
 
             if(npc != null)
 			{
-				wv = npc.getWorldView();
 				final WorldPoint worldNpc = WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
 
 //				log.debug("point.getEntityId(): {}, npc: {}, transNpc: {}", point.getEntityId(), npc.getId(), npc.getTransformedComposition().getId());
@@ -531,7 +509,11 @@ public class PathmakerOverlay extends Overlay
 				LocalPoint lp = LocalPoint.fromWorld(wv, wp);
 
 				if (lp != null)
+				{
+					Point toCenterVec = plugin.getEntityToCenterVector(wv,wp, point.getEntityId(),false);
+					point.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
 					return lp;
+				}
 			}
 		}
 
@@ -786,9 +768,9 @@ public class PathmakerOverlay extends Overlay
 
     boolean isLocalPointInScene(final WorldView wv, final LocalPoint point)
     {
-		return true;
 //        WorldPoint wp = WorldPoint.fromLocal(wv, point.getX(), point.getY(), wv.getPlane());
 //        return WorldPoint.isInScene(wv, wp.getX(), wp.getY());
+		return wv.contains(point);
     }
 
     boolean isRegionLoaded(int regionId)
