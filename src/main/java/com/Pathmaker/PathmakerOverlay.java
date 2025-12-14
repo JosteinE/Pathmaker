@@ -151,7 +151,7 @@ public class PathmakerOverlay extends Overlay
 		Color hoveredTileFillColor = getTileFillColor(hoveredTileColor);
 
         // Highlight hovered tile
-        if (config.highlightHoveredTile() && isRegionLoaded(tile.getWorldLocation().getRegionID()))
+        if (config.highlightHoveredTile())
 		{
 			highlightTile(graphics, wv, hoveredTile, hoveredTileColor, config.hoveredTileBorderWidth(), hoveredTileFillColor);
         }
@@ -768,21 +768,6 @@ public class PathmakerOverlay extends Overlay
 
     boolean isLocalPointInScene(final WorldView wv, final LocalPoint point)
     {
-//        WorldPoint wp = WorldPoint.fromLocal(wv, point.getX(), point.getY(), wv.getPlane());
-//        return WorldPoint.isInScene(wv, wp.getX(), wp.getY());
 		return wv.contains(point);
-    }
-
-    boolean isRegionLoaded(int regionId)
-    {
-		return true;
-//        for(int loadedRegionID : client.getTopLevelWorldView().getMapRegions())
-//        {
-//            if (loadedRegionID == regionId)
-//            {
-//                return true;
-//            }
-//        }
-//        return false;
     }
 }
