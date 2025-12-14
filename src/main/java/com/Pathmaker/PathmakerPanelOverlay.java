@@ -37,18 +37,18 @@ public class PathmakerPanelOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        // InfoBox
-        if (config.infoBoxEnabled())
-        {
-            if (config.infoBoxSpeed())
-            {
-                this.panelComponent.getChildren().add(TitleComponent.builder().text(getSpeedLabelString(moveSpeed)).color(Color.WHITE).build());
-            }
-
-            // Render infobox
-            this.panelComponent.setPreferredSize(new Dimension(20,0));
-            return super.render(graphics);
-        }
+//        // InfoBox
+//        if (config.infoBoxEnabled())
+//        {
+//            if (config.infoBoxSpeed())
+//            {
+//                this.panelComponent.getChildren().add(TitleComponent.builder().text(getSpeedLabelString(moveSpeed)).color(Color.WHITE).build());
+//            }
+//
+//            // Render infobox
+//            this.panelComponent.setPreferredSize(new Dimension(20,0));
+//            return super.render(graphics);
+//        }
         return null;
     }
 

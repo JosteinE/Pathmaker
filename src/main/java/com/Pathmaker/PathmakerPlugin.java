@@ -114,8 +114,8 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private PathmakerOverlay overlay;
 
-    @Inject
-    private PathmakerPanelOverlay panelOverlay;
+//    @Inject
+//    private PathmakerPanelOverlay panelOverlay;
 
     @Inject
     private EventBus eventBus;
@@ -148,7 +148,7 @@ public class PathmakerPlugin extends Plugin
 		//log.info("Starting up Pathmaker plugin");
 
         overlayManager.add(overlay);
-        overlayManager.add(panelOverlay);
+        //overlayManager.add(panelOverlay);
 
 		reload(client.getTopLevelWorldView());
 		pluginPanel = new PathmakerPluginPanel(client, this);
@@ -170,7 +170,7 @@ public class PathmakerPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
         overlayManager.remove(overlay);
-        overlayManager.remove(panelOverlay);
+        //overlayManager.remove(panelOverlay);
         clientToolbar.removeNavigation(navButton);
 
         paths.clear();
@@ -424,8 +424,8 @@ public class PathmakerPlugin extends Plugin
 //			}
 //		}
 
-		if(config.infoBoxEnabled() && config.infoBoxSpeed())
-			panelOverlay.calculateCurrentSpeed();
+//		if(config.infoBoxEnabled() && config.infoBoxSpeed())
+//			panelOverlay.calculateCurrentSpeed();
     }
 
     // Get marked tiles within the rendered regions

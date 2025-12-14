@@ -511,34 +511,34 @@ public interface PathmakerConfig extends Config
     //------------------------------------------------------------//
     // Info Box Section
     //------------------------------------------------------------//
-    @ConfigSection(
-            name = "Info Box",
-            description = "Info Box configuration.",
-            position = 4
-    )
-    String infoBox = "infoBox";
-
-    @ConfigItem(
-            keyName = "infoBoxEnabled",
-            name = "Enabled",
-            description = "Render info box",
-            position = 1,
-            section = infoBox
-    )
-    default boolean infoBoxEnabled()
-    {
-        return false;
-    }
-
-    @ConfigItem(
-            keyName = "infoBoxSpeed",
-            name = "Show Speed",
-            description = "Print how many tiles the player moved since last tick.",
-            position = 2,
-            section = infoBox
-    )
-    default boolean infoBoxSpeed()
-    {
-        return true;
-    }
+//    @ConfigSection(
+//            name = "Info Box",
+//            description = "Info Box configuration.",
+//            position = 4
+//    )
+//    String infoBox = "infoBox";
+//
+//    @ConfigItem(
+//            keyName = "infoBoxEnabled",
+//            name = "Enabled",
+//            description = "Render info box",
+//            position = 1,
+//            section = infoBox
+//    )
+//    default boolean infoBoxEnabled()
+//    {
+//        return false;
+//    }
+//
+//    @ConfigItem(
+//            keyName = "infoBoxSpeed",
+//            name = "Show Speed",
+//            description = "Print how many tiles the player moved since last tick.",
+//            position = 2,
+//            section = infoBox
+//    )
+//    default boolean infoBoxSpeed()
+//    {
+//        return true;
+//    }
 }
