@@ -530,7 +530,7 @@ public class PathmakerPlugin extends Plugin
                 }
                 if (tileObject != null)
                 {
-					trueEntityId = tileObject.getId();
+					trueEntityId = client.getObjectDefinition(tileObject.getId()).getId();
                     worldPoint = WorldPoint.fromLocalInstance(client, tileObject.getLocalLocation());
                     toCenterVec = getObjectToCenterVector(wv, worldPoint, event.getIdentifier());
 

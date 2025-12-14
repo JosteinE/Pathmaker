@@ -9,12 +9,14 @@ import java.util.Collection;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
+import net.runelite.api.GameObject;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
+import net.runelite.api.Scene;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
@@ -33,6 +35,7 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
+import net.runelite.http.api.worlds.World;
 
 
 @Slf4j
@@ -514,18 +517,21 @@ public class PathmakerOverlay extends Overlay
 				return npc.getLocalLocation();
 			}
         }
-		else
+		else if (wv.getScene().isInstance())
 		{
-			TileObject tileObject = plugin.getTileObject(wv, point);
-			return tileObject == null ? LocalPoint.fromWorld(client, point.getWorldPoint()) : tileObject.getLocalLocation();
-//			for (TileObject localObj : plugin.getTile(wv, point.getWorldPoint()).getGameObjects())
-//			{
-//				if (localObj.getId() == point.getEntityId())
-//				{
-//					npc = localNpc;
-//					break;
-//				}
-//			}
+			Collection<WorldPoint> iWps = WorldPoint.toLocalInstance(wv, point.getWorldPoint());
+			if (iWps.isEmpty())
+			{
+				log.debug("iWps.isEmpty()");
+				return LocalPoint.fromWorld(wv, point.getWorldPoint());
+			}
+			else if (iWps.size() == 1)
+			{
+				log.debug("iWps.size() == 1");
+				return LocalPoint.fromWorld(wv, iWps.iterator().next());
+			}
+			else
+				return LocalPoint.fromWorld(wv, point.getWorldPoint());
 		}
 
 		return LocalPoint.fromWorld(client, point.getWorldPoint());
