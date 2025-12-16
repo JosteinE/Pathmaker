@@ -6,9 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
-import java.lang.reflect.Type;
 import java.util.Set;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
@@ -22,7 +20,6 @@ import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
 import net.runelite.api.NPC;
 import net.runelite.api.ObjectComposition;
-import net.runelite.api.Player;
 import net.runelite.api.Point;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
@@ -401,6 +398,33 @@ public class PathmakerPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick gameTick)
     {
+//		MenuEntry[] menuEntries = client.getMenu().getMenuEntries();
+//
+//		int last = menuEntries.length - 1;
+//
+//		if (last < 0)
+//		{
+//			return;
+//		}
+//
+//		MenuEntry menuEntry = menuEntries[last];
+//		Widget widget = menuEntry.getWidget();
+//		if (widget == null)
+//		{
+//			log.debug("MenuEntry: option={}", menuEntry.getOption());
+//			return;
+//		}
+//
+//		int widgetID = widget.getId();
+//		int widgetGroupID = WidgetUtil.componentToInterface(widgetID);
+//
+//		log.debug("MenuEntry: option={}, target={}, groupId={}, widgetId={}",
+//			menuEntry.getOption(),
+//			menuEntry.getTarget(),
+//			widgetGroupID,
+//			widgetID
+//		);
+
 		//log.debug("onGameTick");
 
 //		log.debug("SceneWV: {}, PlayerWV: {}, PlayerSceneWV: {}",

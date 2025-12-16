@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
 import net.runelite.api.GameObject;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Client;
@@ -70,7 +71,7 @@ public class PathmakerOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        // Fetch player position
+		// Fetch player position
         // Doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
 		WorldView pWv = client.getLocalPlayer().getWorldView();
 
@@ -101,15 +102,32 @@ public class PathmakerOverlay extends Overlay
         }
 
 		// Draw hovered tile elements
-		if(config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.ALWAYS ||
+		if(!isMouseOverHud() &&
+			(config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.ALWAYS ||
 			(config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.SHIFT_DOWN &&
-				plugin.hotKeyPressed))
+				plugin.hotKeyPressed)))
 		{
 			drawHoveredTile(graphics, lastActivePathPoint);
 		}
 
         return null;
     }
+
+	boolean isMouseOverHud()
+	{
+		MenuEntry[] menuEntries = client.getMenu().getMenuEntries();
+		int last = menuEntries.length - 1;
+
+		if (last < 0)
+		{
+			return false;
+		}
+
+		MenuEntry menuEntry = menuEntries[last];
+		String option = menuEntry.getOption();
+
+		return menuEntry.getWidget() != null || option.equals("Cancel"); // STANDARD_HUD_INTERFACES.contains(widgetGroupId)
+	}
 
     void drawHoveredTile(Graphics2D graphics, @Nullable LocalPoint lastPathPoint)
     {
