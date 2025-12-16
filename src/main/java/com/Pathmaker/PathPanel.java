@@ -9,6 +9,8 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.Component;
 
+import java.util.ArrayList;
+import java.util.Objects;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -180,8 +182,10 @@ public class PathPanel extends JPanel
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
         int pathSize = path.getSize();
-        for (PathPoint point : path.getDrawOrder(null))
+		ArrayList<PathPoint> drawOrder = path.getDrawOrder(null);
+        for (int i = pathSize - 1; i >= 0; i--)
         {
+			PathPoint point = drawOrder.get(i);
             JPanel pointContainer = new JPanel(new BorderLayout());
             pointContainer.setBorder(new EmptyBorder(5, 0, 5, 0));
             pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -206,13 +210,19 @@ public class PathPanel extends JPanel
             pointContainer.add(pointLabel, BorderLayout.WEST);
 
             // Add spinner box for optionally assigning a new point index.
-            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, -1));
+            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
             indexSpinner.setToolTipText("point index");
             indexSpinner.addChangeListener(ce ->
             {
                 plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
                 plugin.rebuildPanel(true);
             });
+			SpinnerNumberModel model = (SpinnerNumberModel) indexSpinner.getModel();
+			// indexSpinner.getComponents()[0].getName() == "Spinner.nextButton"
+			// indexSpinner.getComponents()[1].getName() == "Spinner.previousButton"
+			indexSpinner.getComponents()[0].setEnabled(!model.getMaximum().equals(model.getValue()));
+			indexSpinner.getComponents()[1].setEnabled(!model.getMinimum().equals(model.getValue()));
+
             pointContainer.add(indexSpinner, BorderLayout.CENTER);
 
             JButton deletePathPointButton = new JButton();
