@@ -299,7 +299,7 @@ public class PathmakerOverlay extends Overlay
 						int entityId = ((PathPointObject) point).getEntityId();
 
 
-						localP = updateMovablePosition(wv, (PathPointObject) point);
+						localP = getCurrentEntityPosition(wv, point, true);
 
 						if(localP != null)
 						{
@@ -310,8 +310,10 @@ public class PathmakerOverlay extends Overlay
 							{
 								highlightTile(graphics, wv, plugin.getEntityPolygon(wv, localP, isNpc, entityId), pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
 							}
-							localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
-							localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
+
+							localP = toEntityCenter((PathPointObject) point, localP);
+//							localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
+//							localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
 						}
 
 						drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
@@ -342,6 +344,7 @@ public class PathmakerOverlay extends Overlay
                         path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
                 {
 					PathPoint startP = path.getPointAtDrawIndex(0);
+
 					WorldPoint startWp = toLocalInstance(startP.getWorldPoint(), loadedRegions);
 					WorldView startWv;
 					if(startWp != null)
@@ -349,19 +352,17 @@ public class PathmakerOverlay extends Overlay
 					else
 					{
 						startWv = client.getTopLevelWorldView();
-						startWp = startP.getWorldPoint();
+						//startWp = startP.getWorldPoint();
 					}
 
-					LocalPoint startLp = LocalPoint.fromWorld(startWv, startWp);
+					LocalPoint startLp = getCurrentEntityPosition(startWv, startP, false);
+
+					if(startP instanceof PathPointObject)
+						startLp = toEntityCenter((PathPointObject) startP, startLp);
 
 					//WorldView startWv = client.getWorldView(startP.getWorldViewId());
 					//LocalPoint startLp = pathPointToLocal(wv, path.getPointAtDrawIndex(0));
 
-					if (path.getPointAtDrawIndex(0) instanceof PathPointObject)
-					{
-						startLp = startLp.dx(((PathPointObject) startP).getToCenterVectorX());
-						startLp = startLp.dy(((PathPointObject) startP).getToCenterVectorY());
-					}
 //                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
 
                     drawLine(graphics, lastLocalP, startLp, lastWv, startWv, path.color, (float) config.pathLineWidth());
@@ -376,6 +377,13 @@ public class PathmakerOverlay extends Overlay
         }
 		return  lastActivePathPoint;
     }
+
+	LocalPoint toEntityCenter(PathPointObject point, LocalPoint localPoint)
+	{
+		localPoint = localPoint.dx(point.getToCenterVectorX());
+		localPoint = localPoint.dy(point.getToCenterVectorY());
+		return localPoint;
+	}
 
 //	int correctPlaneForSailing(WorldView wv)
 //	{
@@ -475,23 +483,32 @@ public class PathmakerOverlay extends Overlay
         }
     }
 
-	LocalPoint updateMovablePosition(WorldView wv, PathPointObject point)
+	LocalPoint getCurrentEntityPosition(WorldView wv, PathPoint p, boolean updateMovable)
     {
-        if(point.isNpc())
+		if (!(p instanceof PathPointObject)) return LocalPoint.fromWorld(wv, p.getWorldPoint());
+
+		PathPointObject entity = (PathPointObject) p;
+		LocalPoint lp = null;
+
+        if(entity.isNpc())
         {
-            NPC npc = wv.npcs().byIndex(point.getEntityId());
+            NPC npc = wv.npcs().byIndex(entity.getEntityId());
 
 			if(npc == null)
 			{
 				for (NPC localNpc : wv.npcs())
 				{
-					if (localNpc.getId() == point.getBaseId())
+					if (localNpc.getId() == entity.getBaseId())
 					{
 						npc = localNpc;
-						point.setEntityId(localNpc.getIndex());
 
-						Point toCenterVec = plugin.getEntityToCenterVector(wv,npc.getWorldLocation(), localNpc.getId(), true);
-						point.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
+						if(updateMovable)
+						{
+							entity.setEntityId(localNpc.getIndex());
+
+							Point toCenterVec = plugin.getEntityToCenterVector(wv, npc.getWorldLocation(), localNpc.getId(), true);
+							entity.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
+						}
 
 						break;
 					}
@@ -500,42 +517,46 @@ public class PathmakerOverlay extends Overlay
 
             if(npc != null)
 			{
-				final WorldPoint worldNpc = WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
+				if(updateMovable)
+				{
+					final WorldPoint worldNpc = WorldPoint.fromLocalInstance(wv.getScene(), npc.getLocalLocation(), wv.getPlane());
 
-//				log.debug("point.getEntityId(): {}, npc: {}, transNpc: {}", point.getEntityId(), npc.getId(), npc.getTransformedComposition().getId());
-//				log.debug("wv: {}, npcView: {}", wv, npc.getWorldView());
+					// Update the stored belonging PathPoint
+					plugin.updatePointLocation(
+						entity.getPathOwnerName(),
+						entity,
+						worldNpc.getRegionID(),
+						worldNpc.getRegionX(),
+						worldNpc.getRegionY(),
+						worldNpc.getPlane());
+				}
 
-				// Update the stored belonging PathPoint
-				plugin.updatePointLocation(
-					point.getPathOwnerName(),
-					point,
-					worldNpc.getRegionID(),
-					worldNpc.getRegionX(),
-					worldNpc.getRegionY(),
-					worldNpc.getPlane());
-
-				return npc.getLocalLocation();
+				lp = npc.getLocalLocation();
 			}
         }
 		else if (wv.getScene().isInstance())
 		{
-			Collection<WorldPoint> iWps = WorldPoint.toLocalInstance(wv, point.getWorldPoint());
+			Collection<WorldPoint> iWps = WorldPoint.toLocalInstance(wv, entity.getWorldPoint());
 
 			if (!iWps.isEmpty())
 			{
 				WorldPoint wp  = iWps.iterator().next();
-				LocalPoint lp = LocalPoint.fromWorld(wv, wp);
+				lp = LocalPoint.fromWorld(wv, wp);
 
-				if (lp != null)
+				if (lp != null && updateMovable)
 				{
-					Point toCenterVec = plugin.getEntityToCenterVector(wv,wp, point.getEntityId(),false);
-					point.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
-					return lp;
+					Point toCenterVec = plugin.getEntityToCenterVector(wv, wp, entity.getEntityId(), false);
+					entity.setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
 				}
 			}
 		}
 
-		return LocalPoint.fromWorld(wv, point.getWorldPoint());
+		if (lp == null)
+		{
+			lp = LocalPoint.fromWorld(wv, entity.getWorldPoint());
+		}
+
+		return lp;
     }
 
 	// (point.getDrawIndex() + 1)
