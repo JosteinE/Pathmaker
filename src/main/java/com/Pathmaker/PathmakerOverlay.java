@@ -5,7 +5,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
+import java.awt.geom.Point2D;
 import java.util.Collection;
+import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
@@ -14,6 +16,7 @@ import net.runelite.api.MenuEntry;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Client;
+import java.awt.geom.Point2D.Float;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -23,7 +26,6 @@ import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;                  // For player position
 import net.runelite.api.coords.WorldPoint;
-
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -259,6 +261,7 @@ public class PathmakerOverlay extends Overlay
 			LocalPoint lastLocalP = null;
 			WorldView lastWv = client.getTopLevelWorldView();
             PathmakerPath path = paths.get(pathName);
+			ArrayList<LocalPoint> outline = new ArrayList<>();
 
             if(path.hidden)
             {
@@ -277,7 +280,6 @@ public class PathmakerOverlay extends Overlay
                 for (int i = 0; i < drawOrder.size(); i++)
 				{
 					PathPoint point = drawOrder.get(i);
-
 					WorldPoint wp = toLocalInstance(point.getWorldPoint(), loadedRegions);
 					WorldView wv;
 					if (wp == null)
@@ -325,11 +327,10 @@ public class PathmakerOverlay extends Overlay
 					}
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
-                    if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-                        drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+                   // if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
+					outline.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
-
                     lastLocalP = localP;
 					lastWv = wv;
                 }
@@ -339,35 +340,110 @@ public class PathmakerOverlay extends Overlay
             // Loop path
             if (path.loopPath && path.getSize() > 2 && config.drawPath())
             {
-                // Making sure both ends are loaded
-                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
-                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
-                {
-					PathPoint startP = path.getPointAtDrawIndex(0);
+				outline.add(outline.get(0));
+//                // Making sure both ends are loaded
+//                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
+//                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
+//                {
+//					PathPoint startP = path.getPointAtDrawIndex(0);
+//
+//					WorldPoint startWp = toLocalInstance(startP.getWorldPoint(), loadedRegions);
+//					WorldView startWv;
+//					if(startWp != null)
+//						startWv = client.getLocalPlayer().getWorldView();
+//					else
+//					{
+//						startWv = client.getTopLevelWorldView();
+//						//startWp = startP.getWorldPoint();
+//					}
+//
+//					LocalPoint startLp = getCurrentEntityPosition(startWv, startP, false);
+//
+//					if(startP instanceof PathPointObject)
+//						startLp = toEntityCenter((PathPointObject) startP, startLp);
+//
+//					//WorldView startWv = client.getWorldView(startP.getWorldViewId());
+//					//LocalPoint startLp = pathPointToLocal(wv, path.getPointAtDrawIndex(0));
+//
+////                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
+//
+//                    drawLine(graphics, lastLocalP, startLp, lastWv, startWv, path.color, (float) config.pathLineWidth());
+//                }
+            }
 
-					WorldPoint startWp = toLocalInstance(startP.getWorldPoint(), loadedRegions);
-					WorldView startWv;
-					if(startWp != null)
-						startWv = client.getLocalPlayer().getWorldView();
-					else
+			if (!outline.isEmpty())
+			{
+				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal())
+				{
+					ArrayList<int[]> tileXs = new ArrayList<>();
+					ArrayList<int[]> tileYs = new ArrayList<>();
+					boolean buildLeft = path.pathDrawOffset == PathPanel.pathDrawOffset.OFFSET_LEFT.ordinal();
+					for (LocalPoint lp : outline)
 					{
-						startWv = client.getTopLevelWorldView();
-						//startWp = startP.getWorldPoint();
+						Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+						int[] polyX = poly.xpoints;
+						int[] polyY = poly.ypoints;
+
+						int avgX = (int) average(polyX);
+						int avgY = (int) average(polyY);
+
+						polyX[0] += lp.getX() - avgX;
+						polyX[1] += lp.getX() - avgX;
+						polyX[2] += lp.getX() - avgX;
+						polyX[3] += lp.getX() - avgX;
+
+						polyY[0] += lp.getY() - avgY;
+						polyY[1] += lp.getY() - avgY;
+						polyY[2] += lp.getY() - avgY;
+						polyY[3] += lp.getY() - avgY;
+
+						// LP: LocalPoint(x=6592, y=7104, worldView=-1)
+						// polyX: 461, 488, 487, 461
+						// polyY: 230, 229, 217, 220
+
+						// 	p1-----P2
+						// 	|		|
+						//	p4-----P3
+
+						tileXs.add(polyX);
+						tileYs.add(polyY);
 					}
 
-					LocalPoint startLp = getCurrentEntityPosition(startWv, startP, false);
+					ArrayList<Point> outlineVertices = PathTileOutline.build(tileXs, tileYs, buildLeft);
+					WorldView wv = client.getTopLevelWorldView();
+					int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
 
-					if(startP instanceof PathPointObject)
-						startLp = toEntityCenter((PathPointObject) startP, startLp);
+					for(int i = 1; i < outlineVertices.size(); i ++)
+					{
+						Point start = outlineVertices.get(i-1);
+						Point end = outlineVertices.get(i);
 
-					//WorldView startWv = client.getWorldView(startP.getWorldViewId());
-					//LocalPoint startLp = pathPointToLocal(wv, path.getPointAtDrawIndex(0));
+//						start = Perspective.localToCanvas(client, start.getX(), start.getY(), wv.getPlane());
+//						end = Perspective.localToCanvas(client, end.getX(), end.getY(), wv.getPlane());
 
-//                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
+						if(start == null || end == null) continue;
 
-                    drawLine(graphics, lastLocalP, startLp, lastWv, startWv, path.color, (float) config.pathLineWidth());
-                }
-            }
+						LocalPoint startLp = new LocalPoint(start.getX()-LOCAL_HALF_TILE_SIZE, start.getY()-LOCAL_HALF_TILE_SIZE, wv);
+						LocalPoint endLp = new LocalPoint(end.getX()-LOCAL_HALF_TILE_SIZE, end.getY()-LOCAL_HALF_TILE_SIZE, wv);
+
+						log.debug("startLp: "+ startLp);
+						drawLine(graphics, startLp,endLp, wv, wv, path.color, (float) config.pathLineWidth());
+					}
+				}
+				else
+				{
+					for (int i = 1; i < outline.size(); i++)
+					{
+						drawLine(graphics,
+							outline.get(i - 1),
+							outline.get(i),
+							client.getTopLevelWorldView(),
+							client.getTopLevelWorldView(),
+							path.color,
+							(float) config.pathLineWidth());
+					}
+				}
+			}
 
 			// Draw hovered tile elements
 			if (pathName.equals(activePathName))
@@ -809,4 +885,23 @@ public class PathmakerOverlay extends Overlay
     {
 		return wv.contains(point);
     }
+
+	float average (int[] ints)
+	{
+		return (float) Arrays.stream(ints).sum() / ints.length;
+	}
+
+	// Return 1 if positive, 0 if zero -1 if negative
+	int sign(float v)
+	{
+		return v > 0 ? 1 : (v < 0 ? -1 : 0);
+	}
+
+	Point2D.Float normalize(Point a, Point b)
+	{
+		float dist = a.distanceTo(b);
+		Point2D.Float ab = new Point2D.Float(b.getX() - a.getX(), b.getY() - a.getY());
+		ab.setLocation(ab.x / dist, ab.y / dist);
+		return ab;
+	}
 }

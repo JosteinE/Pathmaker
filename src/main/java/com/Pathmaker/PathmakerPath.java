@@ -20,6 +20,7 @@ public class PathmakerPath
     boolean loopPath = false;
     boolean hidden = false;
     boolean panelExpanded = true;
+	int pathDrawOffset = PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal(); // PathPanel.pathDrawOffset enum
 
     PathmakerPath(PathPoint initialPathPoint)
     {

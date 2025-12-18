@@ -45,7 +45,17 @@ public class PathPanel extends JPanel
     private static final ImageIcon LOOP_ON_ICON;
     private static final ImageIcon LOOP_OFF_ICON;
     private static final ImageIcon EYE_OPEN_ICON;
-    private static final ImageIcon EYE_CLOSED_ICON;
+	private static final ImageIcon EYE_CLOSED_ICON;
+	private static final ImageIcon OFFSET_LEFT_ICON;
+	private static final ImageIcon OFFSET_MIDDLE_ICON;
+	private static final ImageIcon OFFSET_RIGHT_ICON;
+
+	enum pathDrawOffset
+	{
+		OFFSET_LEFT,
+		OFFSET_MIDDLE,
+		OFFSET_RIGHT,
+	}
 
     private final PathmakerPlugin plugin;
     private final PathmakerPath path;
@@ -69,9 +79,12 @@ public class PathPanel extends JPanel
         final int MAX_LABEL_LENGTH = 15;
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
         COLLAPSE_ICON = new ImageIcon(upArrowImage);
-        EXPAND_ICON= new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
+        EXPAND_ICON = new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
         LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
         LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
+		OFFSET_LEFT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_left.png"));
+		OFFSET_MIDDLE_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_middle.png"));
+		OFFSET_RIGHT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_right.png"));
         EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
         EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
     }
@@ -171,9 +184,24 @@ public class PathPanel extends JPanel
             }
         });
 
+		// Add offset button
+		JButton offsetButton = new JButton();
+		offsetButton.setIcon(getPathDrawOffsetIcon(path));
+		offsetButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+		offsetButton.setToolTipText("Set path draw offset");
+		offsetButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				path.pathDrawOffset = path.pathDrawOffset + 1 > 2 ? 0 : path.pathDrawOffset + 1;
+				offsetButton.setIcon(getPathDrawOffsetIcon(path));
+			}
+		});
+
         // Add button panel to the right
         JPanel rightActionPanel = new JPanel(new BorderLayout());
-        rightActionPanel.add(loopButton, BorderLayout.WEST);
+        rightActionPanel.add(offsetButton, BorderLayout.WEST);
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
 
@@ -273,6 +301,16 @@ public class PathPanel extends JPanel
     {
         return label;
     }
+
+	ImageIcon getPathDrawOffsetIcon(PathmakerPath path)
+	{
+		switch (pathDrawOffset.values()[path.pathDrawOffset])
+		{
+			case OFFSET_LEFT: return OFFSET_LEFT_ICON;
+			case OFFSET_RIGHT: return OFFSET_RIGHT_ICON;
+			default: return OFFSET_MIDDLE_ICON;
+		}
+	}
 
     private RuneliteColorPicker getColorPicker(Color colour, Component relativeTo)
     {
