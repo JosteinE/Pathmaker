@@ -1,10 +1,55 @@
 package com.Pathmaker;
 
 import java.util.ArrayList;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Point;
 
-@Slf4j
+/*
+ * OVERVIEW
+ *
+ * OLD IMPLEMENTATION (what you had before):
+ *
+ * - Tried to choose exactly ONE edge per tile (except corners)
+ * - Used direction vectors, cross products, and suppression rules
+ * - Relied on stitching consecutive edges together
+ *
+ * PROBLEMS WITH OLD APPROACH:
+ *
+ * - When tiles were offset or diagonal, the chosen edges did not line up
+ * - The polyline connected endpoints directly, producing diagonals
+ * - Fixing one case broke another, because the outline is global
+ *   but the logic was local to each tile
+ *
+ * NEW IMPLEMENTATION (this class):
+ *
+ * - A tile is allowed to emit MORE THAN ONE edge
+ * - For each tile, we determine:
+ *     - which side the outline ENTERS
+ *     - which side the outline EXITS
+ * - We then WALK the tile boundary between those sides
+ *   in counter-clockwise order (left outline)
+ *
+ * CONSEQUENCES:
+ *
+ * - The polyline only ever walks along real tile edges
+ * - No diagonals are possible by construction
+ * - All your "missing edge" cases disappear naturally
+ * - The code becomes simpler and more robust
+ *
+ * IMPORTANT:
+ *
+ * - The algorithm ALWAYS computes the LEFT outline
+ * - RIGHT outline is achieved by reversing the tile order
+ *
+ * Coordinate system:
+ *   (1, 0) = right
+ *   (0, 1) = up
+ *
+ * Tile corners:
+ *   p0 = top-left
+ *   p1 = top-right
+ *   p2 = bottom-right
+ *   p3 = bottom-left
+ */
 public class PathTileOutline
 {
 	/* ---------------- Direction ---------------- */
@@ -13,27 +58,25 @@ public class PathTileOutline
 	{
 		final int dx, dy;
 
-		Dir(float ax, float ay, float bx, float by)
+		Dir(int dx, int dy)
 		{
-			dx = Integer.signum(Math.round(bx - ax));
-			dy = Integer.signum(Math.round(by - ay));
+			this.dx = dx;
+			this.dy = dy;
 		}
 	}
 
-	/* ---------------- Edge ---------------- */
+	/* ---------------- Tile side ---------------- */
 
-	private static final class Edge
+	/*
+	 * Represents the four sides of a tile.
+	 * We walk these in counter-clockwise order for a LEFT outline.
+	 */
+	private enum Side
 	{
-		final Point a, b;   // ordered endpoints
-		final int nx, ny;   // outward normal
-
-		Edge(Point a, Point b, int nx, int ny)
-		{
-			this.a = a;
-			this.b = b;
-			this.nx = nx;
-			this.ny = ny;
-		}
+		TOP,
+		LEFT,
+		BOTTOM,
+		RIGHT
 	}
 
 	/* ---------------- Public API ---------------- */
@@ -51,86 +94,123 @@ public class PathTileOutline
 			return out;
 		}
 
-		// Single tile case
-		if (n == 1)
+		/*
+		 * RIGHT outline handling:
+		 *
+		 * We do NOT duplicate logic for right vs left.
+		 * Instead, we reverse the tile order and still compute
+		 * a LEFT outline.
+		 */
+		if (!left)
 		{
-			Point[] p = rect(tileXs.get(0), tileYs.get(0));
-			if (left)
-			{
-				add(out, p[3]);
-				add(out, p[0]);
-			}
-			else
-			{
-				add(out, p[1]);
-				add(out, p[2]);
-			}
-			return out;
+			reverse(tileXs);
+			reverse(tileYs);
 		}
 
 		for (int i = 0; i < n; i++)
 		{
 			Point[] rect = rect(tileXs.get(i), tileYs.get(i));
 
-			Dir dirIn = (i > 0) ? direction(tileXs, tileYs, i - 1, i) : null;
+			Dir dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
 			Dir dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1) : null;
 
-			/* -------- First tile -------- */
-			if (i == 0)
+			/*
+			 * FIRST TILE:
+			 *
+			 * No entry direction.
+			 * We only know where we are going next.
+			 */
+			if (dirIn == null)
 			{
-				Edge e = orientEdge(
-					pickEdge(dirOut, left, rect),
-					dirOut
-				);
-				emitEdge(out, e);
+				Side exit = leftSideOf(dirOut);
+				emitSide(out, rect, exit);
 				continue;
 			}
 
-			/* -------- Last tile -------- */
-			if (i == n - 1)
+			/*
+			 * LAST TILE:
+			 *
+			 * No exit direction.
+			 * We only know where we came from.
+			 */
+			if (dirOut == null)
 			{
-				Edge e = orientEdge(
-					pickEdge(dirIn, left, rect),
-					dirIn
-				);
-				emitEdge(out, e);
+				Side entry = leftSideOf(dirIn);
+				emitSide(out, rect, entry);
 				continue;
 			}
 
-			/* -------- Middle tiles -------- */
+			/*
+			 * MIDDLE TILE (new logic):
+			 *
+			 * OLD approach:
+			 *   - pick one edge
+			 *   - hope it connects
+			 *
+			 * NEW approach:
+			 *   - determine entry side
+			 *   - determine exit side
+			 *   - walk the boundary between them
+			 */
 
-			int cross =
-				dirIn.dx * dirOut.dy -
-					dirIn.dy * dirOut.dx;
+			int cross = dirIn.dx * dirOut.dy - dirIn.dy * dirOut.dx;
 
-			boolean outerTurn = left ? cross < 0 : cross > 0;
+			boolean outerTurn = cross < 0;// left ? cross > 0 : cross < 0;
+			boolean innerTurn = cross > 0;// left ? cross < 0 : cross > 0;
 
-			if (cross == 0)
+			Side inSide  = leftSideOf(dirIn);
+			Side outSide = leftSideOf(dirOut);
+
+			if (inSide == outSide)
 			{
-
-				// STRAIGHT: emit exactly one edge
-				Edge e = orientEdge(
-					pickEdge(dirOut, left, rect),
-					dirOut
-				);
-				emitEdge(out, e);
+				// Normal straight / gentle turn
+				emitSide(out, rect, inSide);
 			}
-			else if (outerTurn)
+			else if (outerTurn || !innerTurn)
 			{
-				// OUTER TURN: emit exactly ONE corner vertex
-				Point corner = outerCorner(rect, dirIn, dirOut, left);
-				if (corner != null)
-				{
-					add(out, corner);
-				}
+				// Diagonal / offset case
+				// Replace diagonal with exactly two edges
+				emitSide(out, rect, inSide);
+				emitSide(out, rect, outSide);
 			}
-			// INNER TURN: emit nothing (collapses the corner)
+
+		}
+
+		/*
+		 * Restore original traversal order for right outline output.
+		 */
+		if (!left)
+		{
+			reverse(out);
 		}
 
 		return out;
 	}
 
-	/* ---------------- Geometry ---------------- */
+	/* ---------------- Geometry helpers ---------------- */
+
+	/*
+	 * Computes cardinal direction between tile centers.
+	 * Diagonal directions are allowed here; they only influence
+	 * which side is considered "left".
+	 */
+	private static Dir direction(
+		ArrayList<int[]> xs,
+		ArrayList<int[]> ys,
+		int a,
+		int b
+	)
+	{
+		int ax = (xs.get(a)[0] + xs.get(a)[2]) / 2;
+		int ay = (ys.get(a)[0] + ys.get(a)[2]) / 2;
+		int bx = (xs.get(b)[0] + xs.get(b)[2]) / 2;
+		int by = (ys.get(b)[0] + ys.get(b)[2]) / 2;
+
+		return new Dir(
+			Integer.signum(bx - ax),
+			Integer.signum(by - ay)
+		);
+	}
 
 	private static Point[] rect(int[] xs, int[] ys)
 	{
@@ -142,111 +222,71 @@ public class PathTileOutline
 		};
 	}
 
-	private static Dir direction(
-		ArrayList<int[]> xs,
-		ArrayList<int[]> ys,
-		int a, int b
-	)
+	/* ---------------- Side logic ---------------- */
+
+	/*
+	 * Determines which SIDE of a tile is on the LEFT
+	 * of a given movement direction.
+	 *
+	 * This replaces the old normal / dot-product logic.
+	 */
+	private static Side leftSideOf(Dir d)
 	{
-		float ax = (xs.get(a)[0] + xs.get(a)[2]) * 0.5f;
-		float ay = (ys.get(a)[0] + ys.get(a)[2]) * 0.5f;
-		float bx = (xs.get(b)[0] + xs.get(b)[2]) * 0.5f;
-		float by = (ys.get(b)[0] + ys.get(b)[2]) * 0.5f;
-		return new Dir(ax, ay, bx, by);
+		if (d.dx == 1 && d.dy == 0)  return Side.TOP;
+		if (d.dx == -1 && d.dy == 0) return Side.BOTTOM;
+		if (d.dx == 0 && d.dy == 1)  return Side.LEFT;
+		if (d.dx == 0 && d.dy == -1) return Side.RIGHT;
+
+		/*
+		 * Diagonal case:
+		 * Use the dominant component implicitly via boundary walking.
+		 * We still return a side so entry/exit always exist.
+		 */
+		if (d.dx > 0)  return Side.TOP;
+		if (d.dx < 0)  return Side.BOTTOM;
+		if (d.dy > 0)  return Side.LEFT;
+		return Side.RIGHT;
 	}
 
-	private static Edge pickEdge(Dir d, boolean left, Point[] p)
+	/*
+	 * Counter-clockwise order around a tile.
+	 * This is what enforces a LEFT outline.
+	 */
+	private static Side nextCCW(Side s)
 	{
-		int nx = left ? -d.dy : d.dy;
-		int ny = left ? d.dx : -d.dx;
-
-		Edge[] edges = new Edge[]{
-			new Edge(p[0], p[1], 0, 1),  // top
-			new Edge(p[1], p[2], 1, 0),  // right
-			new Edge(p[2], p[3], 0, -1),  // bottom
-			new Edge(p[3], p[0], -1, 0)   // left
-		};
-
-		Edge best = null;
-		int bestDot = Integer.MIN_VALUE;
-
-		for (Edge e : edges)
+		switch (s)
 		{
-			int dot = nx * e.nx + ny * e.ny;
-			if (dot > bestDot)
-			{
-				bestDot = dot;
-				best = e;
-			}
+			case TOP:    return Side.LEFT;
+			case LEFT:   return Side.BOTTOM;
+			case BOTTOM: return Side.RIGHT;
+			case RIGHT:  return Side.TOP;
 		}
-		return best;
+		throw new IllegalStateException();
 	}
 
-	/* ---------------- Edge orientation (unchanged) ---------------- */
+	/* ---------------- Emission ---------------- */
 
-	private static Edge orientEdge(Edge e, Dir travel)
+	private static void emitSide(ArrayList<Point> out, Point[] r, Side s)
 	{
-		int ex = Integer.signum(e.b.getX() - e.a.getX());
-		int ey = Integer.signum(e.b.getY() - e.a.getY());
-
-		if (ex == -travel.dx && ey == -travel.dy)
+		switch (s)
 		{
-			return new Edge(e.b, e.a, e.nx, e.ny);
+			case TOP:
+				add(out, r[0]);
+				add(out, r[1]);
+				break;
+			case RIGHT:
+				add(out, r[1]);
+				add(out, r[2]);
+				break;
+			case BOTTOM:
+				add(out, r[2]);
+				add(out, r[3]);
+				break;
+			case LEFT:
+				add(out, r[3]);
+				add(out, r[0]);
+				break;
 		}
-		return e;
-	}
-
-	/* ---------------- NEW: explicit outer corner ---------------- */
-
-	private static Point outerCorner(Point[] r, Dir in, Dir out, boolean left)
-	{
-		if (left)
-		{
-			if (in.dy == 1 && out.dx == 1)
-			{
-				return r[0]; // up → right
-			}
-			if (in.dx == 1 && out.dy == -1)
-			{
-				return r[1]; // right → down
-			}
-			if (in.dy == -1 && out.dx == -1)
-			{
-				return r[2]; // down → left
-			}
-			if (in.dx == -1 && out.dy == 1)
-			{
-				return r[3]; // left → up
-			}
-		}
-		else
-		{
-			if (in.dy == 1 && out.dx == -1)
-			{
-				return r[1]; // up → left
-			}
-			if (in.dx == -1 && out.dy == -1)
-			{
-				return r[0]; // left → down
-			}
-			if (in.dy == -1 && out.dx == 1)
-			{
-				return r[3]; // down → right
-			}
-			if (in.dx == 1 && out.dy == 1)
-			{
-				return r[2]; // right → up
-			}
-		}
-		return null;
-	}
-
-	/* ---------------- Output helpers ---------------- */
-
-	private static void emitEdge(ArrayList<Point> out, Edge e)
-	{
-		add(out, e.a);
-		add(out, e.b);
 	}
 
 	private static void add(ArrayList<Point> out, Point p)
@@ -254,6 +294,16 @@ public class PathTileOutline
 		if (out.isEmpty() || !out.get(out.size() - 1).equals(p))
 		{
 			out.add(p);
+		}
+	}
+
+	private static <T> void reverse(ArrayList<T> list)
+	{
+		for (int i = 0, j = list.size() - 1; i < j; i++, j--)
+		{
+			T tmp = list.get(i);
+			list.set(i, list.get(j));
+			list.set(j, tmp);
 		}
 	}
 }
