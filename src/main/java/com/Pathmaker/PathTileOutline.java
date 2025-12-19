@@ -110,7 +110,7 @@ public class PathTileOutline
 			if (dirIn == null)
 			{
 				Side exit = sideOf(dirOut, left);
-				emitSide(out, rect, exit);
+				addSide(out, rect, exit);
 				continue;
 			}
 
@@ -123,7 +123,7 @@ public class PathTileOutline
 			if (dirOut == null)
 			{
 				Side entry = sideOf(dirIn, left);
-				emitSide(out, rect, entry);
+				addSide(out, rect, entry);
 				continue;
 			}
 
@@ -143,7 +143,7 @@ public class PathTileOutline
 			int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
 
 			boolean outerTurn = left ? cross < 0 : cross > 0;
-			boolean innerTurn = left ? cross > 0 : cross < 0;
+			boolean innerTurn = cross > 0;//left ? cross > 0 : cross < 0;
 
 			Side inSide  = sideOf(dirIn, left);
 			Side outSide = sideOf(dirOut, left);
@@ -151,24 +151,25 @@ public class PathTileOutline
 			if (inSide == outSide)
 			{
 				// Normal straight / gentle turn
-				emitSide(out, rect, inSide);
+				addSide(out, rect, inSide);
 			}
 			else
 			{
-				// Diagonal / offset case
-				// Replace diagonal with exactly two edges
-				emitSide(out, rect, inSide);
-				emitSide(out, rect, outSide);
-//				else if(innerTurn && outerTurn)
-//				{
-//					addLast(out);
-//				}
+				if(innerTurn)
+				{
+					addSideStartPoint(out,rect,inSide);
+				}
+				else
+				{
+					// Diagonal / offset case
+					// Replace diagonal with exactly two edges
+					addSide(out, rect, inSide);
+					addSide(out, rect, outSide);
+				}
 			}
 		}
 
-		/*
-		 * Restore original traversal order for right outline output.
-		 */
+		// Restore original traversal order for right outline output.
 		if (!left)
 		{
 			reverse(out);
@@ -179,11 +180,7 @@ public class PathTileOutline
 
 	/* ---------------- Geometry helpers ---------------- */
 
-	/*
-	 * Computes cardinal direction between tile centers.
-	 * Diagonal directions are allowed here; they only influence
-	 * which side is considered "left".
-	 */
+	// Computes cardinal direction between tile centers.
 	private static Point direction(
 		ArrayList<int[]> xs,
 		ArrayList<int[]> ys,
@@ -223,12 +220,7 @@ public class PathTileOutline
 
 	/* ---------------- Side logic ---------------- */
 
-	/*
-	 * Determines which SIDE of a tile is on the LEFT/RIGHT
-	 * of a given movement direction.
-	 *
-	 * This replaces the old normal / dot-product logic.
-	 */
+	// Determines which SIDE of a tile is on the LEFT/RIGHT of a given movement direction.
 	private static Side sideOf(Point dir, boolean left)
 	{
 		if (left)
@@ -238,11 +230,9 @@ public class PathTileOutline
 			if (dir.getX() == 0 && dir.getY() == 1) return Side.LEFT;
 			if (dir.getX() == 0 && dir.getY() == -1) return Side.RIGHT;
 
-			/*
-			 * Diagonal case:
+			/* Diagonal case:
 			 * Use the dominant component implicitly via boundary walking.
-			 * We still return a side so entry/exit always exist.
-			 */
+			 * We still return a side so entry/exit always exist. */
 			if (dir.getX() > 0) return Side.TOP;
 			if (dir.getX() < 0) return Side.BOTTOM;
 			if (dir.getY() > 0) return Side.LEFT;
@@ -262,25 +252,9 @@ public class PathTileOutline
 		}
 	}
 
-	/*
-	 * Counter-clockwise order around a tile.
-	 * This is what enforces a LEFT outline.
-	 */
-	private static Side nextCCW(Side s)
-	{
-		switch (s)
-		{
-			case TOP:    return Side.LEFT;
-			case LEFT:   return Side.BOTTOM;
-			case BOTTOM: return Side.RIGHT;
-			case RIGHT:  return Side.TOP;
-		}
-		throw new IllegalStateException();
-	}
-
 	/* ---------------- Emission ---------------- */
 
-	private static void emitSide(ArrayList<Point> out, Point[] r, Side s)
+	private static void addSide(ArrayList<Point> out, Point[] r, Side s)
 	{
 		switch (s)
 		{
@@ -303,17 +277,31 @@ public class PathTileOutline
 		}
 	}
 
+	private static void addSideStartPoint(ArrayList<Point> out, Point[] r, Side s)
+	{
+		switch (s)
+		{
+			case TOP:
+				add(out, r[0]);
+				break;
+			case RIGHT:
+				add(out, r[1]);
+				break;
+			case BOTTOM:
+				add(out, r[2]);
+				break;
+			case LEFT:
+				add(out, r[3]);
+				break;
+		}
+	}
+
 	private static void add(ArrayList<Point> out, Point p)
 	{
 		if (out.isEmpty() || !out.get(out.size() - 1).equals(p))
 		{
 			out.add(p);
 		}
-	}
-
-	private static void addLast(ArrayList<Point> out)
-	{
-		out.add(out.get(out.size()-1));
 	}
 
 	private static <T> void reverse(ArrayList<T> list)
