@@ -3,44 +3,7 @@ package com.Pathmaker;
 import java.util.ArrayList;
 import net.runelite.api.Point;
 
-/*
- * OVERVIEW
- *
- * OLD IMPLEMENTATION (what you had before):
- *
- * - Tried to choose exactly ONE edge per tile (except corners)
- * - Used direction vectors, cross products, and suppression rules
- * - Relied on stitching consecutive edges together
- *
- * PROBLEMS WITH OLD APPROACH:
- *
- * - When tiles were offset or diagonal, the chosen edges did not line up
- * - The polyline connected endpoints directly, producing diagonals
- * - Fixing one case broke another, because the outline is global
- *   but the logic was local to each tile
- *
- * NEW IMPLEMENTATION (this class):
- *
- * - A tile is allowed to emit MORE THAN ONE edge
- * - For each tile, we determine:
- *     - which side the outline ENTERS
- *     - which side the outline EXITS
- * - We then WALK the tile boundary between those sides
- *   in counter-clockwise order (left outline)
- *
- * CONSEQUENCES:
- *
- * - The polyline only ever walks along real tile edges
- * - No diagonals are possible by construction
- * - All your "missing edge" cases disappear naturally
- * - The code becomes simpler and more robust
- *
- * IMPORTANT:
- *
- * - The algorithm ALWAYS computes the LEFT outline
- * - RIGHT outline is achieved by reversing the tile order
- *
- * Coordinate system:
+/* Coordinate system:
  *   (1, 0) = right
  *   (0, 1) = up
  *
@@ -53,11 +16,7 @@ import net.runelite.api.Point;
 public class PathTileOutline
 {
 	/* ---------------- Tile side ---------------- */
-
-	/*
-	 * Represents the four sides of a tile.
-	 * We walk these in counter-clockwise order for a LEFT outline.
-	 */
+	
 	private enum Side
 	{
 		TOP,
@@ -81,13 +40,7 @@ public class PathTileOutline
 			return out;
 		}
 
-		/*
-		 * RIGHT outline handling:
-		 *
-		 * We do NOT duplicate logic for right vs left.
-		 * Instead, we reverse the tile order and still compute
-		 * a LEFT outline.
-		 */
+		// RIGHT line handling:
 		if (!left)
 		{
 			reverse(tileXs);
@@ -101,12 +54,10 @@ public class PathTileOutline
 			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i, left) : null;
 			Point dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1, left) : null;
 
-			/*
-			 * FIRST TILE:
-			 *
+			/* FIRST TILE:
 			 * No entry direction.
-			 * We only know where we are going next.
-			 */
+			 * We only know where we are going next. */
+
 			if (dirIn == null)
 			{
 				Side exit = sideOf(dirOut, left);
@@ -114,12 +65,10 @@ public class PathTileOutline
 				continue;
 			}
 
-			/*
-			 * LAST TILE:
-			 *
+			/* LAST TILE:
 			 * No exit direction.
-			 * We only know where we came from.
-			 */
+			 * We only know where we came from. */
+
 			if (dirOut == null)
 			{
 				Side entry = sideOf(dirIn, left);
@@ -127,23 +76,10 @@ public class PathTileOutline
 				continue;
 			}
 
-			/*
-			 * MIDDLE TILE (new logic):
-			 *
-			 * OLD approach:
-			 *   - pick one edge
-			 *   - hope it connects
-			 *
-			 * NEW approach:
-			 *   - determine entry side
-			 *   - determine exit side
-			 *   - walk the boundary between them
-			 */
+			// MIDDLE TILE (new logic):
 
 			int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
-
-			boolean outerTurn = left ? cross < 0 : cross > 0;
-			boolean innerTurn = cross > 0;//left ? cross > 0 : cross < 0;
+			boolean innerTurn = cross > 0;
 
 			Side inSide  = sideOf(dirIn, left);
 			Side outSide = sideOf(dirOut, left);
@@ -169,7 +105,7 @@ public class PathTileOutline
 			}
 		}
 
-		// Restore original traversal order for right outline output.
+		// Restore original order for right line output.
 		if (!left)
 		{
 			reverse(out);
