@@ -21,6 +21,7 @@ import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.Scene;
+import net.runelite.api.SceneTileModel;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
@@ -261,7 +262,7 @@ public class PathmakerOverlay extends Overlay
 			LocalPoint lastLocalP = null;
 			WorldView lastWv = client.getTopLevelWorldView();
             PathmakerPath path = paths.get(pathName);
-			ArrayList<LocalPoint> outline = new ArrayList<>();
+			ArrayList<LocalPoint> line = new ArrayList<>();
 
             if(path.hidden)
             {
@@ -328,7 +329,7 @@ public class PathmakerOverlay extends Overlay
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
                    // if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-					outline.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+					line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     lastLocalP = localP;
@@ -340,7 +341,7 @@ public class PathmakerOverlay extends Overlay
             // Loop path
             if (path.loopPath && path.getSize() > 2 && config.drawPath())
             {
-				outline.add(outline.get(0));
+				line.add(line.get(0));
 //                // Making sure both ends are loaded
 //                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
 //                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
@@ -371,74 +372,65 @@ public class PathmakerOverlay extends Overlay
 //                }
             }
 
-			if (!outline.isEmpty())
+			if (!line.isEmpty())
 			{
+				WorldView wv = client.getTopLevelWorldView();
+				int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
+
 				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal())
 				{
 					ArrayList<int[]> tileXs = new ArrayList<>();
 					ArrayList<int[]> tileYs = new ArrayList<>();
 					boolean buildLeft = path.pathDrawOffset == PathPanel.pathDrawOffset.OFFSET_LEFT.ordinal();
-					for (LocalPoint lp : outline)
+					for (int i = 0; i < line.size(); i++)
 					{
-						Polygon poly = Perspective.getCanvasTilePoly(client, lp);
-						int[] polyX = poly.xpoints;
-						int[] polyY = poly.ypoints;
+						LocalPoint lp = line.get(i);
+						if (lp == null) continue;
 
-						int avgX = (int) average(polyX);
-						int avgY = (int) average(polyY);
+						Tile tile = plugin.getTile(wv, lp.getSceneX(), lp.getSceneY());
+						if (tile == null) continue;
 
-						polyX[0] += lp.getX() - avgX;
-						polyX[1] += lp.getX() - avgX;
-						polyX[2] += lp.getX() - avgX;
-						polyX[3] += lp.getX() - avgX;
+						int[] tileX = new int[4];
+						tileX[0] = lp.getX() - LOCAL_HALF_TILE_SIZE;
+						tileX[1] = lp.getX() + LOCAL_HALF_TILE_SIZE;
+						tileX[2] = lp.getX() + LOCAL_HALF_TILE_SIZE;
+						tileX[3] = lp.getX() - LOCAL_HALF_TILE_SIZE;
 
-						polyY[0] += lp.getY() - avgY;
-						polyY[1] += lp.getY() - avgY;
-						polyY[2] += lp.getY() - avgY;
-						polyY[3] += lp.getY() - avgY;
+						int[] tileY = new int[4];
+						tileY[0] = lp.getY() + LOCAL_HALF_TILE_SIZE;
+						tileY[1] = lp.getY() + LOCAL_HALF_TILE_SIZE;
+						tileY[2] = lp.getY() - LOCAL_HALF_TILE_SIZE;
+						tileY[3] = lp.getY() - LOCAL_HALF_TILE_SIZE;
 
-						// LP: LocalPoint(x=6592, y=7104, worldView=-1)
-						// polyX: 461, 488, 487, 461
-						// polyY: 230, 229, 217, 220
-
-						// 	p1-----P2
-						// 	|		|
-						//	p4-----P3
-
-						tileXs.add(polyX);
-						tileYs.add(polyY);
+						tileXs.add(tileX);
+						tileYs.add(tileY);
 					}
 
-					ArrayList<Point> outlineVertices = PathTileOutline.build(tileXs, tileYs, buildLeft);
-					WorldView wv = client.getTopLevelWorldView();
-					int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
+					ArrayList<Point> lineVertices = PathTileOutline.build(tileXs, tileYs, buildLeft);
 
-					for(int i = 1; i < outlineVertices.size(); i ++)
+					for(int i = 1; i < lineVertices.size(); i ++)
 					{
-						Point start = outlineVertices.get(i-1);
-						Point end = outlineVertices.get(i);
+						Point start = lineVertices.get(i-1);
+						Point end = lineVertices.get(i);
 
-//						start = Perspective.localToCanvas(client, start.getX(), start.getY(), wv.getPlane());
-//						end = Perspective.localToCanvas(client, end.getX(), end.getY(), wv.getPlane());
 
 						if(start == null || end == null) continue;
 
-						LocalPoint startLp = new LocalPoint(start.getX()-LOCAL_HALF_TILE_SIZE, start.getY()-LOCAL_HALF_TILE_SIZE, wv);
-						LocalPoint endLp = new LocalPoint(end.getX()-LOCAL_HALF_TILE_SIZE, end.getY()-LOCAL_HALF_TILE_SIZE, wv);
+						LocalPoint startLp = new LocalPoint(start.getX(), start.getY(), wv);
+						LocalPoint endLp = new LocalPoint(end.getX(), end.getY(), wv);
 
-						log.debug("startLp: "+ startLp);
 						drawLine(graphics, startLp,endLp, wv, wv, path.color, (float) config.pathLineWidth());
 					}
 				}
 				else
 				{
-					for (int i = 1; i < outline.size(); i++)
+					for (int i = 1; i < line.size(); i++)
 					{
 						drawLine(graphics,
-							outline.get(i - 1),
-							outline.get(i),
-							client.getTopLevelWorldView(),
-							client.getTopLevelWorldView(),
+							line.get(i - 1),
+							line.get(i),
+							wv,
+							wv,
 							path.color,
 							(float) config.pathLineWidth());
 					}
