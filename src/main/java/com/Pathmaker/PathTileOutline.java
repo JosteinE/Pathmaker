@@ -52,19 +52,6 @@ import net.runelite.api.Point;
  */
 public class PathTileOutline
 {
-	/* ---------------- Direction ---------------- */
-
-	private static final class Dir
-	{
-		final int dx, dy;
-
-		Dir(int dx, int dy)
-		{
-			this.dx = dx;
-			this.dy = dy;
-		}
-	}
-
 	/* ---------------- Tile side ---------------- */
 
 	/*
@@ -111,8 +98,8 @@ public class PathTileOutline
 		{
 			Point[] rect = rect(tileXs.get(i), tileYs.get(i));
 
-			Dir dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
-			Dir dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1) : null;
+			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i, left) : null;
+			Point dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1, left) : null;
 
 			/*
 			 * FIRST TILE:
@@ -122,7 +109,7 @@ public class PathTileOutline
 			 */
 			if (dirIn == null)
 			{
-				Side exit = leftSideOf(dirOut);
+				Side exit = sideOf(dirOut, left);
 				emitSide(out, rect, exit);
 				continue;
 			}
@@ -135,7 +122,7 @@ public class PathTileOutline
 			 */
 			if (dirOut == null)
 			{
-				Side entry = leftSideOf(dirIn);
+				Side entry = sideOf(dirIn, left);
 				emitSide(out, rect, entry);
 				continue;
 			}
@@ -153,27 +140,30 @@ public class PathTileOutline
 			 *   - walk the boundary between them
 			 */
 
-			int cross = dirIn.dx * dirOut.dy - dirIn.dy * dirOut.dx;
+			int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
 
-			boolean outerTurn = cross < 0;// left ? cross > 0 : cross < 0;
-			boolean innerTurn = cross > 0;// left ? cross < 0 : cross > 0;
+			boolean outerTurn = left ? cross < 0 : cross > 0;
+			boolean innerTurn = left ? cross > 0 : cross < 0;
 
-			Side inSide  = leftSideOf(dirIn);
-			Side outSide = leftSideOf(dirOut);
+			Side inSide  = sideOf(dirIn, left);
+			Side outSide = sideOf(dirOut, left);
 
 			if (inSide == outSide)
 			{
 				// Normal straight / gentle turn
 				emitSide(out, rect, inSide);
 			}
-			else if (outerTurn || !innerTurn)
+			else
 			{
 				// Diagonal / offset case
 				// Replace diagonal with exactly two edges
 				emitSide(out, rect, inSide);
 				emitSide(out, rect, outSide);
+//				else if(innerTurn && outerTurn)
+//				{
+//					addLast(out);
+//				}
 			}
-
 		}
 
 		/*
@@ -194,11 +184,12 @@ public class PathTileOutline
 	 * Diagonal directions are allowed here; they only influence
 	 * which side is considered "left".
 	 */
-	private static Dir direction(
+	private static Point direction(
 		ArrayList<int[]> xs,
 		ArrayList<int[]> ys,
 		int a,
-		int b
+		int b,
+		boolean left
 	)
 	{
 		int ax = (xs.get(a)[0] + xs.get(a)[2]) / 2;
@@ -206,9 +197,17 @@ public class PathTileOutline
 		int bx = (xs.get(b)[0] + xs.get(b)[2]) / 2;
 		int by = (ys.get(b)[0] + ys.get(b)[2]) / 2;
 
-		return new Dir(
-			Integer.signum(bx - ax),
-			Integer.signum(by - ay)
+		if (left)
+		{
+			return new Point(
+				Integer.signum(bx - ax),
+				Integer.signum(by - ay)
+			);
+		}
+
+		return new Point(
+			Integer.signum(ax-bx),
+			Integer.signum(ay-by)
 		);
 	}
 
@@ -225,27 +224,42 @@ public class PathTileOutline
 	/* ---------------- Side logic ---------------- */
 
 	/*
-	 * Determines which SIDE of a tile is on the LEFT
+	 * Determines which SIDE of a tile is on the LEFT/RIGHT
 	 * of a given movement direction.
 	 *
 	 * This replaces the old normal / dot-product logic.
 	 */
-	private static Side leftSideOf(Dir d)
+	private static Side sideOf(Point dir, boolean left)
 	{
-		if (d.dx == 1 && d.dy == 0)  return Side.TOP;
-		if (d.dx == -1 && d.dy == 0) return Side.BOTTOM;
-		if (d.dx == 0 && d.dy == 1)  return Side.LEFT;
-		if (d.dx == 0 && d.dy == -1) return Side.RIGHT;
+		if (left)
+		{
+			if (dir.getX() == 1 && dir.getY() == 0) return Side.TOP;
+			if (dir.getX() == -1 && dir.getY() == 0) return Side.BOTTOM;
+			if (dir.getX() == 0 && dir.getY() == 1) return Side.LEFT;
+			if (dir.getX() == 0 && dir.getY() == -1) return Side.RIGHT;
 
-		/*
-		 * Diagonal case:
-		 * Use the dominant component implicitly via boundary walking.
-		 * We still return a side so entry/exit always exist.
-		 */
-		if (d.dx > 0)  return Side.TOP;
-		if (d.dx < 0)  return Side.BOTTOM;
-		if (d.dy > 0)  return Side.LEFT;
-		return Side.RIGHT;
+			/*
+			 * Diagonal case:
+			 * Use the dominant component implicitly via boundary walking.
+			 * We still return a side so entry/exit always exist.
+			 */
+			if (dir.getX() > 0) return Side.TOP;
+			if (dir.getX() < 0) return Side.BOTTOM;
+			if (dir.getY() > 0) return Side.LEFT;
+			return Side.RIGHT;
+		}
+		else
+		{
+			if (dir.getX() == 1 && dir.getY() == 0)  return Side.BOTTOM;
+			if (dir.getX() == -1 && dir.getY() == 0) return Side.TOP;
+			if (dir.getX() == 0 && dir.getY() == 1)  return Side.RIGHT;
+			if (dir.getX() == 0 && dir.getY() == -1) return Side.LEFT;
+
+			if (dir.getX() > 0)  return Side.BOTTOM;
+			if (dir.getX() < 0)  return Side.TOP;
+			if (dir.getY() > 0)  return Side.RIGHT;
+			return Side.LEFT;
+		}
 	}
 
 	/*
@@ -295,6 +309,11 @@ public class PathTileOutline
 		{
 			out.add(p);
 		}
+	}
+
+	private static void addLast(ArrayList<Point> out)
+	{
+		out.add(out.get(out.size()-1));
 	}
 
 	private static <T> void reverse(ArrayList<T> list)

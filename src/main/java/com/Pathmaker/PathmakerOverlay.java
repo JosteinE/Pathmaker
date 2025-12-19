@@ -372,7 +372,7 @@ public class PathmakerOverlay extends Overlay
 //                }
             }
 
-			if (!line.isEmpty())
+			if (line.size() > 1)
 			{
 				WorldView wv = client.getTopLevelWorldView();
 				int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
