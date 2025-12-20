@@ -283,9 +283,12 @@ public class PathmakerPlugin extends Plugin
 			}
 		}
 
-		paths.get(pathName).color = gson.fromJson(pathJson.get("color"), Color.class);
-		paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
-		paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
+		if (pathJson.has("color"))
+			paths.get(pathName).color = gson.fromJson(pathJson.get("color"), Color.class);
+		if (pathJson.has("looped"))
+			paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
+		if (pathJson.has("pathDrawOffset"))
+			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
 		//log.debug("Loaded path json: {}", pathName);
 	}
 
