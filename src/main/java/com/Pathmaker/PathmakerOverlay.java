@@ -263,6 +263,7 @@ public class PathmakerOverlay extends Overlay
 			WorldView lastWv = client.getTopLevelWorldView();
             PathmakerPath path = paths.get(pathName);
 			ArrayList<LocalPoint> line = new ArrayList<>();
+			ArrayList<WorldView> lineWVs = new ArrayList<>();
 
             if(path.hidden)
             {
@@ -329,7 +330,10 @@ public class PathmakerOverlay extends Overlay
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
                    if ((config.drawPath()))// && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+				   {
+						   lineWVs.add(wv);
+						   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+				   }
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     lastLocalP = localP;
@@ -342,6 +346,7 @@ public class PathmakerOverlay extends Overlay
             if (path.loopPath && path.getSize() > 2 && config.drawPath())
             {
 				line.add(line.get(0));
+				lineWVs.add(lineWVs.get(0));
 //                // Making sure both ends are loaded
 //                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
 //                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
@@ -376,6 +381,7 @@ public class PathmakerOverlay extends Overlay
 			{
 				WorldView wv = client.getTopLevelWorldView();
 				int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
+				boolean isOnBoat = client.getLocalPlayer().getWorldView().getId() != -1;
 
 				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal())
 				{
@@ -406,18 +412,14 @@ public class PathmakerOverlay extends Overlay
 						tileYs.add(tileY);
 					}
 
-					ArrayList<Point> lineVertices = PathTileOutline.build(tileXs, tileYs, buildLeft);
+					ArrayList<LocalPoint> lineVertices = PathTileOutline.build(lineWVs, tileXs, tileYs, buildLeft);
 
 					for(int i = 1; i < lineVertices.size(); i ++)
 					{
-						Point start = lineVertices.get(i-1);
-						Point end = lineVertices.get(i);
+						LocalPoint startLp = lineVertices.get(i-1);
+						LocalPoint endLp = lineVertices.get(i);
 
-
-						if(start == null || end == null) continue;
-
-						LocalPoint startLp = new LocalPoint(start.getX(), start.getY(), wv);
-						LocalPoint endLp = new LocalPoint(end.getX(), end.getY(), wv);
+						if(startLp == null || endLp == null) continue;
 
 						drawLine(graphics, startLp,endLp, wv, wv, path.color, (float) config.pathLineWidth());
 					}
@@ -429,8 +431,8 @@ public class PathmakerOverlay extends Overlay
 						drawLine(graphics,
 							line.get(i - 1),
 							line.get(i),
-							wv,
-							wv,
+							lineWVs.get(i - 1),
+							lineWVs.get(i),
 							path.color,
 							(float) config.pathLineWidth());
 					}

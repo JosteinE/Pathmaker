@@ -2,6 +2,8 @@ package com.Pathmaker;
 
 import java.util.ArrayList;
 import net.runelite.api.Point;
+import net.runelite.api.WorldView;
+import net.runelite.api.coords.LocalPoint;
 
 /* Coordinate system:
  *   (1, 0) = right
@@ -27,13 +29,14 @@ public class PathTileOutline
 
 	/* ---------------- Public API ---------------- */
 
-	public static ArrayList<Point> build(
+	public static ArrayList<LocalPoint> build(
+		ArrayList<WorldView> tileWVs,
 		ArrayList<int[]> tileXs,
 		ArrayList<int[]> tileYs,
 		boolean left
 	)
 	{
-		ArrayList<Point> out = new ArrayList<>();
+		ArrayList<LocalPoint> out = new ArrayList<>();
 		int n = tileXs.size();
 		if (n == 0)
 		{
@@ -44,7 +47,7 @@ public class PathTileOutline
 
 		for (int i = 0; i < n; i++)
 		{
-			Point[] rect = rect(tileXs.get(i), tileYs.get(i));
+			LocalPoint[] rect = rect(tileXs.get(i), tileYs.get(i), tileWVs.get(i));
 
 			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
 			Point dirOut = i < n - 1 ? direction(tileXs, tileYs, i, i + 1) : null;
@@ -151,13 +154,13 @@ public class PathTileOutline
 			);
 	}
 
-	private static Point[] rect(int[] xs, int[] ys)
+	private static LocalPoint[] rect(int[] xs, int[] ys, WorldView wv)
 	{
-		return new Point[]{
-			new Point(xs[0], ys[0]), // p0 top-left
-			new Point(xs[1], ys[1]), // p1 top-right
-			new Point(xs[2], ys[2]), // p2 bottom-right
-			new Point(xs[3], ys[3])  // p3 bottom-left
+		return new LocalPoint[]{
+			new LocalPoint(xs[0], ys[0], wv), // p0 top-left
+			new LocalPoint(xs[1], ys[1], wv), // p1 top-right
+			new LocalPoint(xs[2], ys[2], wv), // p2 bottom-right
+			new LocalPoint(xs[3], ys[3], wv)  // p3 bottom-left
 		};
 	}
 
@@ -197,7 +200,7 @@ public class PathTileOutline
 
 	/* ---------------- Emission ---------------- */
 
-	private static void addSide(ArrayList<Point> out, Point[] r, Side s, boolean left)
+	private static void addSide(ArrayList<LocalPoint> out, LocalPoint[] r, Side s, boolean left)
 	{
 		if(left)
 		{
@@ -246,7 +249,7 @@ public class PathTileOutline
 
 	}
 
-	private static void addSideStartPoint(ArrayList<Point> out, Point[] r, Side s)
+	private static void addSideStartPoint(ArrayList<LocalPoint> out, LocalPoint[] r, Side s)
 	{
 		switch (s)
 		{
@@ -265,7 +268,7 @@ public class PathTileOutline
 		}
 	}
 
-	private static void addSideEndPoint(ArrayList<Point> out, Point[] r, Side s)
+	private static void addSideEndPoint(ArrayList<LocalPoint> out, LocalPoint[] r, Side s)
 	{
 		switch (s)
 		{
@@ -284,7 +287,7 @@ public class PathTileOutline
 		}
 	}
 
-	private static void add(ArrayList<Point> out, Point p)
+	private static void add(ArrayList<LocalPoint> out, LocalPoint p)
 	{
 		if (out.isEmpty() || !out.get(out.size() - 1).equals(p))
 		{
