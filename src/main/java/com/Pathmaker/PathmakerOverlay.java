@@ -259,8 +259,8 @@ public class PathmakerOverlay extends Overlay
 
         for (String pathName : paths.keySet())
         {
-			LocalPoint lastLocalP = null;
-			WorldView lastWv = client.getTopLevelWorldView();
+			//LocalPoint lastLocalP = null;
+			//WorldView lastWv = client.getTopLevelWorldView();
             PathmakerPath path = paths.get(pathName);
 			ArrayList<LocalPoint> line = new ArrayList<>();
 			ArrayList<WorldView> lineWVs = new ArrayList<>();
@@ -336,14 +336,18 @@ public class PathmakerOverlay extends Overlay
 				   }
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
-                    lastLocalP = localP;
-					lastWv = wv;
+                    //lastLocalP = localP;
+					//lastWv = wv;
                 }
 
             }
 
             // Loop path
-            if (path.loopPath && path.getSize() > 2 && config.drawPath())
+            if (path.loopPath &&
+				path.getSize() > 2 &&
+				config.drawPath() &&
+				path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
+				path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
             {
 				line.add(line.get(0));
 				lineWVs.add(lineWVs.get(0));
@@ -437,12 +441,6 @@ public class PathmakerOverlay extends Overlay
 							(float) config.pathLineWidth());
 					}
 				}
-			}
-
-			// Draw hovered tile elements
-			if (pathName.equals(activePathName))
-			{
-				lastActivePathPoint =  lastLocalP;
 			}
         }
 		return  lastActivePathPoint;

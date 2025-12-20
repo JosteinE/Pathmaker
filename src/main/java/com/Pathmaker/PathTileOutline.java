@@ -287,6 +287,20 @@ public class PathTileOutline
 		}
 	}
 
+	private static boolean sidesAreOpposites(Side a, Side b)
+	{
+		if (a.equals(Side.TOP) &&  b.equals(Side.BOTTOM))
+			return true;
+		if (a.equals(Side.LEFT) &&  b.equals(Side.RIGHT))
+			return true;
+		if (a.equals(Side.RIGHT) &&  b.equals(Side.LEFT))
+			return true;
+		if (a.equals(Side.BOTTOM) &&  b.equals(Side.TOP))
+			return true;
+
+		return false;
+	}
+
 	private static void add(ArrayList<LocalPoint> out, LocalPoint p)
 	{
 		if (out.isEmpty() || !out.get(out.size() - 1).equals(p))

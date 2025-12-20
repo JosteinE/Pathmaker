@@ -196,6 +196,7 @@ public class PathPanel extends JPanel
 			{
 				path.pathDrawOffset = path.pathDrawOffset + 1 > 2 ? 0 : path.pathDrawOffset + 1;
 				offsetButton.setIcon(getPathDrawOffsetIcon(path));
+				plugin.saveAll();
 			}
 		});
 
