@@ -201,6 +201,7 @@ public class PathPanel extends JPanel
 
         // Add button panel to the right
         JPanel rightActionPanel = new JPanel(new BorderLayout());
+		//rightActionPanel.add(loopButton, BorderLayout.WEST);
         rightActionPanel.add(offsetButton, BorderLayout.WEST);
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);

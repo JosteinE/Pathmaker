@@ -328,8 +328,8 @@ public class PathmakerOverlay extends Overlay
 					}
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
-                   // if ((config.drawPath() && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
-					line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+                   if ((config.drawPath()))// && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
+					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     lastLocalP = localP;

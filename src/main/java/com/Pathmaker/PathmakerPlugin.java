@@ -246,6 +246,7 @@ public class PathmakerPlugin extends Plugin
 		pathJson.add("regions", regionsJson);
 		pathJson.add("color", gson.toJsonTree(paths.get(pathName).color, Color.class));
 		pathJson.add("looped", gson.toJsonTree(paths.get(pathName).loopPath, boolean.class));
+		pathJson.add("pathDrawOffset", gson.toJsonTree(paths.get(pathName).pathDrawOffset, int.class));
 
 		//log.debug("Saved path: {}", pathName);
 		return pathJson;
@@ -284,6 +285,7 @@ public class PathmakerPlugin extends Plugin
 
 		paths.get(pathName).color = gson.fromJson(pathJson.get("color"), Color.class);
 		paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
+		paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
 		//log.debug("Loaded path json: {}", pathName);
 	}
 
@@ -398,55 +400,7 @@ public class PathmakerPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick gameTick)
     {
-//		MenuEntry[] menuEntries = client.getMenu().getMenuEntries();
-//
-//		int last = menuEntries.length - 1;
-//
-//		if (last < 0)
-//		{
-//			return;
-//		}
-//
-//		MenuEntry menuEntry = menuEntries[last];
-//		Widget widget = menuEntry.getWidget();
-//		if (widget == null)
-//		{
-//			log.debug("MenuEntry: option={}", menuEntry.getOption());
-//			return;
-//		}
-//
-//		int widgetID = widget.getId();
-//		int widgetGroupID = WidgetUtil.componentToInterface(widgetID);
-//
-//		log.debug("MenuEntry: option={}, target={}, groupId={}, widgetId={}",
-//			menuEntry.getOption(),
-//			menuEntry.getTarget(),
-//			widgetGroupID,
-//			widgetID
-//		);
-
 		//log.debug("onGameTick");
-
-//		log.debug("SceneWV: {}, PlayerWV: {}, PlayerSceneWV: {}",
-//			client.getTopLevelWorldView().getScene().getWorldViewId(),
-//			client.getLocalPlayer().getWorldView().getId(),
-//			client.getLocalPlayer().getWorldView().getScene().getWorldViewId());
-
-
-//		log.debug("RegionID: {}, RegionNOInstanceID: {}",
-//			client.getLocalPlayer().getWorldLocation().getRegionID(),
-//			WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation()).getRegionID());
-
-//		for (PathmakerPath path : paths.values())
-//		{
-//			for(int regionIds : path.getRegionIDs())
-//			{
-//				for(PathPoint point : path.getPointsInRegion(regionIds))
-//				{
-//					log.debug("RegionID: {}, X: {}, Y: {}, Z: {}", point.getRegionId(), point.getX(),point.getY(),point.getZ());
-//				}
-//			}
-//		}
 
 //		if(config.infoBoxEnabled() && config.infoBoxSpeed())
 //			panelOverlay.calculateCurrentSpeed();
