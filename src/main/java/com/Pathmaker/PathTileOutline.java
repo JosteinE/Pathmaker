@@ -16,7 +16,7 @@ import net.runelite.api.Point;
 public class PathTileOutline
 {
 	/* ---------------- Tile side ---------------- */
-	
+
 	private enum Side
 	{
 		TOP,
@@ -40,19 +40,14 @@ public class PathTileOutline
 			return out;
 		}
 
-		// RIGHT line handling:
-		if (!left)
-		{
-			reverse(tileXs);
-			reverse(tileYs);
-		}
+		boolean isLooped = tileXs.get(0)[0] == tileXs.get(n - 1)[0] && tileYs.get(0)[0] == tileYs.get(n - 1)[0];
 
 		for (int i = 0; i < n; i++)
 		{
 			Point[] rect = rect(tileXs.get(i), tileYs.get(i));
 
-			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i, left) : null;
-			Point dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1, left) : null;
+			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
+			Point dirOut = i < n - 1 ? direction(tileXs, tileYs, i, i + 1) : null;
 
 			/* FIRST TILE:
 			 * No entry direction.
@@ -61,7 +56,7 @@ public class PathTileOutline
 			if (dirIn == null)
 			{
 				Side exit = sideOf(dirOut, left);
-				addSide(out, rect, exit);
+				addSide(out, rect, exit, left);
 				continue;
 			}
 
@@ -71,15 +66,46 @@ public class PathTileOutline
 
 			if (dirOut == null)
 			{
-				Side entry = sideOf(dirIn, left);
-				addSide(out, rect, entry);
-				continue;
+				if (isLooped)
+				{
+					dirOut = direction(tileXs, tileYs, i,1);
+					int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
+					boolean innerTurn = left ?  cross > 0 : cross < 0;
+					Side inSide  = sideOf(dirIn, left);
+					Side outSide = sideOf(dirOut, left);
+
+					if (inSide == outSide)
+					{
+						out.add(out.get(0));
+					}
+					else
+					{
+						if(innerTurn)
+						{
+							out.remove(0);
+							out.add(out.get(0));
+						}
+						else
+						{
+							out.remove(0);
+							addSide(out, rect, inSide, left);
+							addSide(out, rect, outSide, left);
+						}
+					}
+					continue;
+				}
+				else
+				{
+					Side entry = sideOf(dirIn, left);
+					addSide(out, rect, entry, left);
+					continue;
+				}
 			}
 
 			// MIDDLE TILE (new logic):
 
 			int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
-			boolean innerTurn = cross > 0;
+			boolean innerTurn = left ?  cross > 0 : cross < 0;
 
 			Side inSide  = sideOf(dirIn, left);
 			Side outSide = sideOf(dirOut, left);
@@ -87,28 +113,25 @@ public class PathTileOutline
 			if (inSide == outSide)
 			{
 				// Normal straight / gentle turn
-				addSide(out, rect, inSide);
+				addSide(out, rect, inSide, left);
 			}
 			else
 			{
 				if(innerTurn)
 				{
-					addSideStartPoint(out,rect,inSide);
+					if(left)
+						addSideStartPoint(out,rect,inSide);
+					else
+						addSideEndPoint(out,rect,inSide);
 				}
 				else
 				{
 					// Diagonal / offset case
 					// Replace diagonal with exactly two edges
-					addSide(out, rect, inSide);
-					addSide(out, rect, outSide);
+					addSide(out, rect, inSide, left);
+					addSide(out, rect, outSide, left);
 				}
 			}
-		}
-
-		// Restore original order for right line output.
-		if (!left)
-		{
-			reverse(out);
 		}
 
 		return out;
@@ -121,8 +144,7 @@ public class PathTileOutline
 		ArrayList<int[]> xs,
 		ArrayList<int[]> ys,
 		int a,
-		int b,
-		boolean left
+		int b
 	)
 	{
 		int ax = (xs.get(a)[0] + xs.get(a)[2]) / 2;
@@ -130,18 +152,10 @@ public class PathTileOutline
 		int bx = (xs.get(b)[0] + xs.get(b)[2]) / 2;
 		int by = (ys.get(b)[0] + ys.get(b)[2]) / 2;
 
-		if (left)
-		{
 			return new Point(
 				Integer.signum(bx - ax),
 				Integer.signum(by - ay)
 			);
-		}
-
-		return new Point(
-			Integer.signum(ax-bx),
-			Integer.signum(ay-by)
-		);
 	}
 
 	private static Point[] rect(int[] xs, int[] ys)
@@ -190,27 +204,53 @@ public class PathTileOutline
 
 	/* ---------------- Emission ---------------- */
 
-	private static void addSide(ArrayList<Point> out, Point[] r, Side s)
+	private static void addSide(ArrayList<Point> out, Point[] r, Side s, boolean left)
 	{
-		switch (s)
+		if(left)
 		{
-			case TOP:
-				add(out, r[0]);
-				add(out, r[1]);
-				break;
-			case RIGHT:
-				add(out, r[1]);
-				add(out, r[2]);
-				break;
-			case BOTTOM:
-				add(out, r[2]);
-				add(out, r[3]);
-				break;
-			case LEFT:
-				add(out, r[3]);
-				add(out, r[0]);
-				break;
+			switch (s)
+			{
+				case TOP:
+					add(out, r[0]);
+					add(out, r[1]);
+					break;
+				case RIGHT:
+					add(out, r[1]);
+					add(out, r[2]);
+					break;
+				case BOTTOM:
+					add(out, r[2]);
+					add(out, r[3]);
+					break;
+				case LEFT:
+					add(out, r[3]);
+					add(out, r[0]);
+					break;
+			}
 		}
+		else
+		{
+			switch (s)
+			{
+				case TOP:
+					add(out, r[1]);
+					add(out, r[0]);
+					break;
+				case RIGHT:
+					add(out, r[2]);
+					add(out, r[1]);
+					break;
+				case BOTTOM:
+					add(out, r[3]);
+					add(out, r[2]);
+					break;
+				case LEFT:
+					add(out, r[0]);
+					add(out, r[3]);
+					break;
+			}
+		}
+
 	}
 
 	private static void addSideStartPoint(ArrayList<Point> out, Point[] r, Side s)
@@ -228,6 +268,25 @@ public class PathTileOutline
 				break;
 			case LEFT:
 				add(out, r[3]);
+				break;
+		}
+	}
+
+	private static void addSideEndPoint(ArrayList<Point> out, Point[] r, Side s)
+	{
+		switch (s)
+		{
+			case TOP:
+				add(out, r[1]);
+				break;
+			case RIGHT:
+				add(out, r[2]);
+				break;
+			case BOTTOM:
+				add(out, r[3]);
+				break;
+			case LEFT:
+				add(out, r[0]);
 				break;
 		}
 	}
