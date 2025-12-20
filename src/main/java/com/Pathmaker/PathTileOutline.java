@@ -66,40 +66,35 @@ public class PathTileOutline
 
 			if (dirOut == null)
 			{
+				Side inSide  = sideOf(dirIn, left);
 				if (isLooped)
 				{
 					dirOut = direction(tileXs, tileYs, i,1);
 					int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
 					boolean innerTurn = left ?  cross > 0 : cross < 0;
-					Side inSide  = sideOf(dirIn, left);
 					Side outSide = sideOf(dirOut, left);
 
 					if (inSide == outSide)
 					{
 						out.add(out.get(0));
 					}
+					else if(innerTurn)
+					{
+						out.remove(0);
+						out.add(out.get(0));
+					}
 					else
 					{
-						if(innerTurn)
-						{
-							out.remove(0);
-							out.add(out.get(0));
-						}
-						else
-						{
-							out.remove(0);
-							addSide(out, rect, inSide, left);
-							addSide(out, rect, outSide, left);
-						}
+						out.remove(0);
+						addSide(out, rect, inSide, left);
+						addSide(out, rect, outSide, left);
 					}
-					continue;
 				}
 				else
 				{
-					Side entry = sideOf(dirIn, left);
-					addSide(out, rect, entry, left);
-					continue;
+					addSide(out, rect, inSide, left);
 				}
+				continue;
 			}
 
 			// MIDDLE TILE (new logic):
@@ -115,23 +110,21 @@ public class PathTileOutline
 				// Normal straight / gentle turn
 				addSide(out, rect, inSide, left);
 			}
+			else if(innerTurn)
+			{
+				if(left)
+					addSideStartPoint(out,rect,inSide);
+				else
+					addSideEndPoint(out,rect,inSide);
+			}
 			else
 			{
-				if(innerTurn)
-				{
-					if(left)
-						addSideStartPoint(out,rect,inSide);
-					else
-						addSideEndPoint(out,rect,inSide);
-				}
-				else
-				{
-					// Diagonal / offset case
-					// Replace diagonal with exactly two edges
-					addSide(out, rect, inSide, left);
-					addSide(out, rect, outSide, left);
-				}
+				// Diagonal / offset case
+				// Replace diagonal with exactly two edges
+				addSide(out, rect, inSide, left);
+				addSide(out, rect, outSide, left);
 			}
+
 		}
 
 		return out;
@@ -296,16 +289,6 @@ public class PathTileOutline
 		if (out.isEmpty() || !out.get(out.size() - 1).equals(p))
 		{
 			out.add(p);
-		}
-	}
-
-	private static <T> void reverse(ArrayList<T> list)
-	{
-		for (int i = 0, j = list.size() - 1; i < j; i++, j--)
-		{
-			T tmp = list.get(i);
-			list.set(i, list.get(j));
-			list.set(j, tmp);
 		}
 	}
 }

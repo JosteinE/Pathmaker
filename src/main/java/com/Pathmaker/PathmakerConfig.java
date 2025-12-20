@@ -277,7 +277,7 @@ public interface PathmakerConfig extends Config
     )
     default boolean drawPathPoints()
     {
-        return false;
+        return true;
     }
 
     @ConfigItem(
@@ -354,7 +354,7 @@ public interface PathmakerConfig extends Config
     @Range(min = 0, max = 10)
     default int pathLinePointWidth()
     {
-        return 2;
+        return 0;
     }
 
     @ConfigItem(
