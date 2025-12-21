@@ -270,7 +270,12 @@ public class PathmakerOverlay extends Overlay
                 continue;
             }
 
-            int pathSize = path.getSize();
+			int pathSize = path.getSize();
+			if(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() || path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
+			{
+				line.add(client.getLocalPlayer().getLocalLocation());
+				lineWVs.add(client.getLocalPlayer().getWorldView());
+			}
 
             ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
 
@@ -387,7 +392,7 @@ public class PathmakerOverlay extends Overlay
 				int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
 				boolean isOnBoat = client.getLocalPlayer().getWorldView().getId() != -1;
 
-				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal())
+				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal() && path.drawToPlayer != PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
 				{
 					ArrayList<int[]> tileXs = new ArrayList<>();
 					ArrayList<int[]> tileYs = new ArrayList<>();
@@ -420,7 +425,11 @@ public class PathmakerOverlay extends Overlay
 
 					for(int i = 1; i < lineVertices.size(); i ++)
 					{
-						LocalPoint startLp = lineVertices.get(i-1);
+						LocalPoint startLp;
+						if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
+							startLp = lineVertices.get(0);
+						else
+							startLp = lineVertices.get(i-1);
 						LocalPoint endLp = lineVertices.get(i);
 
 						if(startLp == null || endLp == null) continue;
@@ -432,10 +441,23 @@ public class PathmakerOverlay extends Overlay
 				{
 					for (int i = 1; i < line.size(); i++)
 					{
+						LocalPoint startLp;
+						WorldView startWv;
+						if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
+						{
+							startLp = line.get(0);
+							startWv = lineWVs.get(0);
+						}
+						else
+						{
+							startLp = line.get(i - 1);
+							startWv = lineWVs.get(i - 1);
+						}
+
 						drawLine(graphics,
-							line.get(i - 1),
+							startLp,
 							line.get(i),
-							lineWVs.get(i - 1),
+							startWv,
 							lineWVs.get(i),
 							path.color,
 							(float) config.pathLineWidth());

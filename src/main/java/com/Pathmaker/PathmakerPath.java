@@ -21,6 +21,7 @@ public class PathmakerPath
     boolean hidden = false;
     boolean panelExpanded = true;
 	int pathDrawOffset = PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal(); // PathPanel.pathDrawOffset enum
+	int drawToPlayer = PathPanel.drawFromPlayerMode.NEVER.ordinal();
 
     PathmakerPath(PathPoint initialPathPoint)
     {

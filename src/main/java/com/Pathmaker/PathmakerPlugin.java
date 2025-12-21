@@ -544,6 +544,12 @@ public class PathmakerPlugin extends Plugin
         // If tile is not previously marked by this path, add the "add" option.
         if (pathPoint == null)
         {
+			if (!paths.isEmpty() &&
+				paths.containsKey(getActivePathName()) &&
+				paths.get(getActivePathName()).drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() &&
+				paths.get(getActivePathName()).getSize() > 1)
+				addLoopMenuOption(getActivePathName(), null);
+
             final PathPoint newPoint;
 
             // Skip if the entityID has already been registered
@@ -588,25 +594,29 @@ public class PathmakerPlugin extends Plugin
 			{
 				// Only configure add loop/unloop/label if point belongs to the active group
 				// Only allow loop/unloop with points connected to the last point
-				if ((pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 && paths.get(activePathName).loopPath) ||
-					pathPoint.getDrawIndex() == 0 && paths.get(activePathName).getSize() > 2)
+				if (paths.get(activePathName).getSize() > 2 &&
+					(pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 &&
+					paths.get(activePathName).loopPath) ||
+					(paths.get(getActivePathName()).drawToPlayer == PathPanel.drawFromPlayerMode.NEVER.ordinal() &&
+					pathPoint.getDrawIndex() == 0))
 				{
-					client.getMenu().createMenuEntry(-1)
-						.setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
-						.setTarget(targetPathName)
-						.setType(MenuAction.RUNELITE)
-						.onClick(e ->
-						{
-							// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
-							if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2)
-							{
-								paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
-								paths.get(activePathName).reverseDrawOrder();
-							}
-
-							paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
-							rebuildPanel(true);
-						});
+					addLoopMenuOption(getActivePathName(), pathPoint);
+//					client.getMenu().createMenuEntry(-1)
+//						.setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
+//						.setTarget(targetPathName)
+//						.setType(MenuAction.RUNELITE)
+//						.onClick(e ->
+//						{
+//							// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+//							if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2)
+//							{
+//								paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
+//								paths.get(activePathName).reverseDrawOrder();
+//							}
+//
+//							paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
+//							rebuildPanel(true);
+//						});
 				}
 
 				// Add label rename option
@@ -649,6 +659,31 @@ public class PathmakerPlugin extends Plugin
 			}
 		}
     }
+
+	void addLoopMenuOption(String pathName, PathPoint point)
+	{
+		PathmakerPath path = paths.get(pathName);
+		client.getMenu().createMenuEntry(-1)
+			.setOption(path.loopPath ? "Unloop" : "Loop")
+			.setTarget(pathName)
+			.setType(MenuAction.RUNELITE)
+			.onClick(e ->
+			{
+				//(point == null && path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() && path.getSize() > 1)
+
+				// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
+				if (path.loopPath &&
+					(point != null && point.getDrawIndex() == path.getSize() - 2) ||
+					(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() && point != null && point.getDrawIndex() == path.getSize() - 1))
+				{
+					path.setNewIndex(path.getPointAtDrawIndex(path.getSize() - 1), 0);
+					path.reverseDrawOrder();
+				}
+
+				path.loopPath = !path.loopPath;
+				rebuildPanel(true);
+			});
+	}
 
     void addRemoveMenuOption(String pathName, PathPoint pathPoint, String optionString, String target)
     {

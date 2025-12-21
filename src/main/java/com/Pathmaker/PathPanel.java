@@ -49,12 +49,20 @@ public class PathPanel extends JPanel
 	private static final ImageIcon OFFSET_LEFT_ICON;
 	private static final ImageIcon OFFSET_MIDDLE_ICON;
 	private static final ImageIcon OFFSET_RIGHT_ICON;
+	private static final ImageIcon PERSON_ICON;
 
 	enum pathDrawOffset
 	{
 		OFFSET_LEFT,
 		OFFSET_MIDDLE,
 		OFFSET_RIGHT,
+	}
+
+	enum drawFromPlayerMode
+	{
+		NEVER,
+		START_ONLY,
+		ALWAYS,
 	}
 
     private final PathmakerPlugin plugin;
@@ -87,6 +95,7 @@ public class PathPanel extends JPanel
 		OFFSET_RIGHT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_right.png"));
         EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
         EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
+		PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
     }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
@@ -101,7 +110,7 @@ public class PathPanel extends JPanel
         label.setText(pathLabel);
         label.setForeground(Color.WHITE); //path.color);
 		label.setToolTipText(pathLabel);
-        label.setPreferredSize(new Dimension(140, 20)); // Client.PANEL_WIDTH = 225. (18x4 buttons, 5 margin
+        label.setPreferredSize(new Dimension(122, 20)); // Client.PANEL_WIDTH = 225. (18x6 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
         expandToggle = new JButton(path.panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
@@ -200,10 +209,28 @@ public class PathPanel extends JPanel
 			}
 		});
 
-        // Add button panel to the right
+		// Add offset button
+		JButton loopToPlayerButton = new JButton();
+		loopToPlayerButton.setIcon(PERSON_ICON);
+		loopToPlayerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+		loopToPlayerButton.setToolTipText("Set player as p0");
+		loopToPlayerButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				path.drawToPlayer = path.drawToPlayer + 1 > 2 ? 0 : path.drawToPlayer + 1;
+				//loopToPlayerButton.setIcon(getLoopToPlayerButtonIcon(path));
+				//plugin.saveAll();
+			}
+		});
+
+
+		// Add button panel to the right
         JPanel rightActionPanel = new JPanel(new BorderLayout());
 		//rightActionPanel.add(loopButton, BorderLayout.WEST);
-        rightActionPanel.add(offsetButton, BorderLayout.WEST);
+		rightActionPanel.add(loopToPlayerButton, BorderLayout.WEST);
+        rightActionPanel.add(offsetButton, BorderLayout.CENTER);
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
 
