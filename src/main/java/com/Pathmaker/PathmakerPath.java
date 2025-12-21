@@ -51,6 +51,11 @@ public class PathmakerPath
     {
         int removedIndex = point.getDrawIndex();
 
+		if (removedIndex != getSize()-1)
+		{
+			getPointAtDrawIndex(removedIndex+1).drawToPrevious = point.drawToPrevious;
+		}
+
         innerRemovePathPoint(point);
 
         ArrayList<PathPoint> drawOrder = getDrawOrder(null);

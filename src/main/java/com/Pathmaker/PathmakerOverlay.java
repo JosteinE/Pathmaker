@@ -264,6 +264,7 @@ public class PathmakerOverlay extends Overlay
             PathmakerPath path = paths.get(pathName);
 			ArrayList<LocalPoint> line = new ArrayList<>();
 			ArrayList<WorldView> lineWVs = new ArrayList<>();
+			ArrayList<Boolean> drawToPrevious = new ArrayList<>();
 
             if(path.hidden)
             {
@@ -275,6 +276,7 @@ public class PathmakerOverlay extends Overlay
 			{
 				line.add(client.getLocalPlayer().getLocalLocation());
 				lineWVs.add(client.getLocalPlayer().getWorldView());
+				drawToPrevious.add(true);
 			}
 
             ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
@@ -336,8 +338,9 @@ public class PathmakerOverlay extends Overlay
                     // Only draw line if the previous point had a draw index that was directly behind this.
                    if ((config.drawPath()))// && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
 				   {
-						   lineWVs.add(wv);
-						   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+					   lineWVs.add(wv);
+					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
+					   drawToPrevious.add(point.drawToPrevious);
 				   }
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
@@ -356,6 +359,7 @@ public class PathmakerOverlay extends Overlay
             {
 				line.add(line.get(0));
 				lineWVs.add(lineWVs.get(0));
+				drawToPrevious.add(true);
 //                // Making sure both ends are loaded
 //                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
 //                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
@@ -390,7 +394,6 @@ public class PathmakerOverlay extends Overlay
 			{
 				WorldView wv = client.getTopLevelWorldView();
 				int LOCAL_HALF_TILE_SIZE = Perspective.LOCAL_HALF_TILE_SIZE;
-				boolean isOnBoat = client.getLocalPlayer().getWorldView().getId() != -1;
 
 				if (path.pathDrawOffset != PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal() && path.drawToPlayer != PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
 				{
@@ -421,20 +424,39 @@ public class PathmakerOverlay extends Overlay
 						tileYs.add(tileY);
 					}
 
-					ArrayList<LocalPoint> lineVertices = PathTileOutline.build(lineWVs, tileXs, tileYs, buildLeft);
+					ArrayList<ArrayList<LocalPoint>> lineVertices = PathTileOutline.build(lineWVs, tileXs, tileYs, buildLeft);
 
-					for(int i = 1; i < lineVertices.size(); i ++)
+					for(int vis = 0; vis < drawToPrevious.size(); vis ++)
 					{
-						LocalPoint startLp;
-						if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
-							startLp = lineVertices.get(0);
-						else
-							startLp = lineVertices.get(i-1);
-						LocalPoint endLp = lineVertices.get(i);
 
-						if(startLp == null || endLp == null) continue;
+//						if((vis > 0 && drawToPrevious.get(vis)) || (vis == 0 && drawToPrevious.get(vis + 1)))
+//						{
+						int itStart = (vis > 0 && !drawToPrevious.get(vis)) || (vis == 0 && !drawToPrevious.get(vis + 1)) ? 1 : 0;
+						ArrayList<LocalPoint> lineV =  lineVertices.get(vis);
+						itStart = itStart > lineV.size() ? 0 : itStart;
 
-						drawLine(graphics, startLp,endLp, wv, wv, path.color, (float) config.pathLineWidth());
+						for (int i = itStart; i < lineV.size(); i++)
+							{
+								LocalPoint startLp;
+								if (path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
+									startLp = lineVertices.get(0).get(0);
+								else if (vis > 0 && i == 0)
+								{
+									ArrayList<LocalPoint> prevVertArray = lineVertices.get(vis - 1);
+									startLp = prevVertArray.get(prevVertArray.size() - 1);
+								}
+								else if (vis > 0 || i > 0)
+									startLp = lineV.get(i - 1);
+								else
+									continue;
+
+								LocalPoint endLp = lineV.get(i);
+
+								if (startLp == null || endLp == null) continue;
+
+								drawLine(graphics, startLp, endLp, wv, wv, path.color, (float) config.pathLineWidth());
+							}
+						//}
 					}
 				}
 				else
@@ -443,6 +465,9 @@ public class PathmakerOverlay extends Overlay
 					{
 						LocalPoint startLp;
 						WorldView startWv;
+
+						if (!drawToPrevious.get(i)) continue;
+
 						if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
 						{
 							startLp = line.get(0);

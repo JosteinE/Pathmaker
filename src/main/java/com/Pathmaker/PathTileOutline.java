@@ -29,26 +29,27 @@ public class PathTileOutline
 
 	/* ---------------- Public API ---------------- */
 
-	public static ArrayList<LocalPoint> build(
+	public static ArrayList<ArrayList<LocalPoint>> build(
 		ArrayList<WorldView> tileWVs,
 		ArrayList<int[]> tileXs,
 		ArrayList<int[]> tileYs,
 		boolean left
 	)
 	{
-		ArrayList<LocalPoint> out = new ArrayList<>();
+		ArrayList<ArrayList<LocalPoint>> outFull = new ArrayList<>();
 		int n = tileXs.size();
 		if (n == 0)
 		{
-			return out;
+			return outFull;
 		}
 
 		boolean isLooped = tileXs.get(0)[0] == tileXs.get(n - 1)[0] && tileYs.get(0)[0] == tileYs.get(n - 1)[0];
 
 		for (int i = 0; i < n; i++)
 		{
-			LocalPoint[] rect = rect(tileXs.get(i), tileYs.get(i), tileWVs.get(i));
+			ArrayList<LocalPoint> out = new ArrayList<LocalPoint>();
 
+			LocalPoint[] rect = rect(tileXs.get(i), tileYs.get(i), tileWVs.get(i));
 			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
 			Point dirOut = i < n - 1 ? direction(tileXs, tileYs, i, i + 1) : null;
 
@@ -60,6 +61,7 @@ public class PathTileOutline
 			{
 				Side exit = sideOf(dirOut, left);
 				addSide(out, rect, exit, left);
+				outFull.add(out);
 				continue;
 			}
 
@@ -79,16 +81,16 @@ public class PathTileOutline
 
 					if (inSide == outSide)
 					{
-						out.add(out.get(0));
+						out.add(outFull.get(0).get(0));
 					}
 					else if(innerTurn)
 					{
-						out.remove(0);
-						out.add(out.get(0));
+						outFull.get(0).remove(0);
+						out.add(outFull.get(0).get(0));
 					}
 					else
 					{
-						out.remove(0);
+						outFull.get(0).remove(0);
 						addSide(out, rect, inSide, left);
 						addSide(out, rect, outSide, left);
 					}
@@ -97,10 +99,11 @@ public class PathTileOutline
 				{
 					addSide(out, rect, inSide, left);
 				}
+				outFull.add(out);
 				continue;
 			}
 
-			// MIDDLE TILE (new logic):
+			// MIDDLE TILE
 
 			int cross = dirIn.getX() * dirOut.getY() - dirIn.getY() * dirOut.getX();
 			boolean innerTurn = left ?  cross > 0 : cross < 0;
@@ -127,10 +130,10 @@ public class PathTileOutline
 				addSide(out, rect, inSide, left);
 				addSide(out, rect, outSide, left);
 			}
-
+			outFull.add(out);
 		}
 
-		return out;
+		return outFull;
 	}
 
 	/* ---------------- Geometry helpers ---------------- */

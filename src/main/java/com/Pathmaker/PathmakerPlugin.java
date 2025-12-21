@@ -676,6 +676,7 @@ public class PathmakerPlugin extends Plugin
 					(point != null && point.getDrawIndex() == path.getSize() - 2) ||
 					(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() && point != null && point.getDrawIndex() == path.getSize() - 1))
 				{
+					path.getPointAtDrawIndex(path.getSize() -1).drawToPrevious = true;
 					path.setNewIndex(path.getPointAtDrawIndex(path.getSize() - 1), 0);
 					path.reverseDrawOrder();
 				}

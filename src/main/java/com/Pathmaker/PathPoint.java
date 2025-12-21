@@ -11,6 +11,7 @@ public class PathPoint
     private int regionX;
     private int regionY;
     private int z;
+	boolean drawToPrevious = true;
 
 	private final String pathOwner;
     private String label;

@@ -244,7 +244,7 @@ public class PathPanel extends JPanel
         {
 			PathPoint point = drawOrder.get(i);
             JPanel pointContainer = new JPanel(new BorderLayout());
-            pointContainer.setBorder(new EmptyBorder(5, 0, 5, 0));
+            pointContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
             pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
             //
@@ -294,6 +294,26 @@ public class PathPanel extends JPanel
                 }
             });
             pointContainer.add(deletePathPointButton, BorderLayout.EAST);
+
+			if(i > 0)
+			{
+				JButton drawToLastButton = new JButton();
+				//drawToLastButton.setIcon(new ImageIcon(crossImage));
+				drawToLastButton.setToolTipText("Draw to previous point");
+				Color defaultColor = drawToLastButton.getBackground();
+				drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
+				drawToLastButton.setPreferredSize(new Dimension(0, 20));
+				drawToLastButton.addMouseListener(new MouseAdapter()
+				{
+					@Override
+					public void mousePressed(MouseEvent mouseEvent)
+					{
+						point.drawToPrevious = !point.drawToPrevious;
+						drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
+					}
+				});
+				pointContainer.add(drawToLastButton, BorderLayout.SOUTH);
+			}
 
             pointContainer.setVisible(path.panelExpanded);
             pathContainer.add(pointContainer);
