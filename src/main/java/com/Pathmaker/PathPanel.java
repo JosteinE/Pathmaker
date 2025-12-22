@@ -102,7 +102,7 @@ public class PathPanel extends JPanel
     {
         this.plugin = plugin;
         this.path = plugin.getStoredPaths().get(pathLabel);
-
+		pathContainer.setLayout(new BoxLayout(pathContainer, BoxLayout.Y_AXIS));
 
         JPanel labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -205,9 +205,14 @@ public class PathPanel extends JPanel
 			{
 				path.pathDrawOffset = path.pathDrawOffset + 1 > 2 ? 0 : path.pathDrawOffset + 1;
 				offsetButton.setIcon(getPathDrawOffsetIcon(path));
-				plugin.saveAll();
+				//plugin.saveAll();
+
+				offsetButton.updateUI();
 			}
 		});
+
+		int pathSize = path.getSize();
+		ArrayList<PathPoint> drawOrder = path.getDrawOrder(null);
 
 		// Add offset button
 		JButton loopToPlayerButton = new JButton();
@@ -219,7 +224,21 @@ public class PathPanel extends JPanel
 			@Override
 			public void mousePressed(MouseEvent mouseEvent)
 			{
+
 				path.drawToPlayer = path.drawToPlayer + 1 > 2 ? 0 : path.drawToPlayer + 1;
+
+//				if(path.drawToPlayer == drawFromPlayerMode.NEVER.ordinal())
+//				{
+//					pathContainer.remove(pathContainer.getComponentCount() -1);
+//				}
+//				else if (path.drawToPlayer - 1 == drawFromPlayerMode.NEVER.ordinal())
+//				{
+//					JButton drawToLastButton = addDrawToLastButton(drawOrder.get(0));
+//					pathContainer.add(addDrawToLastButton(drawOrder.get(0)),BorderLayout.CENTER);
+//					drawToLastButton.updateUI();
+//				}
+
+				plugin.rebuildPanel(true);
 				//loopToPlayerButton.setIcon(getLoopToPlayerButtonIcon(path));
 				//plugin.saveAll();
 			}
@@ -234,12 +253,10 @@ public class PathPanel extends JPanel
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
 
-        pathContainer.setLayout(new BoxLayout(pathContainer, BoxLayout.Y_AXIS));
+
         pathContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
-        int pathSize = path.getSize();
-		ArrayList<PathPoint> drawOrder = path.getDrawOrder(null);
         for (int i = pathSize - 1; i >= 0; i--)
         {
 			PathPoint point = drawOrder.get(i);
@@ -271,7 +288,7 @@ public class PathPanel extends JPanel
             indexSpinner.setToolTipText("point index");
             indexSpinner.addChangeListener(ce ->
             {
-                plugin.getStoredPaths().get(pathLabel).setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
+                path.setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
                 plugin.rebuildPanel(true);
             });
 			SpinnerNumberModel model = (SpinnerNumberModel) indexSpinner.getModel();
@@ -295,24 +312,9 @@ public class PathPanel extends JPanel
             });
             pointContainer.add(deletePathPointButton, BorderLayout.EAST);
 
-			if(i > 0)
+			if(i > 0 || path.drawToPlayer != drawFromPlayerMode.NEVER.ordinal())
 			{
-				JButton drawToLastButton = new JButton();
-				//drawToLastButton.setIcon(new ImageIcon(crossImage));
-				drawToLastButton.setToolTipText("Draw to previous point");
-				Color defaultColor = drawToLastButton.getBackground();
-				drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
-				drawToLastButton.setPreferredSize(new Dimension(0, 20));
-				drawToLastButton.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mousePressed(MouseEvent mouseEvent)
-					{
-						point.drawToPrevious = !point.drawToPrevious;
-						drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
-					}
-				});
-				pointContainer.add(drawToLastButton, BorderLayout.SOUTH);
+				pointContainer.add(addDrawToLastButton(point), BorderLayout.SOUTH);
 			}
 
             pointContainer.setVisible(path.panelExpanded);
@@ -320,6 +322,27 @@ public class PathPanel extends JPanel
         }
         add(pathContainer);
     }
+
+	private JButton addDrawToLastButton(PathPoint point)
+	{
+		JButton drawToLastButton = new JButton();
+		//drawToLastButton.setIcon(new ImageIcon(crossImage));
+		drawToLastButton.setToolTipText("Draw to previous point");
+		Color defaultColor = drawToLastButton.getBackground();
+		drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
+		drawToLastButton.setPreferredSize(new Dimension(0, 20));
+		drawToLastButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				point.drawToPrevious = !point.drawToPrevious;
+				drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
+				plugin.saveAll();
+			}
+		});
+		return drawToLastButton;
+	}
 
     private void toggleCollapsed()
     {
