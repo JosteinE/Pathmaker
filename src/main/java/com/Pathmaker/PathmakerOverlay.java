@@ -424,16 +424,19 @@ public class PathmakerOverlay extends Overlay
 						tileYs.add(tileY);
 					}
 
-					ArrayList<ArrayList<LocalPoint>> lineVertices = PathTileOutline.build(lineWVs, tileXs, tileYs, buildLeft);
+					ArrayList<ArrayList<LocalPoint>> lineVertices = PathTileOutline.build(lineWVs, tileXs, tileYs, buildLeft, drawToPrevious);
 
 					for(int vis = 0; vis < drawToPrevious.size(); vis ++)
 					{
 
 //						if((vis > 0 && drawToPrevious.get(vis)) || (vis == 0 && drawToPrevious.get(vis + 1)))
 //						{
+						if((vis != 0 && drawToPrevious.get(vis) || (vis + 1 < drawToPrevious.size() && drawToPrevious.get(vis + 1))))
+						{
 						int itStart = (vis > 0 && !drawToPrevious.get(vis)) || (vis == 0 && !drawToPrevious.get(vis + 1)) ? 1 : 0;
 						ArrayList<LocalPoint> lineV =  lineVertices.get(vis);
 						itStart = itStart > lineV.size() ? 0 : itStart;
+
 
 						for (int i = itStart; i < lineV.size(); i++)
 							{
@@ -456,7 +459,7 @@ public class PathmakerOverlay extends Overlay
 
 								drawLine(graphics, startLp, endLp, wv, wv, path.color, (float) config.pathLineWidth());
 							}
-						//}
+						}
 					}
 				}
 				else

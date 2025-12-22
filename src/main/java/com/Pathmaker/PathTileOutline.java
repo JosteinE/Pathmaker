@@ -33,7 +33,8 @@ public class PathTileOutline
 		ArrayList<WorldView> tileWVs,
 		ArrayList<int[]> tileXs,
 		ArrayList<int[]> tileYs,
-		boolean left
+		boolean left,
+		ArrayList<Boolean> drawToPrevious
 	)
 	{
 		ArrayList<ArrayList<LocalPoint>> outFull = new ArrayList<>();
@@ -51,8 +52,7 @@ public class PathTileOutline
 
 			LocalPoint[] rect = rect(tileXs.get(i), tileYs.get(i), tileWVs.get(i));
 			Point dirIn  = (i > 0)     ? direction(tileXs, tileYs, i - 1, i) : null;
-			Point dirOut = i < n - 1 ? direction(tileXs, tileYs, i, i + 1) : null;
-
+			Point dirOut = (i < n - 1) ? direction(tileXs, tileYs, i, i + 1) : null;
 			/* FIRST TILE:
 			 * No entry direction.
 			 * We only know where we are going next. */
@@ -85,7 +85,8 @@ public class PathTileOutline
 					}
 					else if(innerTurn)
 					{
-						outFull.get(0).remove(0);
+						if(outFull.get(0).size() > 1)
+							outFull.get(0).remove(0);
 						out.add(outFull.get(0).get(0));
 					}
 					else
@@ -111,7 +112,31 @@ public class PathTileOutline
 			Side inSide  = sideOf(dirIn, left);
 			Side outSide = sideOf(dirOut, left);
 
-			if (inSide == outSide)
+			boolean dp = drawToPrevious.get(i);
+			boolean nDp = drawToPrevious.get(i + 1); // i + 1 < drawToPrevious.size() ?  : true;
+			if (!dp || !nDp)
+			{
+				boolean outerTurn = left ? cross < 0 : cross > 0;
+
+				// Todo figure out the best !drawPreviousPoints to add
+				if (left)
+					if (outerTurn)
+//						if (dp)
+//							addSide(out, rect, inSide, left);
+//						else
+							addSideEndPoint(out, rect, inSide);
+					else
+//						if (dp)
+//							addSide(out, rect, inSide, left);
+//						else
+							addSideStartPoint(out, rect, inSide);
+				else
+					if (outerTurn)
+						addSideEndPoint(out, rect, outSide);
+					else
+						addSideStartPoint(out, rect, outSide);
+			}
+			else if (inSide == outSide)
 			{
 				// Normal straight / gentle turn
 				addSide(out, rect, inSide, left);
