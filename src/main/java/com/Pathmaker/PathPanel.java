@@ -50,6 +50,8 @@ public class PathPanel extends JPanel
 	private static final ImageIcon OFFSET_MIDDLE_ICON;
 	private static final ImageIcon OFFSET_RIGHT_ICON;
 	private static final ImageIcon PERSON_ICON;
+	private static final ImageIcon PERSON_GREEN_ICON;
+	private static final ImageIcon PERSON_GREEN_LINES_ICON;
 
 	enum pathDrawOffset
 	{
@@ -87,7 +89,7 @@ public class PathPanel extends JPanel
         final int MAX_LABEL_LENGTH = 15;
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
         COLLAPSE_ICON = new ImageIcon(upArrowImage);
-        EXPAND_ICON = new ImageIcon(ImageUtil.rotateImage(upArrowImage, Math.PI));
+        EXPAND_ICON = new ImageIcon(ImageUtil.flipImage(upArrowImage, false, true));
         LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
         LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
 		OFFSET_LEFT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_left.png"));
@@ -96,6 +98,8 @@ public class PathPanel extends JPanel
         EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
         EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
 		PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
+		PERSON_GREEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green.png"));
+		PERSON_GREEN_LINES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green_lines.png"));
     }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
@@ -216,9 +220,9 @@ public class PathPanel extends JPanel
 
 		// Add offset button
 		JButton loopToPlayerButton = new JButton();
-		loopToPlayerButton.setIcon(PERSON_ICON);
+		loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
 		loopToPlayerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-		loopToPlayerButton.setToolTipText("Set player as p0");
+		loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
 		loopToPlayerButton.addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -226,7 +230,8 @@ public class PathPanel extends JPanel
 			{
 
 				path.drawToPlayer = path.drawToPlayer + 1 > 2 ? 0 : path.drawToPlayer + 1;
-
+				loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
+				loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
 //				if(path.drawToPlayer == drawFromPlayerMode.NEVER.ordinal())
 //				{
 //					pathContainer.remove(pathContainer.getComponentCount() -1);
@@ -327,10 +332,12 @@ public class PathPanel extends JPanel
 	{
 		JButton drawToLastButton = new JButton();
 		//drawToLastButton.setIcon(new ImageIcon(crossImage));
-		drawToLastButton.setToolTipText("Draw to previous point");
+		drawToLastButton.setToolTipText(point.drawToPrevious ? "Unlink from previous point" : "Link to previous point");
 		Color defaultColor = drawToLastButton.getBackground();
 		drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
-		drawToLastButton.setPreferredSize(new Dimension(0, 20));
+		//drawToLastButton.setText(point.drawToPrevious ? "(linked)" : "(unlinked)");
+		//drawToLastButton.setForeground(getBackground().brighter().brighter());
+		drawToLastButton.setPreferredSize(new Dimension(0, 10));
 		drawToLastButton.addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -338,6 +345,8 @@ public class PathPanel extends JPanel
 			{
 				point.drawToPrevious = !point.drawToPrevious;
 				drawToLastButton.setBackground(point.drawToPrevious ? defaultColor : Color.RED);
+				//drawToLastButton.setText(point.drawToPrevious ? "(linked)" : "(unlinked)");
+				//drawToLastButton.setForeground(getBackground().brighter().brighter());
 				plugin.saveAll();
 			}
 		});
@@ -381,6 +390,26 @@ public class PathPanel extends JPanel
 			case OFFSET_LEFT: return OFFSET_LEFT_ICON;
 			case OFFSET_RIGHT: return OFFSET_RIGHT_ICON;
 			default: return OFFSET_MIDDLE_ICON;
+		}
+	}
+
+	ImageIcon getLoopToPlayerIcon(int drawToPlayer)
+	{
+		switch (drawFromPlayerMode.values()[drawToPlayer])
+		{
+			case START_ONLY: return PERSON_GREEN_ICON;
+			case ALWAYS: return PERSON_GREEN_LINES_ICON;
+			default: return PERSON_ICON;
+		}
+	}
+
+	String getLoopToPlayerTooltip(int drawToPlayer)
+	{
+		switch (drawFromPlayerMode.values()[drawToPlayer])
+		{
+			case START_ONLY: return "Set always draw to player";
+			case ALWAYS: return "Un-set player from path";
+			default: return "Set player as point 0";
 		}
 	}
 
