@@ -39,7 +39,7 @@ public class PathmakerPath
         // Add the tile's regionID as key for the belonging tile(s) if it doesn't already exist.
         if (!pathPoints.containsKey(regionId))
         {
-            pathPoints.put(regionId, new ArrayList<PathPoint>());
+            pathPoints.put(regionId, new ArrayList<>());
         }
         pathPoints.get(regionId).add(pathPoint);
 

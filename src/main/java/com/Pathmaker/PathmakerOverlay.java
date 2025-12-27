@@ -340,7 +340,8 @@ public class PathmakerOverlay extends Overlay
 				   {
 					   lineWVs.add(wv);
 					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
-					   drawToPrevious.add(point.drawToPrevious);
+					   boolean previousIsInScene =  i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1;
+					   drawToPrevious.add(point.drawToPrevious && previousIsInScene);
 				   }
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);

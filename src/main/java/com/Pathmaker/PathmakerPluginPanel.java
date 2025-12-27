@@ -141,14 +141,22 @@ public class PathmakerPluginPanel extends PluginPanel
 					return;
 				}
 
-				JsonObject element;
+				JsonObject object;
 				try
 				{
-					element = new JsonParser().parse(json).getAsJsonObject();
+					JsonParser parser = new JsonParser();
+					JsonElement element =  parser.parse(json);
+					if (element == null || !element.isJsonObject())
+					{
+						log.debug("Imported element is not a JsonObject");
+						return;
+					}
+
+					object = element.getAsJsonObject();
 				}
-				catch (JsonParseException e)
+				catch(Exception e)
 				{
-					log.debug("String was not a valid JSON: {}", e.getMessage());
+					log.debug("String was not a valid JSON");
 					return;
 				}
 
@@ -165,7 +173,7 @@ public class PathmakerPluginPanel extends PluginPanel
 //                    return;
 //                }
 
-				String jsonPathName = element.keySet().iterator().next();
+				String jsonPathName = object.keySet().iterator().next();
 
 				JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
 				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -198,14 +206,14 @@ public class PathmakerPluginPanel extends PluginPanel
 					if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
 					{
 						plugin.removePath(inputPathName);
-						plugin.loadPathFromJson(element.get(jsonPathName).getAsJsonObject(), inputPathName);
+						plugin.loadPathFromJson(object.get(jsonPathName).getAsJsonObject(), inputPathName);
 						plugin.rebuildPanel(true);
 						activePath.setText(inputPathName);
 					}
 				}
 				else
 				{
-					plugin.loadPathFromJson(element.get(jsonPathName).getAsJsonObject(), inputPathName);
+					plugin.loadPathFromJson(object.get(jsonPathName).getAsJsonObject(), inputPathName);
 					plugin.rebuildPanel(true);
 					activePath.setText(inputPathName);
 				}

@@ -234,11 +234,26 @@ public class PathmakerPlugin extends Plugin
 			JsonArray regionJson = new JsonArray();
 			for (PathPoint point : paths.get(pathName).getPointsInRegion(regionId))
 			{
-//				JsonObject pointJson = new JsonObject();
-				boolean entityIsObject = point instanceof PathPointObject;
-//				pointJson.add(entityIsObject ? "object" : "tile",
-//					gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
-				regionJson.add(gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
+				JsonObject pointJson = new JsonObject();
+
+				pointJson.addProperty("drawIndex", point.getDrawIndex());
+				pointJson.addProperty("regionId", point.getRegionId());
+				pointJson.addProperty("x", point.getX());
+				pointJson.addProperty("y", point.getY());
+				pointJson.addProperty("z", point.getZ());
+				pointJson.addProperty("drawToPrevious", point.drawToPrevious);
+				pointJson.addProperty("label",  point.getLabel());
+
+				if (point instanceof PathPointObject)
+				{
+					pointJson.addProperty("id", ((PathPointObject) point).getEntityId());
+					pointJson.addProperty("baseId", ((PathPointObject) point).getBaseId());
+					pointJson.addProperty("isNpc", ((PathPointObject) point).isNpc());
+					pointJson.addProperty("toCenterVectorX", ((PathPointObject) point).getToCenterVectorX());
+					pointJson.addProperty("toCenterVectorY", ((PathPointObject) point).getToCenterVectorY());
+				}
+				//regionJson.add(gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
+				regionJson.add(gson.toJsonTree(pointJson));
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
@@ -254,7 +269,11 @@ public class PathmakerPlugin extends Plugin
 
 	void loadPathFromJson(JsonObject pathJson, String pathName)
 	{
-		if (pathJson == null) return;
+		if (pathJson == null)
+		{
+			log.debug("Could not load path from Json. PathJson is null.");
+			return;
+		}
 
 		JsonObject regionsJson = pathJson.get("regions").getAsJsonObject();
 
@@ -263,16 +282,57 @@ public class PathmakerPlugin extends Plugin
 			//log.debug("Loading region: {}, for path: {}", regionIdString, pathName);
 			for(JsonElement pointElement : regionsJson.get(regionIdString).getAsJsonArray())
 			{
+				// Legacy method for importing points
 				PathPoint pathPoint = null;
-
+//
 				try
 				{
-					pathPoint = gson.fromJson(pointElement,
-						pointElement.getAsJsonObject().has("id") ?
-							PathPointObject.class :
-							PathPoint.class);
+					pathPoint = gson.fromJson(pointElement, pointElement.getAsJsonObject().has("id") ?
+						PathPointObject.class : PathPoint.class);
+				} catch (JsonSyntaxException e)
+				{
+					//log.debug("(Legacy) Deserialized PathPoint is null.");
 				}
-				catch (JsonSyntaxException e){log.debug("Deserialized PathPoint is null.");}
+
+				// If legacy didn't work, do modern
+				if(pathPoint == null || pathPoint.getPathOwnerName() == null)
+				{
+					try
+					{
+						JsonObject pointJson = pointElement.getAsJsonObject();
+						int regionId = pointJson.get("regionId").getAsInt();
+						int x = pointJson.get("x").getAsInt();
+						int y = pointJson.get("y").getAsInt();
+						int z = pointJson.get("z").getAsInt();
+
+						if (pointJson.has("id"))
+						{
+							int id = pointJson.get("id").getAsInt();
+							int baseId = pointJson.get("baseId").getAsInt();
+							boolean isNpc = pointJson.get("isNpc").getAsBoolean();
+
+							pathPoint = new PathPointObject(pathName, regionId, x, y, z, id, baseId, isNpc);
+
+							int toCenterVectorX = pointJson.get("toCenterVectorX").getAsInt();
+							int toCenterVectorY = pointJson.get("toCenterVectorY").getAsInt();
+
+							((PathPointObject) pathPoint).setToCenterVector(toCenterVectorX, toCenterVectorY);
+						}
+						else
+						{
+							pathPoint = new PathPoint(pathName, regionId, x, y, z);
+						}
+
+						pathPoint.setDrawIndex(pointJson.get("drawIndex").getAsInt());
+
+						pathPoint.setLabel(gson.fromJson(pointJson.get("label").getAsString(), String.class));
+						pathPoint.drawToPrevious = pointJson.get("drawToPrevious").getAsBoolean();
+					}
+					catch (JsonSyntaxException e)
+					{
+						log.debug("Deserialized PathPoint is null.");
+					}
+				}
 
 				if (pathPoint != null)
 				{
@@ -289,7 +349,7 @@ public class PathmakerPlugin extends Plugin
 			paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
 		if (pathJson.has("pathDrawOffset"))
 			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
-		//log.debug("Loaded path json: {}", pathName);
+		log.debug("Loaded path json: {}", pathName);
 	}
 
     private void reload(WorldView wv)
