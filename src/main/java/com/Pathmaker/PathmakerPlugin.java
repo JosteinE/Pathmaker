@@ -262,6 +262,7 @@ public class PathmakerPlugin extends Plugin
 		pathJson.add("color", gson.toJsonTree(paths.get(pathName).color, Color.class));
 		pathJson.add("looped", gson.toJsonTree(paths.get(pathName).loopPath, boolean.class));
 		pathJson.add("pathDrawOffset", gson.toJsonTree(paths.get(pathName).pathDrawOffset, int.class));
+		pathJson.add("panelExpanded", gson.toJsonTree(paths.get(pathName).panelExpanded, boolean.class));
 
 		//log.debug("Saved path: {}", pathName);
 		return pathJson;
@@ -325,7 +326,8 @@ public class PathmakerPlugin extends Plugin
 
 						pathPoint.setDrawIndex(pointJson.get("drawIndex").getAsInt());
 
-						pathPoint.setLabel(gson.fromJson(pointJson.get("label").getAsString(), String.class));
+						if (pointJson.has("label"))
+							pathPoint.setLabel(pointJson.get("label").getAsString().isEmpty() ? null : pointJson.get("label").getAsString());
 						pathPoint.drawToPrevious = pointJson.get("drawToPrevious").getAsBoolean();
 					}
 					catch (JsonSyntaxException e)
@@ -349,6 +351,8 @@ public class PathmakerPlugin extends Plugin
 			paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
 		if (pathJson.has("pathDrawOffset"))
 			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
+		if (pathJson.has("panelExpanded"))
+			paths.get(pathName).panelExpanded = gson.fromJson(pathJson.get("panelExpanded"), boolean.class);
 		log.debug("Loaded path json: {}", pathName);
 	}
 
