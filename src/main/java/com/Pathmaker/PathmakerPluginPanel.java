@@ -9,6 +9,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Point;
@@ -58,7 +59,7 @@ public class PathmakerPluginPanel extends PluginPanel
     private static final ImageIcon EXPORT_ICON;
 
     private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
-    private final JLayeredPane pathView = new JLayeredPane();
+    private final JPanel pathView = new JPanel();
 
     Client client;
     PathmakerPlugin plugin;
@@ -259,14 +260,6 @@ public class PathmakerPluginPanel extends PluginPanel
         // Configure path view panel
         pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
 
-		JPanel pathViewOverlay = new JPanel(null);
-		pathViewOverlay.setOpaque(true);
-		pathViewOverlay.setBackground(new Color(0, 0, 0, 0));
-		pathViewOverlay.setVisible(true);
-		pathView.add(pathViewOverlay, JLayeredPane.DRAG_LAYER);
-
-		pathView.add(new JPanel(null), JLayeredPane.DEFAULT_LAYER);
-
         // Configure PluginErrorPanel
         noPathPanel.setVisible(false);
         //noPathPanel.setPreferredSize(new Dimension(50, 30));
@@ -291,7 +284,7 @@ public class PathmakerPluginPanel extends PluginPanel
         for (final String pathLabel : plugin.getStoredPaths().keySet())
         {
             // Create new path entry
-			int entryIndex = pathView.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER).length;
+			int entryIndex = pathView.getComponentCount();
             PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
 			// Set as active path on label click
@@ -305,68 +298,24 @@ public class PathmakerPluginPanel extends PluginPanel
 				@Override
 				public void mousePressed(MouseEvent e)
 				{
-//					for (int i = 0; i < pathView.getComponents().length ; i++)
-//					{
-//						Component comp = pathView.getComponents()[i];
-//						if (comp == pathEntry)
-//						{
-//							entryIndex = i;
-//							break;
-//						}
-//					}
-
-					dragGhost = new JPanel();
-					dragGhost.setOpaque(true);
-					dragGhost.setBackground(new Color(0, 255, 0, 150));
-					dragGhost.setSize(e.getComponent().getWidth() - 20, e.getComponent().getHeight());
-
-					int posY = (int) (e.getComponent().getLocationOnScreen().getY() - pathView.getLocationOnScreen().getY());
-					//log.debug("posY: "+ posY);
-					//log.debug("dragGhostY: "+ dragGhost.getY());
-					//pathView.add(dragGhost);
-					pathView.setLayer(dragGhost, JLayeredPane.DRAG_LAYER);
-					pathView.repaint();
-					//log.debug("dragGhostY: "+ dragGhost.getY());
 				}
 
 				@Override
 				public void mouseReleased(MouseEvent e)
 				{
+					pathEntry.getPathLabel().setBackground(new Color(30, 30, 30));
+					pathEntry.getPathLabel().repaint();
 
-					// Move to back, so getComponentAt doesn't select the dragged component
-					//pathView.moveToBack(pathEntry);
-					int entryPosY = dragGhost.getY();// new Point(pathEntry.getX(), pathEntry.getY());
-					pathView.remove(dragGhost);
-					dragGhost = null;
+					int targetIndex = getHoveredPathIndex(e);
 
-					Component[] otherComps = pathView.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER);
-					int targetIndex = -1;
-					for (int i = 0; i < otherComps.length; i++)
-					{
-						Component comp = otherComps[i];
-
-						int minY = (int) comp.getBounds().getMinY();
-						int maxY = (int) comp.getBounds().getMaxY();
-						//log.debug("minY: " + minY + ", maxY: " + maxY);
-						// If on other comp
-						if (entryPosY >= minY && entryPosY < maxY)
-						{
-							// ADD GROUP
-							log.debug("target is a path");
-							targetIndex = i;
-						}
-					}
-					log.debug("entryPosY: " + entryPosY);
-					log.debug("targetIndex: {}", targetIndex);
+					// log.debug("entryPosY: " + entryPosY);
+					// log.debug("targetIndex: {}", targetIndex);
 
 					if (targetIndex == -1 || targetIndex == entryIndex)
-					{
-						plugin.rebuildPanel(false);
 						return;
-					}
 
+					// Reorder paths
 					LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-
 					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
 
 					Map.Entry<String, PathmakerPath> movedPath = paths.remove(entryIndex);
@@ -378,7 +327,7 @@ public class PathmakerPluginPanel extends PluginPanel
 						storedPaths.put(path.getKey(), path.getValue());
 					}
 
-					plugin.rebuildPanel(false);
+					plugin.rebuildPanel(true);
 				}
 			});
 
@@ -392,19 +341,26 @@ public class PathmakerPluginPanel extends PluginPanel
 				@Override
 				public void mouseDragged(MouseEvent e)
 				{
-					int entryHeight = (int) e.getComponent().getBounds().getHeight();
+					// Reset button colours
+					Color defaultColor = new Color(30, 30, 30);
+					for (int i = 0; i < pathView.getComponentCount(); i++)
+						((PathPanel) pathView.getComponents()[i]).getPathLabel().setBackground(defaultColor);
 
-					int maxY = (int) (pathView.getSize().getHeight() - entryHeight);
-					int newY = Math.max(0, Math.min(maxY, pathEntry.getY() + e.getY()));
+					// Set the dragged colour
+					pathEntry.getPathLabel().setBackground(Color.RED);
+					pathView.repaint();
 
-					dragGhost.setLocation(pathEntry.getX(), newY);
+					int targetIndex = getHoveredPathIndex(e);
+					if (targetIndex == -1 || targetIndex == entryIndex) return;
 
-					//log.debug("entryPosY: " + newY);
+					// Set the hovered path color
+					JButton labelButton = ((PathPanel) pathView.getComponent(getHoveredPathIndex(e))).getPathLabel();
+					labelButton.setBackground(Color.GREEN);
+					labelButton.repaint();
 				}
 			});
 
 			pathView.add(pathEntry);
-			pathView.setLayer(pathEntry, JLayeredPane.DEFAULT_LAYER);
         }
 
         boolean empty = pathView.getComponentCount() == 0;
@@ -413,4 +369,25 @@ public class PathmakerPluginPanel extends PluginPanel
         repaint();
         revalidate();
     }
+
+	int getHoveredPathIndex(MouseEvent e)
+	{
+		int entryPosY = (int) (e.getYOnScreen() - pathView.getLocationOnScreen().getY());
+
+		Component[] otherComps = pathView.getComponents();
+
+		for (int i = 0; i < otherComps.length; i++)
+		{
+			Component comp = otherComps[i];
+
+			int minY = (int) comp.getBounds().getMinY();
+			int maxY = (int) comp.getBounds().getMaxY();
+
+			if (entryPosY >= minY && entryPosY < maxY)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
 }
