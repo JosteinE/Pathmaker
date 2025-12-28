@@ -462,6 +462,7 @@ public class PathmakerPlugin extends Plugin
 
         // Fetch game world
         int worldId = event.getMenuEntry().getWorldViewId();
+
         WorldView wv = client.getWorldView(worldId);
 
 

@@ -148,9 +148,10 @@ public class PathmakerOverlay extends Overlay
 
 			if (tile == null) return;
 		}
-        //hoveredTile = tile == null ? hoveredTile : tile.getLocalLocation();
         hoveredTile = tile.getLocalLocation();
-        if (!wv.contains(hoveredTile)) return;
+
+        if (hoveredTile.getSceneX() == -1 && hoveredTile.getSceneY() == -1)//!wv.contains(hoveredTile))
+			return;
 
 		Color hoveredTileColor;
 
