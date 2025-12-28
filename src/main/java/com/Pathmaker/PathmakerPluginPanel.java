@@ -123,7 +123,7 @@ public class PathmakerPluginPanel extends PluginPanel
         importButton.addMouseListener(new MouseAdapter()
         {
             @Override
-            public void mousePressed(MouseEvent mouseEvent) throws NullPointerException
+            public void mousePressed(MouseEvent mouseEvent)
             {
 				String json = "";
 				try
@@ -185,6 +185,9 @@ public class PathmakerPluginPanel extends PluginPanel
 				{
 					return;
 				}
+
+				inputPathName = inputPathName.length() > MAX_PATH_NAME_LENGTH ?
+					inputPathName.substring(0, MAX_PATH_NAME_LENGTH) : inputPathName;
 
 				// Show warning if imported path exists
 				if (plugin.getStoredPaths().containsKey(inputPathName))

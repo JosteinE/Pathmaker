@@ -268,9 +268,8 @@ public class PathmakerPlugin extends Plugin
 			//log.debug("Loading region: {}, for path: {}", regionIdString, pathName);
 			for(JsonElement pointElement : regionsJson.get(regionIdString).getAsJsonArray())
 			{
-				// Legacy method for importing points
 				PathPoint pathPoint = null;
-//
+
 				try
 				{
 					pathPoint = gson.fromJson(pointElement, pointElement.getAsJsonObject().has("id") ?
@@ -297,7 +296,7 @@ public class PathmakerPlugin extends Plugin
 			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
 		if (pathJson.has("panelExpanded"))
 			paths.get(pathName).panelExpanded = gson.fromJson(pathJson.get("panelExpanded"), boolean.class);
-		log.debug("Loaded path json: {}", pathName);
+		//log.debug("Loaded path json: {}", pathName);
 	}
 
     private void reload(WorldView wv)
@@ -318,7 +317,7 @@ public class PathmakerPlugin extends Plugin
 
 			for (String pathName : loadedPaths.keySet())
 			{
-				log.debug("Loading path: {}", pathName);
+				//log.debug("Loading path: {}", pathName);
 				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject(), pathName);
 			}
         }

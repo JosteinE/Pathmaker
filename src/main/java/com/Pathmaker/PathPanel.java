@@ -113,7 +113,7 @@ public class PathPanel extends JPanel
 
         label.setText(pathLabel);
         label.setForeground(Color.WHITE); //path.color);
-		label.setToolTipText(path.getSize() + " point" + (path.getSize() > 1 ? "s, " : ", ") +
+		label.setToolTipText(pathLabel + ": " + path.getSize() + " point" + (path.getSize() > 1 ? "s, " : ", ") +
 			path.getRegionIDs().size() + " region" + (path.getRegionIDs().size() > 1 ? "s" : ""));
         label.setPreferredSize(new Dimension(122, 20)); // Client.PANEL_WIDTH = 225. (18x6 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
