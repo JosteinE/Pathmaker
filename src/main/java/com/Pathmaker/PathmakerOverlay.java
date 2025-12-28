@@ -337,7 +337,7 @@ public class PathmakerOverlay extends Overlay
 				   {
 					   lineWVs.add(wv);
 					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
-					   boolean previousIsInScene =  i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1;
+					   boolean previousIsInScene = (i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1) || i == 0;
 					   drawToPrevious.add(point.drawToPrevious && previousIsInScene);
 				   }
 
@@ -431,7 +431,7 @@ public class PathmakerOverlay extends Overlay
 //						{
 						if((vis != 0 && drawToPrevious.get(vis) || (vis + 1 < drawToPrevious.size() && drawToPrevious.get(vis + 1))))
 						{
-						int itStart = (vis > 0 && !drawToPrevious.get(vis)) || (vis == 0 && !drawToPrevious.get(vis + 1)) ? 1 : 0;
+						int itStart = (vis > 0 && !drawToPrevious.get(vis)) || (vis == 0 && !drawToPrevious.get(1)) ? 1 : 0;
 						ArrayList<LocalPoint> lineV =  lineVertices.get(vis);
 						itStart = itStart > lineV.size() ? 0 : itStart;
 
