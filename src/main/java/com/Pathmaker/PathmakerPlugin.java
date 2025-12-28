@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
@@ -81,7 +82,7 @@ public class PathmakerPlugin extends Plugin
     public final int  TILE_SIZE = 128; // Not in net.runelite.api.Constants?
     public final int  TILE_SIZE_HALF = TILE_SIZE / 2;
 
-    private final HashMap<String, PathmakerPath> paths = new HashMap<>();
+    private final LinkedHashMap<String, PathmakerPath> paths = new LinkedHashMap<>();
     private PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
 
@@ -239,6 +240,28 @@ public class PathmakerPlugin extends Plugin
 				// Don't need to export pathOwner per point, it's re-added when imported and added to a path.
 				pointJson.remove("pathOwner");
 				regionJson.add(gson.toJsonTree(pointJson));
+
+				// Todo: Implement a save JSON that uses fewer symbols
+//				JsonObject pointJson = new JsonObject();
+//
+//				pointJson.addProperty("drawIndex", point.getDrawIndex());
+//				pointJson.addProperty("regionId", point.getRegionId());
+//				pointJson.addProperty("x", point.getX());
+//				pointJson.addProperty("y", point.getY());
+//				pointJson.addProperty("z", point.getZ());
+//				pointJson.addProperty("drawToPrevious", point.drawToPrevious);
+//				pointJson.addProperty("label",  point.getLabel());
+//
+//				if (point instanceof PathPointObject)
+//				{
+//					pointJson.addProperty("id", ((PathPointObject) point).getEntityId());
+//					pointJson.addProperty("baseId", ((PathPointObject) point).getBaseId());
+//					pointJson.addProperty("isNpc", ((PathPointObject) point).isNpc());
+//					pointJson.addProperty("toCenterVectorX", ((PathPointObject) point).getToCenterVectorX());
+//					pointJson.addProperty("toCenterVectorY", ((PathPointObject) point).getToCenterVectorY());
+//				}
+//				//regionJson.add(gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
+//				regionJson.add(gson.toJsonTree(pointJson));
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
 		}
@@ -278,6 +301,43 @@ public class PathmakerPlugin extends Plugin
 				{
 					log.debug("Deserialized PathPoint is null.");
 				}
+
+				// Todo: Implement a load JSON that uses less symbols
+//				try
+//				{
+//					JsonObject pointJson = pointElement.getAsJsonObject();
+//					int regionId = pointJson.get("regionId").getAsInt();
+//					int x = pointJson.get("x").getAsInt();
+//					int y = pointJson.get("y").getAsInt();
+//					int z = pointJson.get("z").getAsInt();
+//
+//					if (pointJson.has("id"))
+//					{
+//						int id = pointJson.get("id").getAsInt();
+//						int baseId = pointJson.get("baseId").getAsInt();
+//						boolean isNpc = pointJson.get("isNpc").getAsBoolean();
+//
+//						pathPoint = new PathPointObject(pathName, regionId, x, y, z, id, baseId, isNpc);
+//
+//						int toCenterVectorX = pointJson.get("toCenterVectorX").getAsInt();
+//						int toCenterVectorY = pointJson.get("toCenterVectorY").getAsInt();
+//
+//						((PathPointObject) pathPoint).setToCenterVector(toCenterVectorX, toCenterVectorY);
+//					}
+//					else
+//					{
+//						pathPoint = new PathPoint(pathName, regionId, x, y, z);
+//					}
+//
+//					pathPoint.setDrawIndex(pointJson.get("drawIndex").getAsInt());
+//
+//					pathPoint.setLabel(gson.fromJson(pointJson.get("label").getAsString(), String.class));
+//					pathPoint.drawToPrevious = pointJson.get("drawToPrevious").getAsBoolean();
+//				}
+//				catch (JsonSyntaxException e)
+//				{
+//					log.debug("Deserialized PathPoint is null.");
+//				}
 
 				if (pathPoint != null)
 				{
@@ -704,7 +764,7 @@ public class PathmakerPlugin extends Plugin
     }
 
 
-    public HashMap<String, PathmakerPath> getStoredPaths()
+    public LinkedHashMap<String, PathmakerPath> getStoredPaths()
     {
         return paths;
     }

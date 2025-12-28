@@ -8,19 +8,33 @@ import com.google.gson.JsonSyntaxException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.MouseMotionListener;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayer;
+import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -44,33 +58,20 @@ public class PathmakerPluginPanel extends PluginPanel
     private static final ImageIcon EXPORT_ICON;
 
     private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
-    private final JPanel pathView = new JPanel();
+    private final JLayeredPane pathView = new JLayeredPane();
 
     Client client;
     PathmakerPlugin plugin;
 
     FlatTextField activePath;
-    final int MAX_PATH_NAME_LENGTH = 20; // Based on ÆÆÆÆÆÆÆÆÆ (9)
+    final int MAX_PATH_NAME_LENGTH = 20;
+
+	JPanel dragGhost = null;
 
     static
     {
         IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
         EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
-    }
-
-    // Making a pair inner class for import/export as path names aren't stored in pathmakerPaths
-    public static class Pair<T, E>
-    {
-        @Getter
-        private final T key;
-        @Getter
-        private final E value;
-
-        Pair(T key, E value)
-        {
-            this.key = key;
-            this.value = value;
-        }
     }
 
     PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
@@ -159,19 +160,6 @@ public class PathmakerPluginPanel extends PluginPanel
 					log.debug("String was not a valid JSON");
 					return;
 				}
-
-				// OLD
-				// Pair<String, PathmakerPath> MUST be a JSON object
-				// Returns if JSON is valid but not suitable for Pair<...>
-//                if (!element.isJsonObject()) {return;}
-
-//                Pair<String, PathmakerPath> loadedPath;
-//                try{loadedPath = plugin.gson.fromJson(element, new TypeToken<Pair<String, PathmakerPath>>(){}.getType());}
-//                catch (JsonSyntaxException e)
-//                {
-//                    log.debug("JSON is an object, but not in the correct Pair structure: {}", e.getMessage());
-//                    return;
-//                }
 
 				String jsonPathName = object.keySet().iterator().next();
 
@@ -271,6 +259,14 @@ public class PathmakerPluginPanel extends PluginPanel
         // Configure path view panel
         pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
 
+		JPanel pathViewOverlay = new JPanel(null);
+		pathViewOverlay.setOpaque(true);
+		pathViewOverlay.setBackground(new Color(0, 0, 0, 0));
+		pathViewOverlay.setVisible(true);
+		pathView.add(pathViewOverlay, JLayeredPane.DRAG_LAYER);
+
+		pathView.add(new JPanel(null), JLayeredPane.DEFAULT_LAYER);
+
         // Configure PluginErrorPanel
         noPathPanel.setVisible(false);
         //noPathPanel.setPreferredSize(new Dimension(50, 30));
@@ -280,6 +276,7 @@ public class PathmakerPluginPanel extends PluginPanel
         JPanel centerPanel = new JPanel(new BorderLayout());
         //centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
         centerPanel.add(noPathPanel, BorderLayout.NORTH);
+
         centerPanel.add(pathView, BorderLayout.CENTER);
 
         add(centerPanel, BorderLayout.CENTER);
@@ -291,19 +288,123 @@ public class PathmakerPluginPanel extends PluginPanel
     {
         pathView.removeAll();
 
-        // HashMap<String, PathmakerPath>
-//        HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
         for (final String pathLabel : plugin.getStoredPaths().keySet())
         {
             // Create new path entry
+			int entryIndex = pathView.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER).length;
             PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
-            // Set as active path on label click
+			// Set as active path on label click
             pathEntry.getPathLabel().addActionListener(actionEvent ->
             {
                 activePath.setText(pathEntry.getPathLabel().getText());
             });
-            pathView.add(pathEntry, BorderLayout.CENTER);
+
+			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
+			{
+				@Override
+				public void mousePressed(MouseEvent e)
+				{
+//					for (int i = 0; i < pathView.getComponents().length ; i++)
+//					{
+//						Component comp = pathView.getComponents()[i];
+//						if (comp == pathEntry)
+//						{
+//							entryIndex = i;
+//							break;
+//						}
+//					}
+
+					dragGhost = new JPanel();
+					dragGhost.setOpaque(true);
+					dragGhost.setBackground(new Color(0, 255, 0, 150));
+					dragGhost.setSize(e.getComponent().getWidth() - 20, e.getComponent().getHeight());
+
+					int posY = (int) (e.getComponent().getLocationOnScreen().getY() - pathView.getLocationOnScreen().getY());
+					//log.debug("posY: "+ posY);
+					//log.debug("dragGhostY: "+ dragGhost.getY());
+					//pathView.add(dragGhost);
+					pathView.setLayer(dragGhost, JLayeredPane.DRAG_LAYER);
+					pathView.repaint();
+					//log.debug("dragGhostY: "+ dragGhost.getY());
+				}
+
+				@Override
+				public void mouseReleased(MouseEvent e)
+				{
+
+					// Move to back, so getComponentAt doesn't select the dragged component
+					//pathView.moveToBack(pathEntry);
+					int entryPosY = dragGhost.getY();// new Point(pathEntry.getX(), pathEntry.getY());
+					pathView.remove(dragGhost);
+					dragGhost = null;
+
+					Component[] otherComps = pathView.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER);
+					int targetIndex = -1;
+					for (int i = 0; i < otherComps.length; i++)
+					{
+						Component comp = otherComps[i];
+
+						int minY = (int) comp.getBounds().getMinY();
+						int maxY = (int) comp.getBounds().getMaxY();
+						//log.debug("minY: " + minY + ", maxY: " + maxY);
+						// If on other comp
+						if (entryPosY >= minY && entryPosY < maxY)
+						{
+							// ADD GROUP
+							log.debug("target is a path");
+							targetIndex = i;
+						}
+					}
+					log.debug("entryPosY: " + entryPosY);
+					log.debug("targetIndex: {}", targetIndex);
+
+					if (targetIndex == -1 || targetIndex == entryIndex)
+					{
+						plugin.rebuildPanel(false);
+						return;
+					}
+
+					LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
+
+					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
+
+					Map.Entry<String, PathmakerPath> movedPath = paths.remove(entryIndex);
+					paths.add(targetIndex, movedPath);
+
+					storedPaths.clear();
+					for (Map.Entry<String, PathmakerPath> path : paths)
+					{
+						storedPaths.put(path.getKey(), path.getValue());
+					}
+
+					plugin.rebuildPanel(false);
+				}
+			});
+
+			pathEntry.getPathLabel().addMouseMotionListener(new MouseMotionListener()
+			{
+				@Override
+				public void mouseMoved(MouseEvent e)
+				{
+				}
+
+				@Override
+				public void mouseDragged(MouseEvent e)
+				{
+					int entryHeight = (int) e.getComponent().getBounds().getHeight();
+
+					int maxY = (int) (pathView.getSize().getHeight() - entryHeight);
+					int newY = Math.max(0, Math.min(maxY, pathEntry.getY() + e.getY()));
+
+					dragGhost.setLocation(pathEntry.getX(), newY);
+
+					//log.debug("entryPosY: " + newY);
+				}
+			});
+
+			pathView.add(pathEntry);
+			pathView.setLayer(pathEntry, JLayeredPane.DEFAULT_LAYER);
         }
 
         boolean empty = pathView.getComponentCount() == 0;
