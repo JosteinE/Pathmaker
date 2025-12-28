@@ -123,7 +123,7 @@ public class PathmakerPluginPanel extends PluginPanel
         importButton.addMouseListener(new MouseAdapter()
         {
             @Override
-            public void mousePressed(MouseEvent mouseEvent)
+            public void mousePressed(MouseEvent mouseEvent) throws NullPointerException
             {
 				String json = "";
 				try

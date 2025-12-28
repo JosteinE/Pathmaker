@@ -234,25 +234,10 @@ public class PathmakerPlugin extends Plugin
 			JsonArray regionJson = new JsonArray();
 			for (PathPoint point : paths.get(pathName).getPointsInRegion(regionId))
 			{
-				JsonObject pointJson = new JsonObject();
+				JsonObject pointJson = gson.toJsonTree(point, point instanceof PathPointObject ? PathPointObject.class : PathPoint.class).getAsJsonObject();
 
-				pointJson.addProperty("drawIndex", point.getDrawIndex());
-				pointJson.addProperty("regionId", point.getRegionId());
-				pointJson.addProperty("x", point.getX());
-				pointJson.addProperty("y", point.getY());
-				pointJson.addProperty("z", point.getZ());
-				pointJson.addProperty("drawToPrevious", point.drawToPrevious);
-				pointJson.addProperty("label",  point.getLabel());
-
-				if (point instanceof PathPointObject)
-				{
-					pointJson.addProperty("id", ((PathPointObject) point).getEntityId());
-					pointJson.addProperty("baseId", ((PathPointObject) point).getBaseId());
-					pointJson.addProperty("isNpc", ((PathPointObject) point).isNpc());
-					pointJson.addProperty("toCenterVectorX", ((PathPointObject) point).getToCenterVectorX());
-					pointJson.addProperty("toCenterVectorY", ((PathPointObject) point).getToCenterVectorY());
-				}
-				//regionJson.add(gson.toJsonTree(point, entityIsObject ? PathPointObject.class : PathPoint.class));
+				// Don't need to export pathOwner per point, it's re-added when imported and added to a path.
+				pointJson.remove("pathOwner");
 				regionJson.add(gson.toJsonTree(pointJson));
 			}
 			regionsJson.add(String.valueOf(regionId), regionJson);
@@ -292,48 +277,7 @@ public class PathmakerPlugin extends Plugin
 						PathPointObject.class : PathPoint.class);
 				} catch (JsonSyntaxException e)
 				{
-					//log.debug("(Legacy) Deserialized PathPoint is null.");
-				}
-
-				// If legacy didn't work, do modern
-				if(pathPoint == null || pathPoint.getPathOwnerName() == null)
-				{
-					try
-					{
-						JsonObject pointJson = pointElement.getAsJsonObject();
-						int regionId = pointJson.get("regionId").getAsInt();
-						int x = pointJson.get("x").getAsInt();
-						int y = pointJson.get("y").getAsInt();
-						int z = pointJson.get("z").getAsInt();
-
-						if (pointJson.has("id"))
-						{
-							int id = pointJson.get("id").getAsInt();
-							int baseId = pointJson.get("baseId").getAsInt();
-							boolean isNpc = pointJson.get("isNpc").getAsBoolean();
-
-							pathPoint = new PathPointObject(pathName, regionId, x, y, z, id, baseId, isNpc);
-
-							int toCenterVectorX = pointJson.get("toCenterVectorX").getAsInt();
-							int toCenterVectorY = pointJson.get("toCenterVectorY").getAsInt();
-
-							((PathPointObject) pathPoint).setToCenterVector(toCenterVectorX, toCenterVectorY);
-						}
-						else
-						{
-							pathPoint = new PathPoint(pathName, regionId, x, y, z);
-						}
-
-						pathPoint.setDrawIndex(pointJson.get("drawIndex").getAsInt());
-
-						if (pointJson.has("label"))
-							pathPoint.setLabel(pointJson.get("label").getAsString().isEmpty() ? null : pointJson.get("label").getAsString());
-						pathPoint.drawToPrevious = pointJson.get("drawToPrevious").getAsBoolean();
-					}
-					catch (JsonSyntaxException e)
-					{
-						log.debug("Deserialized PathPoint is null.");
-					}
+					log.debug("(Legacy) Deserialized PathPoint is null.");
 				}
 
 				if (pathPoint != null)
@@ -838,6 +782,8 @@ public class PathmakerPlugin extends Plugin
 		//pluginPanel.activePath.getText();//config.activePath();
 
         if(pathName == null) return;
+
+		point.setPathOwnerName(pathName);
 
         //log.debug("Checking for existing path: {}", activePath);
         PathmakerPath path;

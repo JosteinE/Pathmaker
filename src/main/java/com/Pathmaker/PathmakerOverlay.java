@@ -11,6 +11,7 @@ import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.text.html.parser.Entity;
+import net.runelite.api.Constants;
 import net.runelite.api.GameObject;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.ObjectComposition;
@@ -33,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
+import net.runelite.client.config.RuneLiteConfig;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -148,13 +150,7 @@ public class PathmakerOverlay extends Overlay
 		}
         //hoveredTile = tile == null ? hoveredTile : tile.getLocalLocation();
         hoveredTile = tile.getLocalLocation();
-
-        // Return here if the distance to hovered tile exceeds the user interactable area.
-        // If endPoint height = 0, it likely means it's out of bounds
-//        if (startPoint.distanceTo(hoveredTile) / tileSize >= MAX_DRAW_DISTANCE)
-//		{
-//            return;
-//        }
+        if (!wv.contains(hoveredTile)) return;
 
 		Color hoveredTileColor;
 
@@ -894,6 +890,7 @@ public class PathmakerOverlay extends Overlay
 		int x = Math.abs(to.getX() - from.getX());
 		int y = Math.abs(to.getY() - from.getY());
 
+		log.debug("dist: {}", (int) ((Math.max(x, y))/ tileSize));
 
         return String.valueOf((int) ((Math.max(x, y))/ tileSize)); // distance to is 1.414 to diagonal tiles
     }
@@ -926,6 +923,7 @@ public class PathmakerOverlay extends Overlay
 
     boolean isLocalPointInScene(final WorldView wv, final LocalPoint point)
     {
+		if(point == null) return false;
 		return wv.contains(point);
     }
 

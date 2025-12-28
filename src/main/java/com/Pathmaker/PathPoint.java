@@ -13,7 +13,7 @@ public class PathPoint
     private int z;
 	boolean drawToPrevious = true;
 
-	private final String pathOwner;
+	private String pathOwner;
     private String label;
 
     PathPoint(String path, int regID, int regX, int regY, int plane)
@@ -37,6 +37,11 @@ public class PathPoint
 	String getPathOwnerName()
 	{
 		return this.pathOwner;
+	}
+
+	void setPathOwnerName(String pathOwnerName)
+	{
+		this.pathOwner = pathOwnerName;
 	}
 
     int getRegionId()
