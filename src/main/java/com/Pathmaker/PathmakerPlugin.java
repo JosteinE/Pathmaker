@@ -277,7 +277,7 @@ public class PathmakerPlugin extends Plugin
 						PathPointObject.class : PathPoint.class);
 				} catch (JsonSyntaxException e)
 				{
-					log.debug("(Legacy) Deserialized PathPoint is null.");
+					log.debug("Deserialized PathPoint is null.");
 				}
 
 				if (pathPoint != null)
@@ -462,7 +462,6 @@ public class PathmakerPlugin extends Plugin
 
         // Fetch game world
         int worldId = event.getMenuEntry().getWorldViewId();
-
         WorldView wv = client.getWorldView(worldId);
 
 

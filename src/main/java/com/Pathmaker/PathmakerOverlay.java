@@ -348,7 +348,7 @@ public class PathmakerOverlay extends Overlay
 
             }
 
-            // Loop path
+            // Loop path, making sure both ends are loaded
             if (path.loopPath &&
 				path.getSize() > 2 &&
 				config.drawPath() &&
@@ -890,8 +890,6 @@ public class PathmakerOverlay extends Overlay
 
 		int x = Math.abs(to.getX() - from.getX());
 		int y = Math.abs(to.getY() - from.getY());
-
-		log.debug("dist: {}", (int) ((Math.max(x, y))/ tileSize));
 
         return String.valueOf((int) ((Math.max(x, y))/ tileSize)); // distance to is 1.414 to diagonal tiles
     }
