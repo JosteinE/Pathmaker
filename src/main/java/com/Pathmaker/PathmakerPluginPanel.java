@@ -14,6 +14,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.BorderFactory;
@@ -41,79 +42,128 @@ import javax.swing.text.AbstractDocument;
 @Slf4j
 public class PathmakerPluginPanel extends PluginPanel
 {
-    private static final ImageIcon IMPORT_ICON;
-    private static final ImageIcon EXPORT_ICON;
+	private static final ImageIcon IMPORT_ICON;
+	private static final ImageIcon EXPORT_ICON;
 
-    private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
-    private final JPanel pathView = new JPanel();
+	private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
+	private final JPanel pathView = new JPanel();
+	HashMap<String, PathGroup> pathGroups = new HashMap<>();
 
-    Client client;
-    PathmakerPlugin plugin;
+	Client client;
+	PathmakerPlugin plugin;
 
-    FlatTextField activePath;
-    final int MAX_PATH_NAME_LENGTH = 20;
+	FlatTextField activePath;
+	final int MAX_PATH_NAME_LENGTH = 20;
 	final int DRAG_DROP_Y_MARGIN = 10;
 
-	JPanel dragGhost = null;
+	static
+	{
+		IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
+		EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
+	}
 
-    static
-    {
-        IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
-        EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
-    }
+	class PathGroup extends JPanel
+	{
+		FlatTextField groupTextField = new FlatTextField();
+		JPanel memberPanel = new JPanel();
 
-    PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
-    {
-        this.client = client;
-	    this.plugin = plugin;
+		PathGroup(PathPanel firstPathEntry, String groupName)
+		{
+			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+			setBorder(BorderFactory.createEmptyBorder(0, 1, 1, 1));
+			setBackground(Color.BLUE);
 
-        // Define standard client panel layout
-        setLayout(new BorderLayout());
-        //setBorder(new EmptyBorder(10, 10, 10, 10));
+			groupTextField.setText(groupName);
+			add(groupTextField);
+			groupTextField.setBackground(Color.BLUE);
 
-        // Create title panel
-        JPanel titlePanel = new JPanel();
-        //titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+			memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
+			memberPanel.setBackground(Color.BLUE);
+			memberPanel.add(firstPathEntry);
+			add(memberPanel);
+		}
 
-        // Create label and add to title panel
-        JLabel title = new JLabel();
-        title.setText("Pathmaker");
-        title.setPreferredSize(new Dimension(80,20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
-        title.setForeground(Color.WHITE);
-        title.setToolTipText("by Fraph");
-        titlePanel.add(title, BorderLayout.CENTER);
+		void addPathPanel(PathPanel panel)
+		{
+			memberPanel.add(panel);
+		}
 
-        // EXPORT / IMPORT
-        JButton exportButton = new JButton();
-        exportButton.setIcon(EXPORT_ICON);
-        exportButton.setToolTipText("Export active path to clipboard");
-        exportButton.setPreferredSize(new Dimension(18, 18));
-        exportButton.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent mouseEvent)
-            {
-                if(!plugin.getStoredPaths().containsKey(activePath.getText())) {return;}
+		Component[] getPathPanels()
+		{
+			return memberPanel.getComponents();
+		}
 
-                //new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
+		int getPathPanelCount()
+		{
+			return memberPanel.getComponentCount();
+		}
+
+		PathPanel getPathPanel(int index)
+		{
+			return (PathPanel) memberPanel.getComponent(index);
+		}
+
+		String getGroupName()
+		{
+			return groupTextField.getText();
+		}
+	}
+
+	PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
+	{
+		this.client = client;
+		this.plugin = plugin;
+
+		// Define standard client panel layout
+		setLayout(new BorderLayout());
+		//setBorder(new EmptyBorder(10, 10, 10, 10));
+
+		// Create title panel
+		JPanel titlePanel = new JPanel();
+		//titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+
+		// Create label and add to title panel
+		JLabel title = new JLabel();
+		title.setText("Pathmaker");
+		title.setPreferredSize(new Dimension(80, 20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
+		title.setForeground(Color.WHITE);
+		title.setToolTipText("by Fraph");
+		titlePanel.add(title, BorderLayout.CENTER);
+
+		// EXPORT / IMPORT
+		JButton exportButton = new JButton();
+		exportButton.setIcon(EXPORT_ICON);
+		exportButton.setToolTipText("Export active path to clipboard");
+		exportButton.setPreferredSize(new Dimension(18, 18));
+		exportButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				if (!plugin.getStoredPaths().containsKey(activePath.getText()))
+				{
+					return;
+				}
+
+				//new Pair<String, PathmakerPath>(activePath.getText(), plugin.getStoredPaths().get(activePath.getText()));
 				JsonObject exportPath = new JsonObject();
 				exportPath.add(activePath.getText(), plugin.pathToJson(activePath.getText()));
 
-                StringSelection json = new StringSelection(plugin.gson.toJson(exportPath));
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(json, null);
-            }
-        });
+				StringSelection json = new StringSelection(plugin.gson.toJson(exportPath));
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				clipboard.setContents(json, null);
+			}
+		});
 
-        JButton importButton = new JButton();
-        importButton.setIcon(IMPORT_ICON);
-        importButton.setToolTipText("Import path from clipboard");
-        importButton.setPreferredSize(new Dimension(18, 18));
-        importButton.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent mouseEvent)
-            {
+		JButton importButton = new JButton();
+		importButton.setIcon(IMPORT_ICON);
+		importButton.setToolTipText("Import path from clipboard");
+		importButton.setPreferredSize(new Dimension(18, 18));
+		importButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
 				String json = "";
 				try
 				{
@@ -134,7 +184,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				try
 				{
 					JsonParser parser = new JsonParser();
-					JsonElement element =  parser.parse(json);
+					JsonElement element = parser.parse(json);
 					if (element == null || !element.isJsonObject())
 					{
 						log.debug("Imported element is not a JsonObject");
@@ -143,7 +193,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 					object = element.getAsJsonObject();
 				}
-				catch(Exception e)
+				catch (Exception e)
 				{
 					log.debug("String was not a valid JSON");
 					return;
@@ -196,89 +246,73 @@ public class PathmakerPluginPanel extends PluginPanel
 					plugin.rebuildPanel(true);
 					activePath.setText(inputPathName);
 				}
-            }
-        });
+			}
+		});
 
-        JPanel rightActionTitlePanel = new JPanel();
-        rightActionTitlePanel.add(importButton, BorderLayout.WEST);
-        rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
-        titlePanel.add(rightActionTitlePanel, BorderLayout.EAST);
+		JPanel rightActionTitlePanel = new JPanel();
+		rightActionTitlePanel.add(importButton, BorderLayout.WEST);
+		rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
+		titlePanel.add(rightActionTitlePanel, BorderLayout.EAST);
 
-        // Create body panel and add titlePanel
-        JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
-        northPanel.add(titlePanel, BorderLayout.NORTH);
+		// Create body panel and add titlePanel
+		JPanel northPanel = new JPanel(new BorderLayout());
+		northPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
+		northPanel.add(titlePanel, BorderLayout.NORTH);
 
-        // Add link to config button
-        // But how? Watchdogs implementation
-        // https://github.com/adamk33n3r/runelite-watchdog/blob/master/src/main/java/com/adamk33n3r/runelite/watchdog/NotificationOverlay.java
-//        JButton configButton = new JButton();
-//        configButton.setIcon(new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png")));
-//        configButton.setToolTipText("Config");
-//        configButton.addChangeListener(ce ->
-//        {
-//            plugin.getEventBus().post(
-//                    new OverlayMenuClicked(
-//                    new OverlayMenuEntry(
-//                    RUNELITE_OVERLAY_CONFIG,
-//                            null,
-//                            null),
-//                            notificationOverlay)); <---- What in this is relevant? (link above)
-//        });
-//        northPanel.add(configButton);
+		// Add Active Path text field
+		JLabel activePathLabel = new JLabel("Active Path: ");
+		activePathLabel.setPreferredSize(new Dimension(75, 20));
+		activePathLabel.setForeground(Color.WHITE);
+		northPanel.add(activePathLabel, BorderLayout.WEST);
 
-        // Add Active Path text field
-        JLabel activePathLabel = new JLabel("Active Path: ");
-        activePathLabel.setPreferredSize(new Dimension(75, 20));
-        activePathLabel.setForeground(Color.WHITE);
-        northPanel.add(activePathLabel, BorderLayout.WEST);
+		activePath = new FlatTextField();
+		((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_PATH_NAME_LENGTH));
+		activePath.setText("unnamed");
+		activePath.setForeground(Color.WHITE);
+		activePath.setBackground(Color.DARK_GRAY);
 
-        activePath = new FlatTextField();
-        ((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_PATH_NAME_LENGTH));
-        activePath.setText("unnamed");
-        activePath.setForeground(Color.WHITE);
-        activePath.setBackground(Color.DARK_GRAY);
+		northPanel.add(activePath);
 
-        northPanel.add(activePath);
+		// Add panel to client panel
+		add(northPanel, BorderLayout.NORTH);
 
-        // Add panel to client panel
-        add(northPanel, BorderLayout.NORTH);
+		// Configure path view panel
+		pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
 
-        // Configure path view panel
-        pathView.setLayout(new BoxLayout(pathView, BoxLayout.Y_AXIS));
+		// Configure PluginErrorPanel
+		noPathPanel.setVisible(false);
+		//noPathPanel.setPreferredSize(new Dimension(50, 30));
+		noPathPanel.setContent("No stored paths", "Shift right-click a tile to add a path point.");
 
-        // Configure PluginErrorPanel
-        noPathPanel.setVisible(false);
-        //noPathPanel.setPreferredSize(new Dimension(50, 30));
-        noPathPanel.setContent("No stored paths", "Shift right-click a tile to add a path point.");
+		// Add body panel
+		JPanel centerPanel = new JPanel(new BorderLayout());
+		//centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
+		centerPanel.add(noPathPanel, BorderLayout.NORTH);
 
-        // Add body panel
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        //centerPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH-5, 0));
-        centerPanel.add(noPathPanel, BorderLayout.NORTH);
+		centerPanel.add(pathView, BorderLayout.CENTER);
 
-        centerPanel.add(pathView, BorderLayout.CENTER);
+		add(centerPanel, BorderLayout.CENTER);
 
-        add(centerPanel, BorderLayout.CENTER);
+		rebuild();
+	}
 
-        rebuild();
-    }
+	void rebuild()
+	{
+		pathView.removeAll();
+		pathGroups.clear();
 
-    void rebuild()
-    {
-        pathView.removeAll();
-
-        for (final String pathLabel : plugin.getStoredPaths().keySet())
-        {
-            // Create new path entry
+		for (final String pathLabel : plugin.getStoredPaths().keySet())
+		{
+			// Create new path entry
 			int entryIndex = pathView.getComponentCount();
-            PathPanel pathEntry = new PathPanel(plugin, pathLabel);
+
+			PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
 			// Set as active path on label click
-            pathEntry.getPathLabel().addActionListener(actionEvent ->
-            {
-                activePath.setText(pathEntry.getPathLabel().getText());
-            });
+			pathEntry.getPathLabel().addActionListener(actionEvent ->
+			{
+				activePath.setText(pathEntry.getPathLabel().getText());
+			});
 
 			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
 			{
@@ -293,28 +327,78 @@ public class PathmakerPluginPanel extends PluginPanel
 
 					int targetIndex = getHoveredPathIndex(e);
 
-					// log.debug("entryPosY: " + entryPosY);
-					// log.debug("targetIndex: {}", targetIndex);
-
 					if (targetIndex == -1 || targetIndex == entryIndex)
 						return;
 
 					// Correct target index for gaps
 					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
 					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
+
+					// Add group if hovering another path
+					if (mouseOnBorder == 0)
+					{
+						PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
+
+						if (targetPanel instanceof PathPanel)
+						{
+							String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
+							PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
+
+							// create new group
+							if (targetPath.pathGroup == null)
+							{
+								String newGroupName = "group 1";
+								if (!pathGroups.isEmpty())
+								{
+									int num = 1;
+									while (pathGroups.containsKey(newGroupName))
+									{
+										num++;
+										newGroupName = "group " + num;
+									}
+								}
+								targetPath.pathGroup = newGroupName;
+								draggedPath.pathGroup = newGroupName;
+							}
+							else
+								draggedPath.pathGroup = targetPath.pathGroup;
+						}
+						else
+							draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
+
+						plugin.rebuildPanel(true);
+						return;
+					}
+
 					if (mouseOnBorder == 1 && targetIndex > entryIndex)
 						targetIndex -= 1;
 					else if (mouseOnBorder == -1 && targetIndex < entryIndex)
 						targetIndex += 1;
 
 
-					// Reorder paths
+					// Erase old group if it has 1 member left
 					LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
+					String oldGroup = storedPaths.get(pathLabel).pathGroup;
+					if(oldGroup != null)
+					{
+						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
+						log.debug("memberPanelComponentCount: " + memberPanel.getComponentCount());
+						if (memberPanel.getComponentCount() == 2)
+						{
+							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
+							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
+						}
+						else
+							storedPaths.get(pathLabel).pathGroup = null;
+					}
 
+					// Create new LinkedHashMap to replace the old plugin.paths map
+					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
 					Map.Entry<String, PathmakerPath> movedPath = paths.remove(entryIndex);
+
 					paths.add(targetIndex, movedPath);
 
+					// Reorder paths
 					storedPaths.clear();
 					for (Map.Entry<String, PathmakerPath> path : paths)
 					{
@@ -328,7 +412,9 @@ public class PathmakerPluginPanel extends PluginPanel
 			pathEntry.getPathLabel().addMouseMotionListener(new MouseMotionListener()
 			{
 				@Override
-				public void mouseMoved(MouseEvent e) {}
+				public void mouseMoved(MouseEvent e)
+				{
+				}
 
 				@Override
 				public void mouseDragged(MouseEvent e)
@@ -336,6 +422,7 @@ public class PathmakerPluginPanel extends PluginPanel
 					// Reset border
 					for (int i = 0; i < pathView.getComponentCount(); i++)
 					{
+						if (!(pathView.getComponents()[i] instanceof PathPanel)) continue;
 						PathPanel pathPanel = ((PathPanel) pathView.getComponents()[i]);
 						pathPanel.setBorder(BorderFactory.createEmptyBorder());
 					}
@@ -358,7 +445,7 @@ public class PathmakerPluginPanel extends PluginPanel
 					}
 					else if (mouseOnBorder == -1)
 					{
-						JPanel bottomPanel = targetIndex < pathView.getComponentCount()-1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
+						JPanel bottomPanel = targetIndex < pathView.getComponentCount() - 1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
 						createGapBorders(targetPanel, bottomPanel, Color.GREEN);
 					}
 					else
@@ -367,15 +454,34 @@ public class PathmakerPluginPanel extends PluginPanel
 				}
 			});
 
-			pathView.add(pathEntry);
-        }
+			String groupName = plugin.getStoredPaths().get(pathLabel).pathGroup;
+			if (groupName == null)
+			{
+				pathView.add(pathEntry);
+			}
+			else
+			{
+				if (pathGroups.containsKey(groupName))
+				{
+					pathGroups.get(groupName).addPathPanel(pathEntry);
+				}
+				else
+				{
+					PathGroup group = new PathGroup(pathEntry, groupName);
+					pathGroups.put(groupName, group);
+					pathView.add(group);
+				}
+			}
+		}
 
-        boolean empty = pathView.getComponentCount() == 0;
-        noPathPanel.setVisible(empty);
+		boolean empty = pathView.getComponentCount() == 0;
+		noPathPanel.setVisible(empty);
 
-        repaint();
-        revalidate();
-    }
+		repaint();
+		revalidate();
+	}
+
+	// ------------- Helpers -------------
 
 	void setPanelInnerBorderColor(JPanel pathPanel, Color color)
 	{
@@ -399,7 +505,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 		if (bottomPathPanel != null)
 		{
-			innerBorder = BorderFactory.createMatteBorder(2,0,0,0, color);
+			innerBorder = BorderFactory.createMatteBorder(2, 0, 0, 0, color);
 			bottomPathPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
 		}
 	}
@@ -422,8 +528,8 @@ public class PathmakerPluginPanel extends PluginPanel
 
 		if (entryPosY < pathView.getComponent(0).getBounds().getMinY())
 			return 0;
-		if (entryPosY > pathView.getComponent(pathView.getComponentCount()-1).getBounds().getMaxY())
-			return pathView.getComponentCount()-1;
+		if (entryPosY > pathView.getComponent(pathView.getComponentCount() - 1).getBounds().getMaxY())
+			return pathView.getComponentCount() - 1;
 
 		Component[] otherComps = pathView.getComponents();
 
