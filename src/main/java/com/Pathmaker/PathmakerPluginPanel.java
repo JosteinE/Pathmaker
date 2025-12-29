@@ -52,6 +52,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
     FlatTextField activePath;
     final int MAX_PATH_NAME_LENGTH = 20;
+	final int DRAG_DROP_Y_MARGIN = 10;
 
 	JPanel dragGhost = null;
 
@@ -298,6 +299,14 @@ public class PathmakerPluginPanel extends PluginPanel
 					if (targetIndex == -1 || targetIndex == entryIndex)
 						return;
 
+					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
+					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
+					if (mouseOnBorder == 1 && targetIndex > entryIndex)
+						targetIndex -= 1;
+					else if (mouseOnBorder == -1 && targetIndex < entryIndex)
+						targetIndex += 1;
+
+
 					// Reorder paths
 					LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
 					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
@@ -336,10 +345,24 @@ public class PathmakerPluginPanel extends PluginPanel
 					int targetIndex = getHoveredPathIndex(e);
 					if (targetIndex == -1 || targetIndex == entryIndex) return;
 
+					// Is mouse on the path border?
+					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
+					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
+
 					// Set the hovered path color
-					PathPanel pathPanel = ((PathPanel) pathView.getComponent(getHoveredPathIndex(e)));
-					setPanelInnerBorderColor(pathPanel, Color.GREEN);
-					pathPanel.repaint();
+					if (mouseOnBorder == 1)
+					{
+						JPanel topPanel = targetIndex > 0 ? (JPanel) pathView.getComponent(targetIndex - 1) : null;
+						createGapBorders(topPanel, targetPanel, Color.GREEN);
+					}
+					else if (mouseOnBorder == -1)
+					{
+						JPanel bottomPanel = targetIndex < pathView.getComponentCount()-1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
+						createGapBorders(targetPanel, bottomPanel, Color.GREEN);
+					}
+					else
+						setPanelInnerBorderColor(targetPanel, Color.GREEN);
+					targetPanel.repaint();
 				}
 			});
 
@@ -361,9 +384,45 @@ public class PathmakerPluginPanel extends PluginPanel
 		pathPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
 	}
 
+	void createGapBorders(JPanel topPathPanel, JPanel bottomPathPanel, Color color)
+	{
+		Border outerBorder, innerBorder;
+
+		// Only drawing inner borders, so leaving outer empty.
+		outerBorder = BorderFactory.createEmptyBorder();
+		if (topPathPanel != null)
+		{
+			innerBorder = BorderFactory.createMatteBorder(0, 0, 2, 0, color);
+			topPathPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+		}
+
+		if (bottomPathPanel != null)
+		{
+			innerBorder = BorderFactory.createMatteBorder(2,0,0,0, color);
+			bottomPathPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+		}
+	}
+
+	// 1 = top, -1 = bottom, 0 = false
+	int isMouseHoveringPathBorder(MouseEvent e, JPanel targetPanel, int margin)
+	{
+		int entryPosY = (int) (e.getYOnScreen() - pathView.getLocationOnScreen().getY());
+		int minY = (int) targetPanel.getBounds().getMinY();
+		int maxY = (int) targetPanel.getBounds().getMaxY();
+
+		if (entryPosY < minY + margin) return 1;
+		if (entryPosY > maxY - margin) return -1;
+		return 0;
+	}
+
 	int getHoveredPathIndex(MouseEvent e)
 	{
 		int entryPosY = (int) (e.getYOnScreen() - pathView.getLocationOnScreen().getY());
+
+		if (entryPosY < pathView.getComponent(0).getBounds().getMinY())
+			return 0;
+		if (entryPosY > pathView.getComponent(pathView.getComponentCount()-1).getBounds().getMaxY())
+			return pathView.getComponentCount()-1;
 
 		Component[] otherComps = pathView.getComponents();
 
