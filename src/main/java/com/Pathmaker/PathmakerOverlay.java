@@ -269,34 +269,34 @@ public class PathmakerOverlay extends Overlay
             }
 
 			int pathSize = path.getSize();
-			if(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() || path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal())
+			ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
+
+			if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal() ||
+				(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() &&
+					!drawOrder.isEmpty() &&
+					drawOrder.get(0).getDrawIndex() == 0))
 			{
 				line.add(client.getLocalPlayer().getLocalLocation());
 				lineWVs.add(client.getLocalPlayer().getWorldView());
 				drawToPrevious.add(true);
 			}
 
-            ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
-
             if (config.drawPath() || config.drawPathPoints())
             {
 				Color pathPointColor = config.pointMatchPathColor() ? path.color : config.pathLinePointColor();
 				Color pathPointFillColor = getTileFillColor(pathPointColor);
 
+				int lastDrawIndex = -1;
+
                 for (int i = 0; i < drawOrder.size(); i++)
 				{
 					PathPoint point = drawOrder.get(i);
-					WorldPoint wp = toLocalInstance(point.getWorldPoint(), loadedRegions);
-					WorldView wv;
-					if (wp == null)
-					{
-						wp = point.getWorldPoint();
-						wv = client.getTopLevelWorldView();
-					}
-					else
-						wv = client.getLocalPlayer().getWorldView();
 
-                    LocalPoint localP = LocalPoint.fromWorld(wv, wp);//pathPointToLocal(wv, point);
+					WorldPoint wp = toLocalInstance(point.getWorldPoint(), loadedRegions);
+					WorldView wv = wp == null ? client.getTopLevelWorldView() : client.getLocalPlayer().getWorldView();
+					wp = wp == null ? point.getWorldPoint() : wp;
+
+                    LocalPoint localP; //pathPointToLocal(wv, point);
                     //LocalPoint centerLocation;
                     // Draw outlines first, as this also lets us conveniently update the stored point locations
                     if(point instanceof PathPointObject)
@@ -326,19 +326,25 @@ public class PathmakerOverlay extends Overlay
 
 						drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     }
-					else if(config.drawPathPoints()) // Draw non-entity tile highlights
+					else
 					{
-						highlightTile(graphics, wv, localP, pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
+						localP = LocalPoint.fromWorld(wv, wp);//pathPointToLocal(wv, point);
+						if (localP == null) continue;
+
+						// Draw non-entity tile highlights
+						if(config.drawPathPoints())
+							highlightTile(graphics, wv, localP, pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
 						//drawLabel(graphics, wv, point, path.color);
 					}
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
-                   if ((config.drawPath()))// && pathSize > 1) && i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1)
+                   if (config.drawPath())// && (i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1) || (i == 0 && path.drawToPlayer != PathPanel.drawFromPlayerMode.NEVER.ordinal()))
 				   {
+					   boolean previousIsInScene = (lastDrawIndex == point.getDrawIndex() - 1) || path.drawToPlayer ==  PathPanel.drawFromPlayerMode.ALWAYS.ordinal();
 					   lineWVs.add(wv);
 					   line.add(localP);//drawLine(graphics, lastLocalP, localP, lastWv, wv, path.color, (float) config.pathLineWidth());
-					   boolean previousIsInScene = (i > 0 && drawOrder.get(i - 1).getDrawIndex() == point.getDrawIndex() - 1) || i == 0;
 					   drawToPrevious.add(point.drawToPrevious && previousIsInScene);
+					   lastDrawIndex = point.getDrawIndex();
 				   }
 
 					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
@@ -401,10 +407,18 @@ public class PathmakerOverlay extends Overlay
 					for (int i = 0; i < line.size(); i++)
 					{
 						LocalPoint lp = line.get(i);
-						if (lp == null) continue;
+						if (lp == null)
+						{
+							log.debug("LocalPoint index: {}, is null so can't be used as PathPoint", i);
+							continue;
+						}
 
 						Tile tile = plugin.getTile(wv, lp.getSceneX(), lp.getSceneY());
-						if (tile == null) continue;
+						if (tile == null)
+						{
+							log.debug("Tile is null so can't be used as PathPoint");
+							continue;
+						}
 
 						int[] tileX = new int[4];
 						tileX[0] = lp.getX() - LOCAL_HALF_TILE_SIZE;
