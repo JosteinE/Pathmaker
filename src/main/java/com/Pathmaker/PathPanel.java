@@ -72,6 +72,7 @@ public class PathPanel extends JPanel
 
     private final JPanel pathContainer = new JPanel();
     private final JButton label = new JButton();
+	private final JPanel labelPanel;
 
     private final int ICON_WIDTH = 18;
 
@@ -108,7 +109,7 @@ public class PathPanel extends JPanel
         this.path = plugin.getStoredPaths().get(pathLabel);
 		pathContainer.setLayout(new BoxLayout(pathContainer, BoxLayout.Y_AXIS));
 
-        JPanel labelPanel = new JPanel(new BorderLayout());
+        labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         label.setText(pathLabel);
@@ -383,6 +384,11 @@ public class PathPanel extends JPanel
     {
         return label;
     }
+
+	JPanel getLabelPanel()
+	{
+		return labelPanel;
+	}
 
 	ImageIcon getPathDrawOffsetIcon(PathmakerPath path)
 	{

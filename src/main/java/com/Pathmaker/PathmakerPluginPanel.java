@@ -2,53 +2,39 @@ package com.Pathmaker;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.ComponentOrientation;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JLayer;
-import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import lombok.Getter;
+import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
 import net.runelite.client.util.ImageUtil;
-import com.google.gson.reflect.TypeToken;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
-import java.util.HashMap;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.AbstractDocument;
 
@@ -296,15 +282,13 @@ public class PathmakerPluginPanel extends PluginPanel
 			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
 			{
 				@Override
-				public void mousePressed(MouseEvent e)
-				{
-				}
+				public void mousePressed(MouseEvent e) {}
 
 				@Override
 				public void mouseReleased(MouseEvent e)
 				{
-					pathEntry.getPathLabel().setBackground(new Color(30, 30, 30));
-					pathEntry.getPathLabel().repaint();
+					pathEntry.setBorder(BorderFactory.createEmptyBorder());
+					pathEntry.repaint();
 
 					int targetIndex = getHoveredPathIndex(e);
 
@@ -334,29 +318,28 @@ public class PathmakerPluginPanel extends PluginPanel
 			pathEntry.getPathLabel().addMouseMotionListener(new MouseMotionListener()
 			{
 				@Override
-				public void mouseMoved(MouseEvent e)
-				{
-				}
+				public void mouseMoved(MouseEvent e) {}
 
 				@Override
 				public void mouseDragged(MouseEvent e)
 				{
-					// Reset button colours
-					Color defaultColor = new Color(30, 30, 30);
+					// Reset border
 					for (int i = 0; i < pathView.getComponentCount(); i++)
-						((PathPanel) pathView.getComponents()[i]).getPathLabel().setBackground(defaultColor);
-
+					{
+						PathPanel pathPanel = ((PathPanel) pathView.getComponents()[i]);
+						pathPanel.setBorder(BorderFactory.createEmptyBorder());
+					}
 					// Set the dragged colour
-					pathEntry.getPathLabel().setBackground(Color.RED);
+					setPanelInnerBorderColor(pathEntry, Color.RED);
 					pathView.repaint();
 
 					int targetIndex = getHoveredPathIndex(e);
 					if (targetIndex == -1 || targetIndex == entryIndex) return;
 
 					// Set the hovered path color
-					JButton labelButton = ((PathPanel) pathView.getComponent(getHoveredPathIndex(e))).getPathLabel();
-					labelButton.setBackground(Color.GREEN);
-					labelButton.repaint();
+					PathPanel pathPanel = ((PathPanel) pathView.getComponent(getHoveredPathIndex(e)));
+					setPanelInnerBorderColor(pathPanel, Color.GREEN);
+					pathPanel.repaint();
 				}
 			});
 
@@ -369,6 +352,14 @@ public class PathmakerPluginPanel extends PluginPanel
         repaint();
         revalidate();
     }
+
+	void setPanelInnerBorderColor(JPanel pathPanel, Color color)
+	{
+		Border outerBorder, innerBorder;
+		outerBorder = BorderFactory.createEmptyBorder();
+		innerBorder = BorderFactory.createLineBorder(color, 2);
+		pathPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+	}
 
 	int getHoveredPathIndex(MouseEvent e)
 	{
