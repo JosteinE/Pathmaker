@@ -299,6 +299,7 @@ public class PathmakerPluginPanel extends PluginPanel
 					if (targetIndex == -1 || targetIndex == entryIndex)
 						return;
 
+					// Correct target index for gaps
 					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
 					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
 					if (mouseOnBorder == 1 && targetIndex > entryIndex)
