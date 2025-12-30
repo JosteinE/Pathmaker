@@ -27,10 +27,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.Nullable;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -77,9 +79,13 @@ public class PathmakerPluginPanel extends PluginPanel
 	{
 		FlatTextField groupTextField = new FlatTextField();
 		JPanel memberPanel = new JPanel();
+		int viewPanelIndex;
 
-		PathGroup(PathPanel firstPathEntry, String groupName)
+		PathGroup(PathPanel firstPathEntry, String groupName, int viewPanelIndex)
 		{
+			JPanel groupPanel = this;
+			this.viewPanelIndex = viewPanelIndex;
+
 			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 			setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 			setBackground(Color.BLUE);
@@ -87,14 +93,11 @@ public class PathmakerPluginPanel extends PluginPanel
 			groupTextField.setText(groupName);
 			groupTextField.getTextField().setEnabled(false);
 			groupTextField.setBackground(Color.BLUE);
-			groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
-			{
-				@Override
-				public void mouseDragged(MouseEvent e)
-				{
-					onMouseDragged(e, (JPanel) groupTextField.getParent());
-				}
-			});
+
+			// Add drag and drop
+			groupTextField.getTextField().addMouseMotionListener(dragAdapter(groupPanel, true));
+			groupTextField.getTextField().addMouseListener(dropAdapter(groupPanel, viewPanelIndex, null));
+
 			groupTextField.getTextField().addFocusListener(new FocusAdapter()
 			{
 				@Override
@@ -372,113 +375,8 @@ public class PathmakerPluginPanel extends PluginPanel
 				activePath.setText(pathEntry.getPathLabel().getText());
 			});
 
-			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mousePressed(MouseEvent e) {}
-
-				@Override
-				public void mouseReleased(MouseEvent e)
-				{
-					pathEntry.setBorder(BorderFactory.createEmptyBorder());
-					pathEntry.repaint();
-
-					int targetIndex = getHoveredPathIndex(e);
-
-					if (targetIndex == -1 || targetIndex == entryIndex)
-						return;
-
-					// Correct target index for gaps
-					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
-					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
-
-					// Add group if hovering another path
-					if (mouseOnBorder == 0)
-					{
-						PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
-
-						if (targetPanel instanceof PathPanel)
-						{
-							String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
-							PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
-
-							// create new group
-							if (targetPath.pathGroup == null)
-							{
-								String newGroupName = "group 1";
-								if (!pathGroups.isEmpty())
-								{
-									int num = 1;
-									while (pathGroups.containsKey(newGroupName))
-									{
-										num++;
-										newGroupName = "group " + num;
-									}
-								}
-								targetPath.pathGroup = newGroupName;
-								draggedPath.pathGroup = newGroupName;
-							}
-							else
-								draggedPath.pathGroup = targetPath.pathGroup;
-						}
-						else
-							draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
-
-						plugin.rebuildPanel(true);
-						return;
-					}
-
-					if (mouseOnBorder == 1 && targetIndex > entryIndex)
-						targetIndex -= 1;
-					else if (mouseOnBorder == -1 && targetIndex < entryIndex)
-						targetIndex += 1;
-
-
-					// Erase old group if it has 1 member left
-					LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-					String oldGroup = storedPaths.get(pathLabel).pathGroup;
-					if(oldGroup != null)
-					{
-						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-						if (memberPanel.getComponentCount() == 2)
-						{
-							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
-							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
-						}
-						else
-							storedPaths.get(pathLabel).pathGroup = null;
-					}
-
-					// Create new LinkedHashMap to replace the old plugin.paths map
-					ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
-					Map.Entry<String, PathmakerPath> movedPath = paths.remove(entryIndex);
-
-					paths.add(targetIndex, movedPath);
-
-					// Reorder paths
-					storedPaths.clear();
-					for (Map.Entry<String, PathmakerPath> path : paths)
-					{
-						storedPaths.put(path.getKey(), path.getValue());
-					}
-
-					plugin.rebuildPanel(true);
-				}
-			});
-
-			pathEntry.getPathLabel().addMouseMotionListener(new MouseMotionListener()
-			{
-				@Override
-				public void mouseMoved(MouseEvent e)
-				{
-				}
-
-				@Override
-				public void mouseDragged(MouseEvent e)
-				{
-					onMouseDragged(e, pathEntry);
-				}
-			});
+			pathEntry.getPathLabel().addMouseListener(dropAdapter(pathEntry, entryIndex, pathLabel));
+			pathEntry.getPathLabel().addMouseMotionListener(dragAdapter(pathEntry, false));
 
 			String groupName = plugin.getStoredPaths().get(pathLabel).pathGroup;
 			if (groupName == null)
@@ -493,7 +391,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				}
 				else
 				{
-					PathGroup group = new PathGroup(pathEntry, groupName);
+					PathGroup group = new PathGroup(pathEntry, groupName, entryIndex);
 
 					pathGroups.put(groupName, group);
 					pathView.add(group);
@@ -510,7 +408,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 	// ------------- Helpers -------------
 
-	void setPanelInnerBorderColor(JPanel pathPanel, Color color)
+	void setPanelInnerBorderColor(JComponent pathPanel, Color color)
 	{
 		Border outerBorder, innerBorder;
 		outerBorder = BorderFactory.createEmptyBorder();
@@ -538,36 +436,34 @@ public class PathmakerPluginPanel extends PluginPanel
 	}
 
 	// 1 = top, -1 = bottom, 0 = false
-	int isMouseHoveringPathBorder(MouseEvent e, JPanel targetPanel, int margin)
+	int isMouseHoveringPathBorder(MouseEvent e, JPanel listPanel, JPanel targetPanel)
 	{
-		int entryPosY = (int) (e.getYOnScreen() - pathView.getLocationOnScreen().getY());
+		int entryPosY = (int) (e.getYOnScreen() - listPanel.getLocationOnScreen().getY());
 		int minY = (int) targetPanel.getBounds().getMinY();
 		int maxY = (int) targetPanel.getBounds().getMaxY();
 
-		if (entryPosY < minY + margin) return 1;
-		if (entryPosY > maxY - margin) return -1;
+		if (entryPosY < minY + DRAG_DROP_Y_MARGIN) return 1;
+		if (entryPosY > maxY - DRAG_DROP_Y_MARGIN) return -1;
 		return 0;
 	}
 
-	int getHoveredPathIndex(MouseEvent e)
+	int getHoveredPathIndex(MouseEvent e, JPanel listPanel)
 	{
-		int entryPosY = (int) (e.getYOnScreen() - pathView.getLocationOnScreen().getY());
+		int hoverY = (int) (e.getYOnScreen() - listPanel.getLocationOnScreen().getY());
 
-		if (entryPosY < pathView.getComponent(0).getBounds().getMinY())
+		// If the mouse Y position is above or below the panel, then return the first or last index
+		if (hoverY < listPanel.getComponent(0).getBounds().getMinY())
 			return 0;
-		if (entryPosY > pathView.getComponent(pathView.getComponentCount() - 1).getBounds().getMaxY())
-			return pathView.getComponentCount() - 1;
+		if (hoverY > listPanel.getComponent(listPanel.getComponentCount() - 1).getBounds().getMaxY())
+			return listPanel.getComponentCount() - 1;
 
-		Component[] otherComps = pathView.getComponents();
-
-		for (int i = 0; i < otherComps.length; i++)
+		for (int i = 0; i < listPanel.getComponentCount(); i++)
 		{
-			Component comp = otherComps[i];
-
+			Component comp = listPanel.getComponent(i);
 			int minY = (int) comp.getBounds().getMinY();
 			int maxY = (int) comp.getBounds().getMaxY();
 
-			if (entryPosY >= minY && entryPosY < maxY)
+			if(isMouseHoveringPath(hoverY, minY, maxY))
 			{
 				return i;
 			}
@@ -575,44 +471,277 @@ public class PathmakerPluginPanel extends PluginPanel
 		return -1;
 	}
 
-	void onMouseDragged(MouseEvent e, JPanel panel)
+	// Returns the actual path index, also counting grouped paths.
+	// If viewIndex is a group, then the true index is trueIndex + comp index
+	int getTrueIndexInView(int viewIndex)
 	{
-		int panelIndex = -1;
-
-		// Reset borders
+		int trueIndex = 0;
 		for (int i = 0; i < pathView.getComponentCount(); i++)
 		{
-			if (!(pathView.getComponents()[i] instanceof PathPanel)) continue;
-			PathPanel pathPanel = ((PathPanel) pathView.getComponents()[i]);
-			pathPanel.setBorder(BorderFactory.createEmptyBorder());
+			Component comp = pathView.getComponent(i);
 
-			if (pathPanel == panel)
-				panelIndex = i;
+			if(i == viewIndex)
+			{
+				return trueIndex;
+			}
+
+			if (comp instanceof PathGroup)
+			{
+				trueIndex += ((PathGroup)comp).getPathPanelCount();
+			}
+			else
+			{
+				trueIndex++;
+			}
 		}
-		// Set the dragged colour
-		setPanelInnerBorderColor(panel, Color.RED);
-		pathView.repaint();
+		return trueIndex;
+	}
 
-		int targetIndex = getHoveredPathIndex(e);
-		if (targetIndex == -1 || targetIndex == panelIndex) return;
+	boolean isMouseHoveringPath(int mouseY, int panelMinY, int panelMaxY)
+	{
+		return mouseY >= panelMinY && mouseY < panelMaxY;
+	}
 
-		// Is mouse on the path border?
-		JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
-		int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
+	boolean isIndexValidDropTarget(int index, int targetIndex)
+	{
+		return index != -1 && index != targetIndex;
+	}
 
-		// Set the hovered path color
-		if (mouseOnBorder == 1)
+	JPanel getHoveredPathPanel(JPanel listPanel, int index)
+	{
+		return (JPanel) listPanel.getComponent(index);
+	}
+
+	private MouseMotionAdapter dragAdapter(JComponent panel, boolean isGroupPanel)
+	{
+		return new MouseMotionAdapter()
 		{
-			JPanel topPanel = targetIndex > 0 ? (JPanel) pathView.getComponent(targetIndex - 1) : null;
-			createGapBorders(topPanel, targetPanel, Color.GREEN);
+			@Override
+			public void mouseDragged(MouseEvent e)
+			{
+				super.mouseDragged(e);
+				int panelIndex = -1;
+				int pathCounter = 0;
+				// Reset borders and find panelIndex
+				for (int i = 0; i < pathView.getComponentCount(); i++)
+				{
+					JPanel p = ((JPanel) pathView.getComponents()[i]);
+					p.setBorder(BorderFactory.createEmptyBorder());
+
+					if (p == panel)
+					{
+						panelIndex = pathCounter;
+					}
+					else if (p instanceof PathGroup)
+					{
+						int groupedPathCount = ((PathGroup) p).getPathPanelCount();
+						for (int ii = 0; ii < groupedPathCount; ii++)
+						{
+							if (((PathGroup) p).getPathPanel(ii) == panel)
+							{
+								panelIndex = pathCounter;
+							}
+						}
+						pathCounter += groupedPathCount;
+					}
+					else
+						pathCounter++;
+				}
+
+				// Set the dragged colour
+				setPanelInnerBorderColor(panel, Color.RED);
+				pathView.repaint();
+
+				int targetIndex = getHoveredPathIndex(e, pathView);
+				log.debug("panelIndex: " + panelIndex + " targetIndex: " + targetIndex);
+				if (!isIndexValidDropTarget(panelIndex, targetIndex)) return;
+
+				// Is mouse on the path border?
+				JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
+				int mouseOnBorder = isMouseHoveringPathBorder(e, pathView, targetPanel);
+
+				// Set the hovered path color
+				if (mouseOnBorder == 1)
+				{
+					JPanel topPanel = targetIndex > 0 ? (JPanel) pathView.getComponent(targetIndex - 1) : null;
+					createGapBorders(topPanel, targetPanel, Color.GREEN);
+				}
+				else if (mouseOnBorder == -1)
+				{
+					JPanel bottomPanel = targetIndex < pathView.getComponentCount() - 1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
+					createGapBorders(targetPanel, bottomPanel, Color.GREEN);
+				}
+				// Not allowing group placement directly on other pathView Entries.
+				else if (!isGroupPanel)
+					setPanelInnerBorderColor(targetPanel, Color.GREEN);
+				targetPanel.repaint();
+			}
+		};
+	}
+
+	private MouseAdapter dropAdapter(JComponent panel, int pathViewIndex, @Nullable String pathLabel)
+	{
+		return new MouseAdapter()
+		{
+			@Override
+			public void mouseReleased(MouseEvent e)
+			{
+				panel.setBorder(BorderFactory.createEmptyBorder());
+				panel.repaint();
+
+				int targetIndex = getHoveredPathIndex(e, pathView);
+				JPanel targetPanel = getHoveredPathPanel(pathView, targetIndex);
+
+				int mouseOnBorder = isMouseHoveringPathBorder(e, pathView, targetPanel);
+
+				// Add group if hovering another path
+				if (mouseOnBorder == 0)
+				{
+
+					// Panel is a PathGroup if pathLabel == null
+					if (pathLabel == null)
+						return;
+					else
+					{
+						PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
+
+						if (targetPanel instanceof PathPanel)
+						{
+							String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
+							PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
+
+							// create new group
+							if (targetPath.pathGroup == null)
+							{
+								String newGroupName = "group 1";
+								if (!pathGroups.isEmpty())
+								{
+									int num = 1;
+									while (pathGroups.containsKey(newGroupName))
+									{
+										num++;
+										newGroupName = "group " + num;
+									}
+								}
+								targetPath.pathGroup = newGroupName;
+								draggedPath.pathGroup = newGroupName;
+							}
+							else
+								draggedPath.pathGroup = targetPath.pathGroup;
+						}
+						else // Target panel is PathGroup
+						{
+							// Find appropriate index within group
+							draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
+						}
+					}
+
+					plugin.rebuildPanel(true);
+					return;
+				}
+
+				// Correct target index for specific gap scenarios
+				if (mouseOnBorder == 1 && targetIndex > pathViewIndex)
+					targetIndex -= 1;
+				else if (mouseOnBorder == -1 && targetIndex < pathViewIndex)
+					targetIndex += 1;
+
+				LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
+
+				// Erase old group if it has 1 member left
+				if (pathLabel != null)
+				{
+					String oldGroup = storedPaths.get(pathLabel).pathGroup;
+					if (oldGroup != null)
+					{
+						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
+						if (memberPanel.getComponentCount() == 2)
+						{
+							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
+							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
+						}
+						else
+							storedPaths.get(pathLabel).pathGroup = null;
+					}
+				}
+
+				// Create new LinkedHashMap to replace the old plugin.paths map
+				ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
+
+				if (pathLabel != null)
+				{
+					Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
+					paths.add(targetIndex, movedPath);
+				}
+				else
+				{
+					for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
+					{
+						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
+						paths.add(targetIndex, movedGroupedPath);
+					}
+				}
+
+				// Reorder paths
+				storedPaths.clear();
+				for (Map.Entry<String, PathmakerPath> path : paths)
+				{
+					storedPaths.put(path.getKey(), path.getValue());
+				}
+
+				plugin.rebuildPanel(true);
+			}
+		};
+	}
+
+	void rearrangePaths(ArrayList<Integer> oldPathIndices, ArrayList<Integer> newPathIndices)
+	{
+		if (oldPathIndices.size() != newPathIndices.size())
+		{
+			log.debug("Did not provide an equal amount of indices for path rearrangement.");
+		};
+
+		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
+
+		// REPLACE: CHECK INSTEAD WHILE ITERATING IF TWO PATHS NEXT TO EACH OTHER ARE IN THE SAME GROUP
+		if (pathLabel != null)
+		{
+			String oldGroup = storedPaths.get(pathLabel).pathGroup;
+			if (oldGroup != null)
+			{
+				JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
+				if (memberPanel.getComponentCount() == 2)
+				{
+					storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
+					storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
+				}
+				else
+					storedPaths.get(pathLabel).pathGroup = null;
+			}
 		}
-		else if (mouseOnBorder == -1)
+
+		// Create new LinkedHashMap to replace the old plugin.paths map
+		ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
+
+		if (pathLabel != null)
 		{
-			JPanel bottomPanel = targetIndex < pathView.getComponentCount() - 1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
-			createGapBorders(targetPanel, bottomPanel, Color.GREEN);
+			Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
+			paths.add(targetIndex, movedPath);
 		}
 		else
-			setPanelInnerBorderColor(targetPanel, Color.GREEN);
-		targetPanel.repaint();
+		{
+			for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
+			{
+				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
+				paths.add(targetIndex, movedGroupedPath);
+			}
+		}
+
+		// Reorder paths
+		storedPaths.clear();
+		for (Map.Entry<String, PathmakerPath> path : paths)
+		{
+			storedPaths.put(path.getKey(), path.getValue());
+		}
 	}
 }
