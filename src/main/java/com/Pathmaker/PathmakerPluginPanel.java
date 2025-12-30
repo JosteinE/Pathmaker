@@ -12,7 +12,16 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -70,17 +79,62 @@ public class PathmakerPluginPanel extends PluginPanel
 		PathGroup(PathPanel firstPathEntry, String groupName)
 		{
 			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-			setBorder(BorderFactory.createEmptyBorder(0, 1, 1, 1));
+			setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 			setBackground(Color.BLUE);
 
 			groupTextField.setText(groupName);
-			add(groupTextField);
-			groupTextField.setBackground(Color.BLUE);
+			groupTextField.getTextField().addFocusListener(new FocusAdapter()
+			{
+				@Override
+				public void focusLost(FocusEvent e)
+				{
+					finalizeEditing();
+				}
+			});
+			groupTextField.getTextField().addMouseListener(new MouseAdapter()
+			{
+				@Override
+				public void mouseClicked(MouseEvent e)
+				{
+					super.mouseClicked(e);
+					groupTextField.setEditable(true);
+					groupTextField.requestFocusInWindow();
+					groupTextField.getTextField().selectAll();
+					groupTextField.setBackground(Color.DARK_GRAY);
+				}
 
+				@Override
+				public void mouseDragged(MouseEvent e)
+				{
+					super.mouseDragged(e);
+					// onMouseDragged()
+				}
+			});
+			groupTextField.getTextField().addKeyListener(new KeyAdapter()
+			{
+				@Override
+				public void keyPressed(KeyEvent e)
+				{
+					super.keyPressed(e);
+					if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_ESCAPE)
+					{
+						finalizeEditing();
+					}
+				}
+			});
+			groupTextField.setBackground(Color.BLUE);
+			add(groupTextField);
+			groupTextField.setEditable(false);
 			memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
 			memberPanel.setBackground(Color.BLUE);
 			memberPanel.add(firstPathEntry);
 			add(memberPanel);
+		}
+
+		private void finalizeEditing()
+		{
+			groupTextField.setEditable(false);
+			groupTextField.setBackground(Color.BLUE);
 		}
 
 		void addPathPanel(PathPanel panel)
