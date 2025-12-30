@@ -19,6 +19,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseMotionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -71,6 +72,7 @@ public class PathmakerPluginPanel extends PluginPanel
 		EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
 	}
 
+	// Inner PathGroup Class
 	class PathGroup extends JPanel
 	{
 		FlatTextField groupTextField = new FlatTextField();
@@ -83,6 +85,16 @@ public class PathmakerPluginPanel extends PluginPanel
 			setBackground(Color.BLUE);
 
 			groupTextField.setText(groupName);
+			groupTextField.getTextField().setEnabled(false);
+			groupTextField.setBackground(Color.BLUE);
+			groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
+			{
+				@Override
+				public void mouseDragged(MouseEvent e)
+				{
+					onMouseDragged(e, (JPanel) groupTextField.getParent());
+				}
+			});
 			groupTextField.getTextField().addFocusListener(new FocusAdapter()
 			{
 				@Override
@@ -97,17 +109,10 @@ public class PathmakerPluginPanel extends PluginPanel
 				public void mouseClicked(MouseEvent e)
 				{
 					super.mouseClicked(e);
-					groupTextField.setEditable(true);
+					groupTextField.getTextField().setEnabled(true);
 					groupTextField.requestFocusInWindow();
 					groupTextField.getTextField().selectAll();
 					groupTextField.setBackground(Color.DARK_GRAY);
-				}
-
-				@Override
-				public void mouseDragged(MouseEvent e)
-				{
-					super.mouseDragged(e);
-					// onMouseDragged()
 				}
 			});
 			groupTextField.getTextField().addKeyListener(new KeyAdapter()
@@ -122,9 +127,8 @@ public class PathmakerPluginPanel extends PluginPanel
 					}
 				}
 			});
-			groupTextField.setBackground(Color.BLUE);
 			add(groupTextField);
-			groupTextField.setEditable(false);
+
 			memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
 			memberPanel.setBackground(Color.BLUE);
 			memberPanel.add(firstPathEntry);
@@ -133,7 +137,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 		private void finalizeEditing()
 		{
-			groupTextField.setEditable(false);
+			groupTextField.getTextField().setEnabled(false);
 			groupTextField.setBackground(Color.BLUE);
 		}
 
@@ -436,7 +440,6 @@ public class PathmakerPluginPanel extends PluginPanel
 					if(oldGroup != null)
 					{
 						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-						log.debug("memberPanelComponentCount: " + memberPanel.getComponentCount());
 						if (memberPanel.getComponentCount() == 2)
 						{
 							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
@@ -473,38 +476,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				@Override
 				public void mouseDragged(MouseEvent e)
 				{
-					// Reset border
-					for (int i = 0; i < pathView.getComponentCount(); i++)
-					{
-						if (!(pathView.getComponents()[i] instanceof PathPanel)) continue;
-						PathPanel pathPanel = ((PathPanel) pathView.getComponents()[i]);
-						pathPanel.setBorder(BorderFactory.createEmptyBorder());
-					}
-					// Set the dragged colour
-					setPanelInnerBorderColor(pathEntry, Color.RED);
-					pathView.repaint();
-
-					int targetIndex = getHoveredPathIndex(e);
-					if (targetIndex == -1 || targetIndex == entryIndex) return;
-
-					// Is mouse on the path border?
-					JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
-					int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
-
-					// Set the hovered path color
-					if (mouseOnBorder == 1)
-					{
-						JPanel topPanel = targetIndex > 0 ? (JPanel) pathView.getComponent(targetIndex - 1) : null;
-						createGapBorders(topPanel, targetPanel, Color.GREEN);
-					}
-					else if (mouseOnBorder == -1)
-					{
-						JPanel bottomPanel = targetIndex < pathView.getComponentCount() - 1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
-						createGapBorders(targetPanel, bottomPanel, Color.GREEN);
-					}
-					else
-						setPanelInnerBorderColor(targetPanel, Color.GREEN);
-					targetPanel.repaint();
+					onMouseDragged(e, pathEntry);
 				}
 			});
 
@@ -522,6 +494,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				else
 				{
 					PathGroup group = new PathGroup(pathEntry, groupName);
+
 					pathGroups.put(groupName, group);
 					pathView.add(group);
 				}
@@ -600,5 +573,46 @@ public class PathmakerPluginPanel extends PluginPanel
 			}
 		}
 		return -1;
+	}
+
+	void onMouseDragged(MouseEvent e, JPanel panel)
+	{
+		int panelIndex = -1;
+
+		// Reset borders
+		for (int i = 0; i < pathView.getComponentCount(); i++)
+		{
+			if (!(pathView.getComponents()[i] instanceof PathPanel)) continue;
+			PathPanel pathPanel = ((PathPanel) pathView.getComponents()[i]);
+			pathPanel.setBorder(BorderFactory.createEmptyBorder());
+
+			if (pathPanel == panel)
+				panelIndex = i;
+		}
+		// Set the dragged colour
+		setPanelInnerBorderColor(panel, Color.RED);
+		pathView.repaint();
+
+		int targetIndex = getHoveredPathIndex(e);
+		if (targetIndex == -1 || targetIndex == panelIndex) return;
+
+		// Is mouse on the path border?
+		JPanel targetPanel = (JPanel) pathView.getComponent(targetIndex);
+		int mouseOnBorder = isMouseHoveringPathBorder(e, targetPanel, DRAG_DROP_Y_MARGIN);
+
+		// Set the hovered path color
+		if (mouseOnBorder == 1)
+		{
+			JPanel topPanel = targetIndex > 0 ? (JPanel) pathView.getComponent(targetIndex - 1) : null;
+			createGapBorders(topPanel, targetPanel, Color.GREEN);
+		}
+		else if (mouseOnBorder == -1)
+		{
+			JPanel bottomPanel = targetIndex < pathView.getComponentCount() - 1 ? (JPanel) pathView.getComponent(targetIndex + 1) : null;
+			createGapBorders(targetPanel, bottomPanel, Color.GREEN);
+		}
+		else
+			setPanelInnerBorderColor(targetPanel, Color.GREEN);
+		targetPanel.repaint();
 	}
 }
