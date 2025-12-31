@@ -82,6 +82,7 @@ public class PathmakerPluginPanel extends PluginPanel
 		FlatTextField groupTextField = new FlatTextField();
 		JPanel memberPanel = new JPanel();
 		int viewPanelIndex;
+		boolean beingDragged = false;
 
 		PathGroup(PathPanel firstPathEntry, String groupName, int viewPanelIndex)
 		{
@@ -96,14 +97,8 @@ public class PathmakerPluginPanel extends PluginPanel
 			groupTextField.getTextField().setEnabled(false);
 			groupTextField.setBackground(Color.BLUE);
 
-			groupTextField.getTextField().addFocusListener(new FocusAdapter()
-			{
-				@Override
-				public void focusLost(FocusEvent e)
-				{
-					finalizeEditing();
-				}
-			});
+			// Add drag and drop adapters, but also extra logic to allow for renaming on click.
+			MouseAdapter dropAdapter = dropAdapter(groupPanel, viewPanelIndex, null);
 			groupTextField.getTextField().addMouseListener(new MouseAdapter()
 			{
 				@Override
@@ -115,6 +110,39 @@ public class PathmakerPluginPanel extends PluginPanel
 					groupTextField.requestFocusInWindow();
 					groupTextField.getTextField().selectAll();
 					groupTextField.setBackground(Color.DARK_GRAY);
+					beingDragged = false;
+				}
+
+				@Override
+				public void mouseReleased(MouseEvent e)
+				{
+					super.mouseReleased(e);
+					if(beingDragged) // need to do this, otherwise mouseClicked doesn't get called
+					{
+						dropAdapter.mouseReleased(e);
+						beingDragged = false;
+					}
+				}
+			});
+			MouseMotionAdapter dragAdapter = dragAdapter(groupPanel, true);
+			groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
+			{
+				@Override
+				public void mouseDragged(MouseEvent e)
+				{
+					super.mouseDragged(e);
+					beingDragged = true;
+					dragAdapter.mouseDragged(e);
+				}
+			});
+			
+			groupTextField.getTextField().addFocusListener(new FocusAdapter()
+			{
+				@Override
+				public void focusLost(FocusEvent e)
+				{
+					beingDragged = false;
+					finalizeEditing();
 				}
 			});
 			groupTextField.getTextField().addKeyListener(new KeyAdapter()
@@ -129,10 +157,6 @@ public class PathmakerPluginPanel extends PluginPanel
 					}
 				}
 			});
-
-			// Add drag and drop
-			groupTextField.getTextField().addMouseListener(dropAdapter(groupPanel, viewPanelIndex, null));
-			groupTextField.getTextField().addMouseMotionListener(dragAdapter(groupPanel, true));
 			add(groupTextField);
 
 			memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
@@ -604,7 +628,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				pathView.repaint();
 
 				int targetIndex = getHoveredPathIndex(e, pathView);
-				log.debug("panelIndex: " + panelIndex + " targetIndex: " + targetIndex);
+				//log.debug("panelIndex: " + panelIndex + " targetIndex: " + targetIndex);
 				if (!isIndexValidDropTarget(panelIndex, targetIndex)) return;
 
 				// Is mouse on the path border?
