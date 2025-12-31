@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -59,7 +60,8 @@ public class PathmakerPluginPanel extends PluginPanel
 
 	private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
 	private final JPanel pathView = new JPanel();
-	HashMap<String, PathGroup> pathGroups = new HashMap<>();
+	private ArrayList<String> groupNames = new ArrayList<>();
+	//HashMap<String, PathGroup> pathGroups = new HashMap<>();
 
 	Client client;
 	PathmakerPlugin plugin;
@@ -94,10 +96,6 @@ public class PathmakerPluginPanel extends PluginPanel
 			groupTextField.getTextField().setEnabled(false);
 			groupTextField.setBackground(Color.BLUE);
 
-			// Add drag and drop
-			groupTextField.getTextField().addMouseMotionListener(dragAdapter(groupPanel, true));
-			groupTextField.getTextField().addMouseListener(dropAdapter(groupPanel, viewPanelIndex, null));
-
 			groupTextField.getTextField().addFocusListener(new FocusAdapter()
 			{
 				@Override
@@ -112,6 +110,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				public void mouseClicked(MouseEvent e)
 				{
 					super.mouseClicked(e);
+					log.debug("mouse clicked");
 					groupTextField.getTextField().setEnabled(true);
 					groupTextField.requestFocusInWindow();
 					groupTextField.getTextField().selectAll();
@@ -130,6 +129,10 @@ public class PathmakerPluginPanel extends PluginPanel
 					}
 				}
 			});
+
+			// Add drag and drop
+			groupTextField.getTextField().addMouseListener(dropAdapter(groupPanel, viewPanelIndex, null));
+			groupTextField.getTextField().addMouseMotionListener(dragAdapter(groupPanel, true));
 			add(groupTextField);
 
 			memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
@@ -360,13 +363,14 @@ public class PathmakerPluginPanel extends PluginPanel
 	void rebuild()
 	{
 		pathView.removeAll();
-		pathGroups.clear();
+		groupNames.clear();
 
-		for (final String pathLabel : plugin.getStoredPaths().keySet())
+
+		ArrayList<String> pathKeys = new ArrayList<>(plugin.getStoredPaths().keySet());
+		String validGroup = null;
+		for (int i = 0;  i < pathKeys.size(); i++)
 		{
-			// Create new path entry
-			int entryIndex = pathView.getComponentCount();
-
+			String pathLabel = pathKeys.get(i);
 			PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
 			// Set as active path on label click
@@ -375,26 +379,45 @@ public class PathmakerPluginPanel extends PluginPanel
 				activePath.setText(pathEntry.getPathLabel().getText());
 			});
 
-			pathEntry.getPathLabel().addMouseListener(dropAdapter(pathEntry, entryIndex, pathLabel));
+			// NOTE: Sending in pathView.getComponentCount() as index. Might be bad if you want to pull elements out of groups
+			pathEntry.getPathLabel().addMouseListener(dropAdapter(pathEntry, pathView.getComponentCount(), pathLabel));
+
+
 			pathEntry.getPathLabel().addMouseMotionListener(dragAdapter(pathEntry, false));
 
 			String groupName = plugin.getStoredPaths().get(pathLabel).pathGroup;
+
 			if (groupName == null)
 			{
+				validGroup = null;
 				pathView.add(pathEntry);
 			}
 			else
 			{
-				if (pathGroups.containsKey(groupName))
+				// Validate a group on first occurrence, by comparing it to the following path's group
+				// If they're equal, then the group is valid.
+				if (validGroup == null || !validGroup.equals(groupName))
 				{
-					pathGroups.get(groupName).addPathPanel(pathEntry);
-				}
-				else
-				{
-					PathGroup group = new PathGroup(pathEntry, groupName, entryIndex);
+					validGroup = null;
 
-					pathGroups.put(groupName, group);
-					pathView.add(group);
+					// Group is invalid
+					if (i == pathKeys.size() - 1 ||
+						!groupName.equals(plugin.getStoredPaths().get(pathKeys.get(i+1)).pathGroup))
+					{
+						plugin.getStoredPaths().get(pathLabel).pathGroup = null;
+						pathView.add(pathEntry);
+					}
+					else // Group is valid, create it
+					{
+						validGroup = groupName;
+						PathGroup group = new PathGroup(pathEntry, groupName, i);
+						groupNames.add(groupName);
+						pathView.add(group);
+					}
+				}
+				else // Last component is a valid group which this path belongs to
+				{
+					((PathGroup) pathView.getComponent(pathView.getComponentCount()-1)).addPathPanel(pathEntry);
 				}
 			}
 		}
@@ -504,7 +527,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 	boolean isIndexValidDropTarget(int index, int targetIndex)
 	{
-		return index != -1 && index != targetIndex;
+		return targetIndex != -1 && index != targetIndex;
 	}
 
 	JPanel getHoveredPathPanel(JPanel listPanel, int index)
@@ -589,12 +612,13 @@ public class PathmakerPluginPanel extends PluginPanel
 				panel.setBorder(BorderFactory.createEmptyBorder());
 				panel.repaint();
 
+				int truePathIndex = getTrueIndexInView(pathViewIndex);
 				int targetIndex = getHoveredPathIndex(e, pathView);
 				JPanel targetPanel = getHoveredPathPanel(pathView, targetIndex);
 
 				int mouseOnBorder = isMouseHoveringPathBorder(e, pathView, targetPanel);
 
-				// Add group if hovering another path
+				// Create group if hovering another path
 				if (mouseOnBorder == 0 && pathLabel != null)
 				{
 					PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
@@ -608,10 +632,10 @@ public class PathmakerPluginPanel extends PluginPanel
 						if (targetPath.pathGroup == null)
 						{
 							String newGroupName = "group 1";
-							if (!pathGroups.isEmpty())
+							if (!groupNames.isEmpty())
 							{
 								int num = 1;
-								while (pathGroups.containsKey(newGroupName))
+								while (groupNames.contains(newGroupName))
 								{
 									num++;
 									newGroupName = "group " + num;
@@ -622,12 +646,14 @@ public class PathmakerPluginPanel extends PluginPanel
 						}
 						else
 						{
+							// Return if already in the group
+							if (targetPath.pathGroup.equals(draggedPath.pathGroup)) return;
 							draggedPath.pathGroup = targetPath.pathGroup;
 						}
 
 						// Moving target path position below target panel.
 						targetIndex = getTrueIndexInView(targetIndex);
-						targetIndex += pathViewIndex > targetIndex ? 1 : 0;
+						targetIndex += truePathIndex > targetIndex ? 1 : 0;
 
 					}
 					else // Add panel to existing group
@@ -635,39 +661,28 @@ public class PathmakerPluginPanel extends PluginPanel
 						// Set panel index to be bottom of the group
 						draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
 
-
+						log.debug("targetIndex: " + targetIndex);
 						targetIndex = getTrueIndexInView(targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
-						targetIndex -= pathViewIndex > targetIndex ? 0 : 1;
+						log.debug("trueTargetIndex: " + targetIndex);
+						targetIndex -= truePathIndex > targetIndex ? 0 : 1;
+						log.debug("finalTargetIndex: " + targetIndex);
 					}
 				}
 				// Correct target index for specific gap scenarios
-				else if (mouseOnBorder == 1 && targetIndex > pathViewIndex)
+				else if (mouseOnBorder == 1 && targetIndex > truePathIndex)
 				{
 					targetIndex = getTrueIndexInView(targetIndex -1);
 				}
-				else if (mouseOnBorder == -1 && targetIndex < pathViewIndex)
+				else if (mouseOnBorder == -1 && targetIndex < truePathIndex)
 				{
 					targetIndex = getTrueIndexInView(targetIndex + 1);
 				}
+				else
+				{
+					targetIndex = getTrueIndexInView(targetIndex);
+				}
 
 				LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-
-//				// Erase old group if it has 1 member left
-//				if (pathLabel != null)
-//				{
-//					String oldGroup = storedPaths.get(pathLabel).pathGroup;
-//					if (oldGroup != null)
-//					{
-//						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-//						if (memberPanel.getComponentCount() == 2)
-//						{
-//							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
-//							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
-//						}
-//						else
-//							storedPaths.get(pathLabel).pathGroup = null;
-//					}
-//				}
 
 				// Create new LinkedHashMap to replace the old plugin.paths map
 				ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
@@ -675,21 +690,21 @@ public class PathmakerPluginPanel extends PluginPanel
 				// Move single path
 				if (pathLabel != null)
 				{
-					Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
+					Map.Entry<String, PathmakerPath> movedPath = paths.remove(truePathIndex);
 					paths.add(targetIndex, movedPath);
 				}
 				else // Move group
 				{
 					int numPanels = ((PathGroup) panel).getPathPanelCount();
-					int start = 	pathViewIndex > targetIndex ? numPanels - 1 : 0;
-					int end = 		pathViewIndex > targetIndex ? -1 : numPanels;
-					int itValue = 	pathViewIndex > targetIndex ? -1 : 1;
+					int start = 	truePathIndex > targetIndex ? numPanels - 1 : 0;
+					int end = 		truePathIndex > targetIndex ? -1 : numPanels;
+					int itValue = 	truePathIndex > targetIndex ? -1 : 1;
 
 					log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
 
 					for (int i = start; i != end; i+= itValue)
 					{
-						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + start);
+						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(truePathIndex + start);
 						paths.add(targetIndex, movedGroupedPath);
 					}
 				}
@@ -704,56 +719,5 @@ public class PathmakerPluginPanel extends PluginPanel
 				plugin.rebuildPanel(true);
 			}
 		};
-	}
-
-	void rearrangePaths(ArrayList<Integer> oldPathIndices, ArrayList<Integer> newPathIndices)
-	{
-//		if (oldPathIndices.size() != newPathIndices.size())
-//		{
-//			log.debug("Did not provide an equal amount of indices for path rearrangement.");
-//		};
-//
-//		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-//
-//		// REPLACE: CHECK INSTEAD WHILE ITERATING IF TWO PATHS NEXT TO EACH OTHER ARE IN THE SAME GROUP
-//		if (pathLabel != null)
-//		{
-//			String oldGroup = storedPaths.get(pathLabel).pathGroup;
-//			if (oldGroup != null)
-//			{
-//				JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-//				if (memberPanel.getComponentCount() == 2)
-//				{
-//					storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
-//					storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
-//				}
-//				else
-//					storedPaths.get(pathLabel).pathGroup = null;
-//			}
-//		}
-//
-//		// Create new LinkedHashMap to replace the old plugin.paths map
-//		ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
-//
-//		if (pathLabel != null)
-//		{
-//			Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
-//			paths.add(targetIndex, movedPath);
-//		}
-//		else
-//		{
-//			for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
-//			{
-//				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
-//				paths.add(targetIndex, movedGroupedPath);
-//			}
-//		}
-//
-//		// Reorder paths
-//		storedPaths.clear();
-//		for (Map.Entry<String, PathmakerPath> path : paths)
-//		{
-//			storedPaths.put(path.getKey(), path.getValue());
-//		}
 	}
 }
