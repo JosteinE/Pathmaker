@@ -287,7 +287,7 @@ public class PathmakerPluginPanel extends PluginPanel
 			// NOTE: Sending in pathView.getComponentCount() as index. Might be bad if you want to pull elements out of groups
 			pathEntry.getPathLabel().addMouseListener(new DropAdapter(plugin, groupNames, pathView, pathEntry, i, pathLabel, PANEL_MARGIN));
 
-			pathEntry.getPathLabel().addMouseMotionListener(new DragAdapter(pathView, pathEntry, false, PANEL_MARGIN));
+			pathEntry.getPathLabel().addMouseMotionListener(new DragAdapter(pathView, pathEntry, PANEL_MARGIN));
 
 			String groupName = plugin.getStoredPaths().get(pathLabel).pathGroup;
 

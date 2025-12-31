@@ -13,11 +13,10 @@ public class DragAdapter extends MouseMotionAdapter
 	boolean isGroupPanel;
 	int panelMargin;
 
-	DragAdapter(JPanel parentPanel, JPanel panel, boolean isGroupPanel, int panelMargin)
+	DragAdapter(JPanel parentPanel, JPanel panel, int panelMargin)
 	{
 		this.parentPanel = parentPanel;
 		this.panel = panel;
-		this.isGroupPanel = isGroupPanel;
 		this.panelMargin = panelMargin;
 	}
 
@@ -27,11 +26,16 @@ public class DragAdapter extends MouseMotionAdapter
 		super.mouseDragged(e);
 		int panelIndex = -1;
 		int pathCounter = 0;
-		// Reset borders and find panelIndex
+
+		// Reset borders (excluding groups) and find panelIndex
 		for (int i = 0; i < parentPanel.getComponentCount(); i++)
 		{
 			JPanel p = ((JPanel) parentPanel.getComponents()[i]);
-			p.setBorder(BorderFactory.createEmptyBorder());
+
+			if(p instanceof PathGroup)
+				p.setBorder(((PathGroup) p).createDefaultBorder());
+			else
+				p.setBorder(BorderFactory.createEmptyBorder());
 
 			if (p == panel)
 			{
@@ -50,7 +54,9 @@ public class DragAdapter extends MouseMotionAdapter
 				pathCounter += groupedPathCount;
 			}
 			else
+			{
 				pathCounter++;
+			}
 		}
 
 		// Set the dragged colour
@@ -77,7 +83,7 @@ public class DragAdapter extends MouseMotionAdapter
 			MouseAdapterUtils.createGapBorders(targetPanel, bottomPanel, Color.GREEN);
 		}
 		// Not allowing group placement directly on other pathView Entries.
-		else if (!isGroupPanel)
+		else if (!(panel instanceof PathGroup))
 			MouseAdapterUtils.setPanelInnerBorderColor(targetPanel, Color.GREEN);
 		targetPanel.repaint();
 	}

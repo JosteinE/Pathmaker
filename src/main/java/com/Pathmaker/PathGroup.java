@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
+import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.components.FlatTextField;
 
@@ -30,15 +31,15 @@ public class PathGroup extends JPanel
 		int PANEL_MARGIN = 10;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 		setBackground(Color.BLUE);
 
 		groupTextField.setText(groupName);
 		groupTextField.getTextField().setEnabled(false);
+		setBorder(createDefaultBorder());
 		groupTextField.setBackground(Color.BLUE);
 
 		// Add drag and drop adapters, but also extra logic to allow for renaming on click.
-		MouseMotionAdapter dragAdapter = new DragAdapter(parentPanel, groupPanel, true, PANEL_MARGIN);
+		MouseMotionAdapter dragAdapter = new DragAdapter(parentPanel, groupPanel, PANEL_MARGIN);
 		groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
 		{
 			@Override
@@ -129,6 +130,11 @@ public class PathGroup extends JPanel
 	{
 		groupTextField.getTextField().setEnabled(false);
 		groupTextField.setBackground(Color.BLUE);
+	}
+
+	Border createDefaultBorder()
+	{
+		return BorderFactory.createEmptyBorder(2, 2, 2, 2);
 	}
 
 	void addPathPanel(PathPanel panel)

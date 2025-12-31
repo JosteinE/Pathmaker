@@ -34,18 +34,36 @@ public class MouseAdapterUtils
 	{
 		Border outerBorder, innerBorder;
 
-		// Only drawing inner borders, so leaving outer empty.
-		outerBorder = BorderFactory.createEmptyBorder();
+		int thickness = 2;
+
 		if (topPanel != null)
 		{
-			innerBorder = BorderFactory.createMatteBorder(0, 0, 2, 0, color);
-			topPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+			if(topPanel instanceof PathGroup)
+			{
+				outerBorder = BorderFactory.createMatteBorder(0, 0, thickness, 0, color);
+				topPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, topPanel.getBorder()));
+			}
+			else
+			{
+				outerBorder = BorderFactory.createEmptyBorder();
+				innerBorder = BorderFactory.createMatteBorder(0, 0, thickness, 0, color);
+				topPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+			}
 		}
 
 		if (bottomPanel != null)
 		{
-			innerBorder = BorderFactory.createMatteBorder(2, 0, 0, 0, color);
-			bottomPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+			if(bottomPanel instanceof PathGroup)
+			{
+				outerBorder = BorderFactory.createMatteBorder(thickness, 0, 0, 0, color);
+				bottomPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, bottomPanel.getBorder()));
+			}
+			else
+			{
+				outerBorder = BorderFactory.createEmptyBorder();
+				innerBorder = BorderFactory.createMatteBorder(thickness, 0, 0, 0, color);
+				bottomPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, innerBorder));
+			}
 		}
 	}
 
