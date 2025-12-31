@@ -98,6 +98,17 @@ public class PathmakerPluginPanel extends PluginPanel
 			groupTextField.setBackground(Color.BLUE);
 
 			// Add drag and drop adapters, but also extra logic to allow for renaming on click.
+			MouseMotionAdapter dragAdapter = dragAdapter(groupPanel, true);
+			groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
+			{
+				@Override
+				public void mouseDragged(MouseEvent e)
+				{
+					super.mouseDragged(e);
+					beingDragged = true;
+					dragAdapter.mouseDragged(e);
+				}
+			});
 			MouseAdapter dropAdapter = dropAdapter(groupPanel, viewPanelIndex, null);
 			groupTextField.getTextField().addMouseListener(new MouseAdapter()
 			{
@@ -124,24 +135,13 @@ public class PathmakerPluginPanel extends PluginPanel
 					}
 				}
 			});
-			MouseMotionAdapter dragAdapter = dragAdapter(groupPanel, true);
-			groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
-			{
-				@Override
-				public void mouseDragged(MouseEvent e)
-				{
-					super.mouseDragged(e);
-					beingDragged = true;
-					dragAdapter.mouseDragged(e);
-				}
-			});
-			
 			groupTextField.getTextField().addFocusListener(new FocusAdapter()
 			{
 				@Override
 				public void focusLost(FocusEvent e)
 				{
 					beingDragged = false;
+					groupTextField.getTextField().setText(groupName);
 					finalizeEditing();
 				}
 			});
@@ -151,8 +151,28 @@ public class PathmakerPluginPanel extends PluginPanel
 				public void keyPressed(KeyEvent e)
 				{
 					super.keyPressed(e);
-					if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_ESCAPE)
+
+					if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
 					{
+						groupTextField.getTextField().setText(groupName);
+						finalizeEditing();
+					}
+
+					if (e.getKeyCode() == KeyEvent.VK_ENTER)
+					{
+						// If name changed: rename entries group name
+						if(!groupTextField.getText().equals(groupName))
+						{
+							log.debug("finalizeEditing: group name changed from {} to {}", groupName, groupTextField.getText());
+							for(Component c : memberPanel.getComponents())
+							{
+								String pathLabel = ((PathPanel) c).getPathLabel().getText();
+								plugin.getStoredPaths().get(pathLabel).pathGroup = groupTextField.getTextField().getText();
+							}
+							plugin.rebuildPanel(true);
+							return;
+						}
+
 						finalizeEditing();
 					}
 				}
