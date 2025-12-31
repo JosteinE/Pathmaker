@@ -19,15 +19,15 @@ public class DropAdapter extends MouseAdapter
 	JPanel panel;
 	@Nullable String panelLabel;
 	int margin;
-	int indexInParent;
+	int trueIndexInParent;
 
-	DropAdapter(PathmakerPlugin plugin, ArrayList<String> groupNames, JPanel parentPanel, JPanel panel, int indexInParent, @Nullable String panelLabel, int margin)
+	DropAdapter(PathmakerPlugin plugin, ArrayList<String> groupNames, JPanel parentPanel, JPanel panel, int trueIndexInParent, @Nullable String panelLabel, int margin)
 	{
 		this.plugin = plugin;
 		this.groupNames = groupNames;
 		this.parentPanel = parentPanel;
 		this.panel = panel;
-		this.indexInParent = indexInParent;
+		this.trueIndexInParent = trueIndexInParent;
 		this.panelLabel = panelLabel;
 		this.margin = margin;
 	}
@@ -43,11 +43,18 @@ public class DropAdapter extends MouseAdapter
 
 		int mouseOnBorder = MouseAdapterUtils.isMouseHoveringPathBorder(e, parentPanel, targetPanel, margin);
 
-		// Create group if hovering another path
-		if (mouseOnBorder == 0 && panelLabel != null)
+		// Skip if a group is dropped directly on top of another group
+		if (mouseOnBorder == 0 && panel instanceof PathGroup && targetPanel instanceof PathGroup)
+		{
+			return;
+		}
+
+		// Mouse is on a PathPanel
+		if (mouseOnBorder == 0 && panel instanceof PathPanel)
 		{
 			PathmakerPath draggedPath = plugin.getStoredPaths().get(panelLabel);
 
+			// Create group if dropped on another path
 			if (targetPanel instanceof PathPanel)
 			{
 				String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
@@ -69,7 +76,7 @@ public class DropAdapter extends MouseAdapter
 					targetPath.pathGroup = newGroupName;
 					draggedPath.pathGroup = newGroupName;
 				}
-				else
+				else // Add to existing group
 				{
 					// Return if already in the group
 					if (targetPath.pathGroup.equals(draggedPath.pathGroup)) return;
@@ -78,7 +85,7 @@ public class DropAdapter extends MouseAdapter
 
 				// Moving target path position below target panel.
 				targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
-				targetIndex += indexInParent > targetIndex ? 1 : 0;
+				targetIndex += trueIndexInParent > targetIndex ? 1 : 0;
 
 			}
 			else // Add panel to existing group
@@ -86,25 +93,40 @@ public class DropAdapter extends MouseAdapter
 				// Set panel index to be bottom of the group
 				draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
 
-				log.debug("targetIndex: " + targetIndex);
+				//log.debug("targetIndex: " + targetIndex);
 				targetIndex = MouseAdapterUtils.getIndexInView(parentPanel, targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
-				log.debug("trueTargetIndex: " + targetIndex);
-				targetIndex -= indexInParent > targetIndex ? 0 : 1;
-				log.debug("finalTargetIndex: " + targetIndex);
+				//log.debug("trueTargetIndex: " + targetIndex);
+				targetIndex -= trueIndexInParent >= targetIndex ? 0 : 1;
+				//log.debug("finalTargetIndex: " + targetIndex);
 			}
 		}
+
 		// Correct target index for specific gap scenarios
-		else if (mouseOnBorder == 1 && targetIndex > indexInParent)
+		else if (mouseOnBorder == 1 && targetIndex > trueIndexInParent)
 		{
 			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel,targetIndex -1);
 		}
-		else if (mouseOnBorder == -1 && targetIndex < indexInParent)
+		else if (mouseOnBorder == -1 && targetIndex < trueIndexInParent)
 		{
 			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel,targetIndex + 1);
 		}
 		else
 		{
 			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
+		}
+
+		if (mouseOnBorder == -1 || mouseOnBorder == 1)
+		{
+			if (targetIndex == trueIndexInParent + 1 || targetIndex == trueIndexInParent)
+			{
+				// Remove from existing group if path is dropped on a gap directly next to itself.
+				if (panel instanceof PathPanel)
+				{
+					plugin.getStoredPaths().get(panelLabel).pathGroup = null;
+					plugin.rebuildPanel(true);
+					return;
+				}
+			}
 		}
 
 		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
@@ -115,7 +137,7 @@ public class DropAdapter extends MouseAdapter
 		// Move single path
 		if (panelLabel != null)
 		{
-			Map.Entry<String, PathmakerPath> movedPath = paths.remove(indexInParent);
+			Map.Entry<String, PathmakerPath> movedPath = paths.remove(trueIndexInParent);
 			if(targetIndex > paths.size() -1)
 				paths.add(movedPath);
 			else
@@ -123,16 +145,18 @@ public class DropAdapter extends MouseAdapter
 		}
 		else // Move group
 		{
+			targetIndex += targetPanel instanceof PathGroup && trueIndexInParent < targetIndex ? ((PathGroup) targetPanel).getPathPanelCount() - 1 : 0;
 			int numPanels = ((PathGroup) panel).getPathPanelCount();
-			int start = 	indexInParent > targetIndex ? numPanels - 1 : 0;
-			int end = 		indexInParent > targetIndex ? -1 : numPanels;
-			int itValue = 	indexInParent > targetIndex ? -1 : 1;
+			int start = 	trueIndexInParent > targetIndex ? numPanels - 1 : 0;
+			int end = 		trueIndexInParent > targetIndex ? -1 : numPanels;
+			int itValue = 	trueIndexInParent > targetIndex ? -1 : 1;
 
-			log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
+			log.debug("trueIndexInParent: " + trueIndexInParent + " targetIndex: " + targetIndex);
+			//log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
 
 			for (int i = start; i != end; i+= itValue)
 			{
-				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(indexInParent + start);
+				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(trueIndexInParent + start);
 				if(targetIndex > paths.size() -1)
 					paths.add(movedGroupedPath);
 				else
