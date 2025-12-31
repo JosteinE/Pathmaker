@@ -49,7 +49,7 @@ public class PathGroup extends JPanel
 				dragAdapter.mouseDragged(e);
 			}
 		});
-		MouseAdapter dropAdapter = new DropAdapter(plugin.getStoredPaths(), groupNames, parentPanel, groupPanel, parentPanelIndex, null, PANEL_MARGIN);
+		MouseAdapter dropAdapter = new DropAdapter(plugin, groupNames, parentPanel, groupPanel, parentPanelIndex, null, PANEL_MARGIN);
 		groupTextField.getTextField().addMouseListener(new MouseAdapter()
 		{
 			@Override

@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DropAdapter extends MouseAdapter
 {
-	LinkedHashMap<String, PathmakerPath> paths;
+	PathmakerPlugin plugin;
 	ArrayList<String> groupNames;
 	JPanel parentPanel;
 	JPanel panel;
@@ -21,9 +21,9 @@ public class DropAdapter extends MouseAdapter
 	int margin;
 	int indexInParent;
 
-	DropAdapter(LinkedHashMap<String, PathmakerPath> paths, ArrayList<String> groupNames, JPanel parentPanel, JPanel panel, int indexInParent, @Nullable String panelLabel, int margin)
+	DropAdapter(PathmakerPlugin plugin, ArrayList<String> groupNames, JPanel parentPanel, JPanel panel, int indexInParent, @Nullable String panelLabel, int margin)
 	{
-		this.paths = paths;
+		this.plugin = plugin;
 		this.groupNames = groupNames;
 		this.parentPanel = parentPanel;
 		this.panel = panel;
@@ -46,12 +46,12 @@ public class DropAdapter extends MouseAdapter
 		// Create group if hovering another path
 		if (mouseOnBorder == 0 && panelLabel != null)
 		{
-			PathmakerPath draggedPath = paths.get(panelLabel);
+			PathmakerPath draggedPath = plugin.getStoredPaths().get(panelLabel);
 
 			if (targetPanel instanceof PathPanel)
 			{
 				String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
-				PathmakerPath targetPath = paths.get(targetName);
+				PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
 
 				// Create a new group with target as the first member
 				if (targetPath.pathGroup == null)
@@ -107,7 +107,7 @@ public class DropAdapter extends MouseAdapter
 			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
 		}
 
-		LinkedHashMap<String, PathmakerPath> storedPaths = paths;
+		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
 
 		// Create new LinkedHashMap to replace the old plugin.paths map
 		ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
@@ -116,7 +116,10 @@ public class DropAdapter extends MouseAdapter
 		if (panelLabel != null)
 		{
 			Map.Entry<String, PathmakerPath> movedPath = paths.remove(indexInParent);
-			paths.add(targetIndex, movedPath);
+			if(targetIndex > paths.size() -1)
+				paths.add(movedPath);
+			else
+				paths.add(targetIndex, movedPath);
 		}
 		else // Move group
 		{
@@ -130,7 +133,10 @@ public class DropAdapter extends MouseAdapter
 			for (int i = start; i != end; i+= itValue)
 			{
 				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(indexInParent + start);
-				paths.add(targetIndex, movedGroupedPath);
+				if(targetIndex > paths.size() -1)
+					paths.add(movedGroupedPath);
+				else
+					paths.add(targetIndex, movedGroupedPath);
 			}
 		}
 
@@ -141,6 +147,6 @@ public class DropAdapter extends MouseAdapter
 			storedPaths.put(path.getKey(), path.getValue());
 		}
 
-		//plugin.rebuildPanel(true);
+		plugin.rebuildPanel(true);
 	}
 }
