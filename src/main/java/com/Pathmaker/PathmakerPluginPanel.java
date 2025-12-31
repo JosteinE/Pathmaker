@@ -595,89 +595,101 @@ public class PathmakerPluginPanel extends PluginPanel
 				int mouseOnBorder = isMouseHoveringPathBorder(e, pathView, targetPanel);
 
 				// Add group if hovering another path
-				if (mouseOnBorder == 0)
+				if (mouseOnBorder == 0 && pathLabel != null)
 				{
+					PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
 
-					// Panel is a PathGroup if pathLabel == null
-					if (pathLabel == null)
-						return;
-					else
+					if (targetPanel instanceof PathPanel)
 					{
-						PathmakerPath draggedPath = plugin.getStoredPaths().get(pathLabel);
+						String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
+						PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
 
-						if (targetPanel instanceof PathPanel)
+						// Create a new group with target as the first member
+						if (targetPath.pathGroup == null)
 						{
-							String targetName = ((PathPanel) targetPanel).getPathLabel().getText();
-							PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
-
-							// create new group
-							if (targetPath.pathGroup == null)
+							String newGroupName = "group 1";
+							if (!pathGroups.isEmpty())
 							{
-								String newGroupName = "group 1";
-								if (!pathGroups.isEmpty())
+								int num = 1;
+								while (pathGroups.containsKey(newGroupName))
 								{
-									int num = 1;
-									while (pathGroups.containsKey(newGroupName))
-									{
-										num++;
-										newGroupName = "group " + num;
-									}
+									num++;
+									newGroupName = "group " + num;
 								}
-								targetPath.pathGroup = newGroupName;
-								draggedPath.pathGroup = newGroupName;
 							}
-							else
-								draggedPath.pathGroup = targetPath.pathGroup;
+							targetPath.pathGroup = newGroupName;
+							draggedPath.pathGroup = newGroupName;
 						}
-						else // Target panel is PathGroup
+						else
 						{
-							// Find appropriate index within group
-							draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
+							draggedPath.pathGroup = targetPath.pathGroup;
 						}
+
+						// Moving target path position below target panel.
+						targetIndex = getTrueIndexInView(targetIndex);
+						targetIndex += pathViewIndex > targetIndex ? 1 : 0;
+
 					}
+					else // Add panel to existing group
+					{
+						// Set panel index to be bottom of the group
+						draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
 
-					plugin.rebuildPanel(true);
-					return;
+
+						targetIndex = getTrueIndexInView(targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
+						targetIndex -= pathViewIndex > targetIndex ? 0 : 1;
+					}
 				}
-
 				// Correct target index for specific gap scenarios
-				if (mouseOnBorder == 1 && targetIndex > pathViewIndex)
-					targetIndex -= 1;
+				else if (mouseOnBorder == 1 && targetIndex > pathViewIndex)
+				{
+					targetIndex = getTrueIndexInView(targetIndex -1);
+				}
 				else if (mouseOnBorder == -1 && targetIndex < pathViewIndex)
-					targetIndex += 1;
+				{
+					targetIndex = getTrueIndexInView(targetIndex + 1);
+				}
 
 				LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
 
-				// Erase old group if it has 1 member left
-				if (pathLabel != null)
-				{
-					String oldGroup = storedPaths.get(pathLabel).pathGroup;
-					if (oldGroup != null)
-					{
-						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-						if (memberPanel.getComponentCount() == 2)
-						{
-							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
-							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
-						}
-						else
-							storedPaths.get(pathLabel).pathGroup = null;
-					}
-				}
+//				// Erase old group if it has 1 member left
+//				if (pathLabel != null)
+//				{
+//					String oldGroup = storedPaths.get(pathLabel).pathGroup;
+//					if (oldGroup != null)
+//					{
+//						JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
+//						if (memberPanel.getComponentCount() == 2)
+//						{
+//							storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
+//							storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
+//						}
+//						else
+//							storedPaths.get(pathLabel).pathGroup = null;
+//					}
+//				}
 
 				// Create new LinkedHashMap to replace the old plugin.paths map
 				ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
 
+				// Move single path
 				if (pathLabel != null)
 				{
 					Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
 					paths.add(targetIndex, movedPath);
 				}
-				else
+				else // Move group
 				{
-					for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
+					int numPanels = ((PathGroup) panel).getPathPanelCount();
+					int start = 	pathViewIndex > targetIndex ? numPanels - 1 : 0;
+					int end = 		pathViewIndex > targetIndex ? -1 : numPanels;
+					int itValue = 	pathViewIndex > targetIndex ? -1 : 1;
+
+					log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
+
+					for (int i = start; i != end; i+= itValue)
 					{
-						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
+						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + start);
 						paths.add(targetIndex, movedGroupedPath);
 					}
 				}
@@ -696,52 +708,52 @@ public class PathmakerPluginPanel extends PluginPanel
 
 	void rearrangePaths(ArrayList<Integer> oldPathIndices, ArrayList<Integer> newPathIndices)
 	{
-		if (oldPathIndices.size() != newPathIndices.size())
-		{
-			log.debug("Did not provide an equal amount of indices for path rearrangement.");
-		};
-
-		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
-
-		// REPLACE: CHECK INSTEAD WHILE ITERATING IF TWO PATHS NEXT TO EACH OTHER ARE IN THE SAME GROUP
-		if (pathLabel != null)
-		{
-			String oldGroup = storedPaths.get(pathLabel).pathGroup;
-			if (oldGroup != null)
-			{
-				JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
-				if (memberPanel.getComponentCount() == 2)
-				{
-					storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
-					storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
-				}
-				else
-					storedPaths.get(pathLabel).pathGroup = null;
-			}
-		}
-
-		// Create new LinkedHashMap to replace the old plugin.paths map
-		ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
-
-		if (pathLabel != null)
-		{
-			Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
-			paths.add(targetIndex, movedPath);
-		}
-		else
-		{
-			for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
-			{
-				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
-				paths.add(targetIndex, movedGroupedPath);
-			}
-		}
-
-		// Reorder paths
-		storedPaths.clear();
-		for (Map.Entry<String, PathmakerPath> path : paths)
-		{
-			storedPaths.put(path.getKey(), path.getValue());
-		}
+//		if (oldPathIndices.size() != newPathIndices.size())
+//		{
+//			log.debug("Did not provide an equal amount of indices for path rearrangement.");
+//		};
+//
+//		LinkedHashMap<String, PathmakerPath> storedPaths = plugin.getStoredPaths();
+//
+//		// REPLACE: CHECK INSTEAD WHILE ITERATING IF TWO PATHS NEXT TO EACH OTHER ARE IN THE SAME GROUP
+//		if (pathLabel != null)
+//		{
+//			String oldGroup = storedPaths.get(pathLabel).pathGroup;
+//			if (oldGroup != null)
+//			{
+//				JPanel memberPanel = pathGroups.get(oldGroup).memberPanel;
+//				if (memberPanel.getComponentCount() == 2)
+//				{
+//					storedPaths.get(((PathPanel) memberPanel.getComponent(0)).getPathLabel().getText()).pathGroup = null;
+//					storedPaths.get(((PathPanel) memberPanel.getComponent(1)).getPathLabel().getText()).pathGroup = null;
+//				}
+//				else
+//					storedPaths.get(pathLabel).pathGroup = null;
+//			}
+//		}
+//
+//		// Create new LinkedHashMap to replace the old plugin.paths map
+//		ArrayList<Map.Entry<String, PathmakerPath>> paths = new ArrayList<>(storedPaths.entrySet());
+//
+//		if (pathLabel != null)
+//		{
+//			Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
+//			paths.add(targetIndex, movedPath);
+//		}
+//		else
+//		{
+//			for (int i = ((PathGroup) panel).getPathPanelCount() - 1; i >= 0; i--)
+//			{
+//				Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + i);
+//				paths.add(targetIndex, movedGroupedPath);
+//			}
+//		}
+//
+//		// Reorder paths
+//		storedPaths.clear();
+//		for (Map.Entry<String, PathmakerPath> path : paths)
+//		{
+//			storedPaths.put(path.getKey(), path.getValue());
+//		}
 	}
 }
