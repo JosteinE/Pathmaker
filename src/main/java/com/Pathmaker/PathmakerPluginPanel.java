@@ -380,7 +380,7 @@ public class PathmakerPluginPanel extends PluginPanel
 			});
 
 			// NOTE: Sending in pathView.getComponentCount() as index. Might be bad if you want to pull elements out of groups
-			pathEntry.getPathLabel().addMouseListener(dropAdapter(pathEntry, pathView.getComponentCount(), pathLabel));
+			pathEntry.getPathLabel().addMouseListener(dropAdapter(pathEntry, i, pathLabel));
 
 
 			pathEntry.getPathLabel().addMouseMotionListener(dragAdapter(pathEntry, false));
@@ -520,6 +520,34 @@ public class PathmakerPluginPanel extends PluginPanel
 		return trueIndex;
 	}
 
+	// Return top layer component index of view (either group if in group, else path)
+	int getIndexInView(int trueIndex)
+	{
+		int index = 0;
+		for (int i = 0; i < pathView.getComponentCount(); i++)
+		{
+			Component comp = pathView.getComponent(i);
+
+			if (comp instanceof PathGroup)
+			{
+				if (trueIndex >= index && trueIndex < index + ((PathGroup) comp).getPathPanelCount())
+				{
+					return i;
+				}
+				index += ((PathGroup)comp).getPathPanelCount();
+			}
+			else if (index == trueIndex)
+			{
+				return i;
+			}
+			else
+			{
+				index++;
+			}
+		}
+		return trueIndex;
+	}
+
 	boolean isMouseHoveringPath(int mouseY, int panelMinY, int panelMaxY)
 	{
 		return mouseY >= panelMinY && mouseY < panelMaxY;
@@ -612,7 +640,6 @@ public class PathmakerPluginPanel extends PluginPanel
 				panel.setBorder(BorderFactory.createEmptyBorder());
 				panel.repaint();
 
-				int truePathIndex = getTrueIndexInView(pathViewIndex);
 				int targetIndex = getHoveredPathIndex(e, pathView);
 				JPanel targetPanel = getHoveredPathPanel(pathView, targetIndex);
 
@@ -653,7 +680,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 						// Moving target path position below target panel.
 						targetIndex = getTrueIndexInView(targetIndex);
-						targetIndex += truePathIndex > targetIndex ? 1 : 0;
+						targetIndex += pathViewIndex > targetIndex ? 1 : 0;
 
 					}
 					else // Add panel to existing group
@@ -662,18 +689,18 @@ public class PathmakerPluginPanel extends PluginPanel
 						draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
 
 						log.debug("targetIndex: " + targetIndex);
-						targetIndex = getTrueIndexInView(targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
+						targetIndex = getIndexInView(targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
 						log.debug("trueTargetIndex: " + targetIndex);
-						targetIndex -= truePathIndex > targetIndex ? 0 : 1;
+						targetIndex -= pathViewIndex > targetIndex ? 0 : 1;
 						log.debug("finalTargetIndex: " + targetIndex);
 					}
 				}
 				// Correct target index for specific gap scenarios
-				else if (mouseOnBorder == 1 && targetIndex > truePathIndex)
+				else if (mouseOnBorder == 1 && targetIndex > pathViewIndex)
 				{
 					targetIndex = getTrueIndexInView(targetIndex -1);
 				}
-				else if (mouseOnBorder == -1 && targetIndex < truePathIndex)
+				else if (mouseOnBorder == -1 && targetIndex < pathViewIndex)
 				{
 					targetIndex = getTrueIndexInView(targetIndex + 1);
 				}
@@ -690,21 +717,24 @@ public class PathmakerPluginPanel extends PluginPanel
 				// Move single path
 				if (pathLabel != null)
 				{
-					Map.Entry<String, PathmakerPath> movedPath = paths.remove(truePathIndex);
+					Map.Entry<String, PathmakerPath> movedPath = paths.remove(pathViewIndex);
 					paths.add(targetIndex, movedPath);
 				}
 				else // Move group
 				{
+//					if(targetPanel instanceof PathGroup)
+//						targetIndex = getIndexInView(targetIndex);
+
 					int numPanels = ((PathGroup) panel).getPathPanelCount();
-					int start = 	truePathIndex > targetIndex ? numPanels - 1 : 0;
-					int end = 		truePathIndex > targetIndex ? -1 : numPanels;
-					int itValue = 	truePathIndex > targetIndex ? -1 : 1;
+					int start = 	pathViewIndex > targetIndex ? numPanels - 1 : 0;
+					int end = 		pathViewIndex > targetIndex ? -1 : numPanels;
+					int itValue = 	pathViewIndex > targetIndex ? -1 : 1;
 
 					log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
 
 					for (int i = start; i != end; i+= itValue)
 					{
-						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(truePathIndex + start);
+						Map.Entry<String, PathmakerPath> movedGroupedPath = paths.remove(pathViewIndex + start);
 						paths.add(targetIndex, movedGroupedPath);
 					}
 				}
