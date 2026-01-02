@@ -40,13 +40,38 @@ public class DropAdapter extends MouseAdapter
 
 		int targetIndex = MouseAdapterUtils.getHoveredPathIndex(e, parentPanel);
 		JPanel targetPanel = MouseAdapterUtils.getHoveredPathPanel(parentPanel, targetIndex);
-
 		int mouseOnBorder = MouseAdapterUtils.isMouseHoveringPathBorder(e, parentPanel, targetPanel, margin);
 
-		// Skip if a group is dropped directly on top of another group
-		if (mouseOnBorder == 0 && panel instanceof PathGroup && targetPanel instanceof PathGroup)
+		targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
+
+		// Skip if a group is dropped directly on top of another group or path
+		if (mouseOnBorder == 0 && panel instanceof PathGroup)
 		{
 			return;
+		}
+
+		// DEBUGGING
+		if (panel instanceof PathPanel)
+		{
+			if (targetPanel instanceof PathGroup)
+			{
+				log.debug("Panel ({}) is {}, TargetGroup ({}) is: {}", trueIndexInParent, ((PathPanel) panel).getPathLabel().getText(), targetIndex, ((PathGroup) targetPanel).getGroupName());
+			}
+			else
+			{
+				log.debug("Panel ({}) is {}, TargetPanel ({}) is: {}", trueIndexInParent, ((PathPanel) panel).getPathLabel().getText(), targetIndex, ((PathPanel) targetPanel).getPathLabel().getText());
+			}
+		}
+		else if (panel instanceof PathGroup)
+		{
+			if (targetPanel instanceof PathGroup)
+			{
+				log.debug("Group ({}) is {}, TargetGroup ({}) is: {}", trueIndexInParent, ((PathGroup) panel).getGroupName(), targetIndex, ((PathGroup) targetPanel).getGroupName());
+			}
+			else
+			{
+				log.debug("Group ({}) is {}, TargetPanel ({}) is: {}", trueIndexInParent, ((PathGroup) panel).getGroupName(), targetIndex, ((PathPanel) targetPanel).getPathLabel().getText());
+			}
 		}
 
 		// Mouse is on a PathPanel
@@ -84,7 +109,6 @@ public class DropAdapter extends MouseAdapter
 				}
 
 				// Moving target path position below target panel.
-				targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
 				targetIndex += trueIndexInParent > targetIndex ? 1 : 0;
 
 			}
@@ -104,28 +128,37 @@ public class DropAdapter extends MouseAdapter
 		// Correct target index for specific gap scenarios
 		else if (mouseOnBorder == 1 && targetIndex > trueIndexInParent)
 		{
-			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel,targetIndex -1);
+			targetIndex -= 1;
 		}
-		else if (mouseOnBorder == -1 && targetIndex < trueIndexInParent)
+		else if (mouseOnBorder == -1)
 		{
-			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel,targetIndex + 1);
-		}
-		else
-		{
-			targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
+			if (targetPanel instanceof PathGroup)
+			{
+				if(targetIndex < trueIndexInParent)
+				{
+					targetIndex += ((PathGroup) targetPanel).getPathPanelCount();
+				}
+				else
+				{
+					targetIndex += ((PathGroup) targetPanel).getPathPanelCount() - 1;
+				}
+			}
+			else if (targetIndex < trueIndexInParent)
+			{
+				targetIndex += 1;
+			}
 		}
 
-		if (mouseOnBorder == -1 || mouseOnBorder == 1)
+		// Remove from existing group if path is dropped on a gap directly next to itself.
+		if ((mouseOnBorder == -1 || mouseOnBorder == 1) &&
+			(targetIndex == trueIndexInParent + 1 || targetIndex == trueIndexInParent))
 		{
-			if (targetIndex == trueIndexInParent + 1 || targetIndex == trueIndexInParent)
+			PathmakerPath draggedPath = plugin.getStoredPaths().get(panelLabel);
+			if (panel instanceof PathPanel && draggedPath.pathGroup != null)
 			{
-				// Remove from existing group if path is dropped on a gap directly next to itself.
-				if (panel instanceof PathPanel)
-				{
-					plugin.getStoredPaths().get(panelLabel).pathGroup = null;
-					plugin.rebuildPanel(true);
-					return;
-				}
+				draggedPath.pathGroup = null;
+				plugin.rebuildPanel(true);
+				return;
 			}
 		}
 
@@ -137,21 +170,25 @@ public class DropAdapter extends MouseAdapter
 		// Move single path
 		if (panelLabel != null)
 		{
+			if(targetPanel instanceof PathPanel)
+				log.debug("Moved ({}) {} to ({}) {}", trueIndexInParent, ((PathPanel) panel).getPathLabel().getText(), targetIndex, ((PathPanel) targetPanel).getPathLabel().getText());
+			else
+				log.debug("Moved ({}) {} to ({}) {}", trueIndexInParent, ((PathPanel) panel).getPathLabel().getText(), targetIndex, ((PathGroup) targetPanel).getGroupName());
+
 			Map.Entry<String, PathmakerPath> movedPath = paths.remove(trueIndexInParent);
-			if(targetIndex > paths.size() -1)
+			if(targetIndex > paths.size())
 				paths.add(movedPath);
 			else
 				paths.add(targetIndex, movedPath);
 		}
 		else // Move group
 		{
-			targetIndex += targetPanel instanceof PathGroup && trueIndexInParent < targetIndex ? ((PathGroup) targetPanel).getPathPanelCount() - 1 : 0;
+			//targetIndex += targetPanel instanceof PathGroup && trueIndexInParent < targetIndex ? ((PathGroup) targetPanel).getPathPanelCount() - 1 : 0;
 			int numPanels = ((PathGroup) panel).getPathPanelCount();
 			int start = 	trueIndexInParent > targetIndex ? numPanels - 1 : 0;
 			int end = 		trueIndexInParent > targetIndex ? -1 : numPanels;
 			int itValue = 	trueIndexInParent > targetIndex ? -1 : 1;
 
-			log.debug("trueIndexInParent: " + trueIndexInParent + " targetIndex: " + targetIndex);
 			//log.debug("numPanels: " + numPanels + " start: " + start + " end: " + end + " itValue: " + itValue);
 
 			for (int i = start; i != end; i+= itValue)
