@@ -7,7 +7,9 @@ import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class MouseAdapterUtils
 {
 	// 1 = top, -1 = bottom, 0 = false
@@ -129,14 +131,15 @@ public class MouseAdapterUtils
 				trueIndex++;
 			}
 		}
-		return trueIndex;
+		return -1;
 	}
 
 	// Return top layer component index of view (either group if in group, else path)
 	static int getIndexInView(JPanel parentPanel, int trueIndex)
 	{
 		int index = 0;
-		for (int i = 0; i < parentPanel.getComponentCount(); i++)
+		int parentPanelCompCount = parentPanel.getComponentCount();
+		for (int i = 0; i < parentPanelCompCount; i++)
 		{
 			Component comp = parentPanel.getComponent(i);
 
@@ -157,6 +160,6 @@ public class MouseAdapterUtils
 				index++;
 			}
 		}
-		return trueIndex;
+		return parentPanelCompCount - 1;
 	}
 }

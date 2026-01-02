@@ -44,12 +44,6 @@ public class DropAdapter extends MouseAdapter
 
 		targetIndex = MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex);
 
-		// Skip if a group is dropped directly on top of another group or path
-		if (mouseOnBorder == 0 && panel instanceof PathGroup)
-		{
-			return;
-		}
-
 		// DEBUGGING
 		if (panel instanceof PathPanel)
 		{
@@ -75,8 +69,12 @@ public class DropAdapter extends MouseAdapter
 		}
 
 		// Mouse is on a PathPanel
-		if (mouseOnBorder == 0 && panel instanceof PathPanel)
+		if (mouseOnBorder == 0)
 		{
+			// Skip if a group is dropped directly on top of another group or path
+			if (panel instanceof PathGroup)
+				return;
+
 			PathmakerPath draggedPath = plugin.getStoredPaths().get(panelLabel);
 
 			// Create group if dropped on another path
@@ -86,27 +84,18 @@ public class DropAdapter extends MouseAdapter
 				PathmakerPath targetPath = plugin.getStoredPaths().get(targetName);
 
 				// Create a new group with target as the first member
-				if (targetPath.pathGroup == null)
+				String newGroupName = "group 1";
+				if (!groupNames.isEmpty())
 				{
-					String newGroupName = "group 1";
-					if (!groupNames.isEmpty())
+					int num = 1;
+					while (groupNames.contains(newGroupName))
 					{
-						int num = 1;
-						while (groupNames.contains(newGroupName))
-						{
-							num++;
-							newGroupName = "group " + num;
-						}
+						num++;
+						newGroupName = "group " + num;
 					}
-					targetPath.pathGroup = newGroupName;
-					draggedPath.pathGroup = newGroupName;
 				}
-				else // Add to existing group
-				{
-					// Return if already in the group
-					if (targetPath.pathGroup.equals(draggedPath.pathGroup)) return;
-					draggedPath.pathGroup = targetPath.pathGroup;
-				}
+				targetPath.pathGroup = newGroupName;
+				draggedPath.pathGroup = newGroupName;
 
 				// Moving target path position below target panel.
 				targetIndex += trueIndexInParent > targetIndex ? 1 : 0;
@@ -114,11 +103,15 @@ public class DropAdapter extends MouseAdapter
 			}
 			else // Add panel to existing group
 			{
+				// Skip if it already belongs to the group
+				String groupName = ((PathGroup) targetPanel).getGroupName();
+				if (groupName.equals(draggedPath.pathGroup))
+					return;
 				// Set panel index to be bottom of the group
-				draggedPath.pathGroup = ((PathGroup) targetPanel).getGroupName();
+				draggedPath.pathGroup = groupName;
 
 				//log.debug("targetIndex: " + targetIndex);
-				targetIndex = MouseAdapterUtils.getIndexInView(parentPanel, targetIndex) + ((PathGroup) targetPanel).getPathPanelCount();
+				targetIndex += ((PathGroup) targetPanel).getPathPanelCount();
 				//log.debug("trueTargetIndex: " + targetIndex);
 				targetIndex -= trueIndexInParent >= targetIndex ? 0 : 1;
 				//log.debug("finalTargetIndex: " + targetIndex);
@@ -150,15 +143,14 @@ public class DropAdapter extends MouseAdapter
 		}
 
 		// Remove from existing group if path is dropped on a gap directly next to itself.
-		if ((mouseOnBorder == -1 || mouseOnBorder == 1) &&
-			(targetIndex == trueIndexInParent + 1 || targetIndex == trueIndexInParent))
+		if ((mouseOnBorder == -1 || mouseOnBorder == 1) && panel instanceof PathPanel)
 		{
-			PathmakerPath draggedPath = plugin.getStoredPaths().get(panelLabel);
-			if (panel instanceof PathPanel && draggedPath.pathGroup != null)
+			int compIndex = MouseAdapterUtils.getIndexInView(parentPanel, trueIndexInParent);
+			int compTargetIndex = MouseAdapterUtils.getIndexInView(parentPanel, targetIndex);
+			log.debug("INDEX = {}, TARGETINDEX = {}", compIndex , compTargetIndex);
+			if (compTargetIndex == compIndex)
 			{
-				draggedPath.pathGroup = null;
-				plugin.rebuildPanel(true);
-				return;
+				plugin.getStoredPaths().get(panelLabel).pathGroup = null;
 			}
 		}
 
@@ -176,7 +168,7 @@ public class DropAdapter extends MouseAdapter
 				log.debug("Moved ({}) {} to ({}) {}", trueIndexInParent, ((PathPanel) panel).getPathLabel().getText(), targetIndex, ((PathGroup) targetPanel).getGroupName());
 
 			Map.Entry<String, PathmakerPath> movedPath = paths.remove(trueIndexInParent);
-			if(targetIndex > paths.size())
+			if(targetIndex > paths.size() -1)
 				paths.add(movedPath);
 			else
 				paths.add(targetIndex, movedPath);

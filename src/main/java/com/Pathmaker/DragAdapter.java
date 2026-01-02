@@ -5,7 +5,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class DragAdapter extends MouseMotionAdapter
 {
 	JPanel parentPanel;
@@ -27,7 +29,7 @@ public class DragAdapter extends MouseMotionAdapter
 		int panelIndex = -1;
 		int pathCounter = 0;
 
-		// Reset borders (excluding groups) and find panelIndex
+		// Reset borders and find panelIndex
 		for (int i = 0; i < parentPanel.getComponentCount(); i++)
 		{
 			JPanel p = ((JPanel) parentPanel.getComponents()[i]);
@@ -65,7 +67,7 @@ public class DragAdapter extends MouseMotionAdapter
 
 		int targetIndex = MouseAdapterUtils.getHoveredPathIndex(e, parentPanel);
 		//log.debug("panelIndex: " + panelIndex + " targetIndex: " + targetIndex);
-		if (!MouseAdapterUtils.isIndexValidDropTarget(panelIndex, targetIndex)) return;
+		if (!MouseAdapterUtils.isIndexValidDropTarget(panelIndex, MouseAdapterUtils.getTrueIndexInView(parentPanel, targetIndex))) return;
 
 		// Is mouse on the path border?
 		JPanel targetPanel = (JPanel) parentPanel.getComponent(targetIndex);
