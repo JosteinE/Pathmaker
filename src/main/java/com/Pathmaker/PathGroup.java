@@ -28,8 +28,6 @@ public class PathGroup extends JPanel
 	{
 		JPanel groupPanel = this;
 
-		int PANEL_MARGIN = 10;
-
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setBackground(Color.BLUE);
 
@@ -38,6 +36,7 @@ public class PathGroup extends JPanel
 		setBorder(createDefaultBorder());
 		groupTextField.setBackground(Color.BLUE);
 
+		int PANEL_MARGIN = 20;
 		// Add drag and drop adapters, but also extra logic to allow for renaming on click.
 		MouseMotionAdapter dragAdapter = new DragAdapter(parentPanel, groupPanel, PANEL_MARGIN);
 		groupTextField.getTextField().addMouseMotionListener(new MouseMotionAdapter()
