@@ -303,12 +303,12 @@ public class PathmakerPlugin extends Plugin
 		return pathJson;
 	}
 
-	void loadPathFromJson(JsonObject pathJson, String pathName)
+	PathmakerPath loadPathFromJson(JsonObject pathJson, String pathName)
 	{
 		if (pathJson == null)
 		{
-			log.debug("Could not load path from Json. PathJson is null.");
-			return;
+			log.debug("Could not load path {} from Json. PathJson is null.", pathName);
+			return null;
 		}
 
 		JsonObject regionsJson = pathJson.get("regions").getAsJsonObject();
@@ -386,6 +386,7 @@ public class PathmakerPlugin extends Plugin
 		if (pathJson.has("pathGroup"))
 			paths.get(pathName).pathGroup = gson.fromJson(pathJson.get("pathGroup"), String.class);
 		//log.debug("Loaded path json: {}", pathName);
+		return paths.get(pathName);
 	}
 
     private void reload(WorldView wv)

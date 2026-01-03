@@ -24,9 +24,14 @@
 
 package com.Pathmaker;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -40,13 +45,14 @@ import net.runelite.client.util.ImageUtil;
 
 public class PanelBuildUtils
 {
+	private static final ImageIcon EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
 	private static final BufferedImage BRUSH_IMAGE = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
 	private static final ImageIcon EXPAND_ICON;
 	private static final ImageIcon COLLAPSE_ICON;
 	//	private static final ImageIcon LOOP_ON_ICON;
 //	private static final ImageIcon LOOP_OFF_ICON;
-	private static final ImageIcon EYE_OPEN_ICON;
-	private static final ImageIcon EYE_CLOSED_ICON;
+	private static final ImageIcon EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
+	private static final ImageIcon EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
 //	private static final ImageIcon OFFSET_LEFT_ICON;
 //	private static final ImageIcon OFFSET_MIDDLE_ICON;
 //	private static final ImageIcon OFFSET_RIGHT_ICON;
@@ -62,16 +68,6 @@ public class PanelBuildUtils
 		BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
 		COLLAPSE_ICON = new ImageIcon(upArrowImage);
 		EXPAND_ICON = new ImageIcon(ImageUtil.flipImage(upArrowImage, false, true));
-//		LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
-//		LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
-//		OFFSET_LEFT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_left.png"));
-//		OFFSET_MIDDLE_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_middle.png"));
-//		OFFSET_RIGHT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_right.png"));
-		EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
-		EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
-//		PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
-//		PERSON_GREEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green.png"));
-//		PERSON_GREEN_LINES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green_lines.png"));
 	}
 
 	// EXPAND
@@ -149,10 +145,10 @@ public class PanelBuildUtils
 		return colorPickerButton;
 	}
 
-	static RuneliteColorPicker getColorPicker(ColorPickerManager colorPickerManager, Color colour, JPanel owner, Component relativeTo, String panelTypeText)
+	static RuneliteColorPicker getColorPicker(ColorPickerManager colorPickerManager, Color color, JPanel owner, Component relativeTo, String panelTypeText)
 	{
 		RuneliteColorPicker colorPicker = colorPickerManager.create(
-			SwingUtilities.windowForComponent(owner), colour, panelTypeText + " color",false);
+			SwingUtilities.windowForComponent(owner), color, panelTypeText + " color",true);
 		colorPicker.setLocationRelativeTo(relativeTo);
 		return colorPicker;
 	}
@@ -160,5 +156,26 @@ public class PanelBuildUtils
 	static ImageIcon getRecoloredBrushIcon(Color color)
 	{
 		return new ImageIcon(ImageUtil.recolorImage(PanelBuildUtils.BRUSH_IMAGE, color));
+	}
+
+	// EXPORT
+
+	static JButton createExportButton(int width, int height, Gson gson, String panelTypeText)
+	{
+		JButton exportButton = new JButton();
+		exportButton.setIcon(EXPORT_ICON);
+		exportButton.setToolTipText("Export " + panelTypeText + " to clipboard");
+		exportButton.setPreferredSize(new Dimension(width, height));
+		return exportButton;
+	}
+
+	static void getExportButtonAction(Gson gson, String exportName, JsonObject object)
+	{
+		JsonObject exportPath = new JsonObject();
+		exportPath.add(exportName, object);
+
+		StringSelection json = new StringSelection(gson.toJson(exportPath));
+		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+		clipboard.setContents(json, null);
 	}
 }

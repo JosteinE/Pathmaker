@@ -36,33 +36,16 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.event.MouseMotionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nullable;
-import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.PluginPanel;
@@ -84,8 +67,7 @@ public class PathmakerPluginPanel extends PluginPanel
 
 	private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
 	private final JPanel pathView = new JPanel();
-	ArrayList<String> groupNames = new ArrayList<>();
-	//HashMap<String, PathGroup> pathGroups = new HashMap<>();
+	HashMap<String, PathGroup> pathGroups = new HashMap<>();
 
 	Client client;
 	PathmakerPlugin plugin;
@@ -98,6 +80,13 @@ public class PathmakerPluginPanel extends PluginPanel
 	{
 		IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
 		EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
+	}
+
+	static class PathGroup
+	{
+		boolean expanded = true;
+		boolean hidden = false;
+		Color color = new Color(0, 100,100);
 	}
 
 	PathmakerPluginPanel(Client client, PathmakerPlugin plugin)
@@ -190,53 +179,12 @@ public class PathmakerPluginPanel extends PluginPanel
 					return;
 				}
 
-				String jsonPathName = object.keySet().iterator().next();
+				String jsonName = object.keySet().iterator().next();
 
-				JLabel centeredNameText = new JLabel("Path name", JLabel.CENTER);
-				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
-				//String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
-				String inputPathName = JOptionPane.showInputDialog(importButton, centeredNameText, jsonPathName);
-
-				// Return if the window was cancelled or closed
-				if (inputPathName == null)
-				{
-					return;
-				}
-
-				inputPathName = inputPathName.length() > MAX_PATH_NAME_LENGTH ?
-					inputPathName.substring(0, MAX_PATH_NAME_LENGTH) : inputPathName;
-
-				// Show warning if imported path exists
-				if (plugin.getStoredPaths().containsKey(inputPathName))
-				{
-					JLabel centeredWarningText = new JLabel("The path name " + inputPathName + " already exist.", JLabel.CENTER);
-					JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
-
-					centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
-					centeredReplaceText.setHorizontalTextPosition(SwingConstants.CENTER);
-
-					JPanel centeredTextFrame = new JPanel(new GridLayout(0, 1));
-					centeredTextFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
-					centeredTextFrame.add(centeredWarningText);
-					centeredTextFrame.add(centeredReplaceText);
-
-					int confirm = JOptionPane.showConfirmDialog(null,
-						centeredTextFrame, "Warning", JOptionPane.YES_NO_OPTION);
-
-					if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
-					{
-						plugin.removePath(inputPathName);
-						plugin.loadPathFromJson(object.get(jsonPathName).getAsJsonObject(), inputPathName);
-						plugin.rebuildPanel(true);
-						activePath.setText(inputPathName);
-					}
-				}
+				if (object.getAsJsonObject(jsonName).has("members"))
+					importGroup(importButton, jsonName, object.getAsJsonObject(jsonName));
 				else
-				{
-					plugin.loadPathFromJson(object.get(jsonPathName).getAsJsonObject(), inputPathName);
-					plugin.rebuildPanel(true);
-					activePath.setText(inputPathName);
-				}
+					importPath(importButton, jsonName, object.getAsJsonObject(jsonName), true, true,null);
 			}
 		});
 
@@ -287,10 +235,98 @@ public class PathmakerPluginPanel extends PluginPanel
 		rebuild();
 	}
 
+	void importGroup(JButton importButton, String groupName, JsonObject object)
+	{
+		JsonObject members = object.getAsJsonObject("members");
+		JLabel centeredNameText = new JLabel("Group name", JLabel.CENTER);
+		String inputGroupName = JOptionPane.showInputDialog(importButton, centeredNameText, groupName);
+
+		for  (String pathName : members.keySet())
+		{
+			importPath(importButton, pathName, members.getAsJsonObject(pathName), false, false, inputGroupName);
+		}
+
+		PathGroup group = new PathGroup();
+		if (object.has("expanded"))
+			group.expanded = plugin.gson.fromJson(object.get("expanded"), boolean.class);
+		if (object.has("hidden"))
+			group.hidden = plugin.gson.fromJson(object.get("hidden"), boolean.class);
+		if (object.has("color"))
+			group.color = plugin.gson.fromJson(object.get("color"), Color.class);
+
+		pathGroups.put(groupName, group);
+
+		plugin.rebuildPanel(true);
+	}
+
+	void importPath(JButton importButton, String jsonPathName, JsonObject object, boolean rebuildPanel, boolean askForPathName, @Nullable String inputGroupName)
+	{
+		String inputPathName;
+		if(askForPathName || plugin.getStoredPaths().containsKey(jsonPathName))
+		{
+			JLabel centeredNameText;
+			if(plugin.getStoredPaths().containsKey(jsonPathName))
+				centeredNameText = new JLabel("Path name already exists", JLabel.CENTER);
+			else
+				centeredNameText = new JLabel("Path name", JLabel.CENTER);
+			centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
+			//String pathName = JOptionPane.showInputDialog(importButton, centeredNameText, loadedPath.getKey());
+			inputPathName = JOptionPane.showInputDialog(importButton, centeredNameText, jsonPathName);
+		}
+		else
+			inputPathName = jsonPathName;
+
+		// Return if the window was cancelled or closed
+		if (inputPathName == null)
+		{
+			return;
+		}
+
+		PathmakerPath path = null;
+
+		inputPathName = inputPathName.length() > MAX_PATH_NAME_LENGTH ?
+			inputPathName.substring(0, MAX_PATH_NAME_LENGTH) : inputPathName;
+
+		// Show warning if imported path exists
+		if (plugin.getStoredPaths().containsKey(inputPathName))
+		{
+			JLabel centeredWarningText = new JLabel("The path name " + inputPathName + " already exist.", JLabel.CENTER);
+			JLabel centeredReplaceText = new JLabel("Replace it?", JLabel.CENTER);
+
+			centeredWarningText.setHorizontalTextPosition(SwingConstants.CENTER);
+			centeredReplaceText.setHorizontalTextPosition(SwingConstants.CENTER);
+
+			JPanel centeredTextFrame = new JPanel(new GridLayout(0, 1));
+			centeredTextFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
+			centeredTextFrame.add(centeredWarningText);
+			centeredTextFrame.add(centeredReplaceText);
+
+			int confirm = JOptionPane.showConfirmDialog(null,
+				centeredTextFrame, "Warning", JOptionPane.YES_NO_OPTION);
+
+			if (confirm == JOptionPane.YES_OPTION)// || confirm == JOptionPane.CLOSED_OPTION)
+			{
+				plugin.removePath(inputPathName);
+				path = plugin.loadPathFromJson(object, inputPathName);
+				activePath.setText(inputPathName);
+			}
+		}
+		else
+		{
+			path = plugin.loadPathFromJson(object, inputPathName);
+			activePath.setText(inputPathName);
+		}
+
+		if(path != null && inputGroupName != null)
+			path.pathGroup = inputGroupName;
+		if(rebuildPanel)
+			plugin.rebuildPanel(true);
+	}
+
 	void rebuild()
 	{
 		pathView.removeAll();
-		groupNames.clear();
+		pathGroups.clear();
 
 
 		ArrayList<String> pathKeys = new ArrayList<>(plugin.getStoredPaths().keySet());
@@ -349,14 +385,17 @@ public class PathmakerPluginPanel extends PluginPanel
 					else // Group is valid, create it
 					{
 						validGroup = groupName;
-						PathGroup group = new PathGroup(plugin, pathView, pathEntry, groupName, i);
-						groupNames.add(groupName);
-						pathView.add(group);
+						PathGroup group = new PathGroup();
+						pathGroups.put(groupName, group);
+
+						GroupPanel groupPanel = new GroupPanel(plugin, pathView, pathEntry, groupName, i);
+						groupPanel.importGroupData(group);
+						pathView.add(groupPanel);
 					}
 				}
 				else // Last component is a valid group which this path belongs to
 				{
-					((PathGroup) pathView.getComponent(pathView.getComponentCount()-1)).addPathPanel(pathEntry);
+					((GroupPanel) pathView.getComponent(pathView.getComponentCount()-1)).addPathPanel(pathEntry);
 				}
 			}
 		}
@@ -371,10 +410,10 @@ public class PathmakerPluginPanel extends PluginPanel
 	String getAvailableGroupName()
 	{
 		String groupName = "group 1";
-		if (!groupNames.isEmpty())
+		if (!pathGroups.isEmpty())
 		{
 			int num = 1;
-			while (groupNames.contains(groupName))
+			while (pathGroups.containsKey(groupName))
 			{
 				num++;
 				groupName = "group " + num;

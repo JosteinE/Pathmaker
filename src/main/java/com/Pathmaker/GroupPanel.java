@@ -24,33 +24,29 @@
 
 package com.Pathmaker;
 
+import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Panel;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
-import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
-import net.runelite.client.util.ImageUtil;
 
 @Slf4j
-public class PathGroup extends JPanel
+public class GroupPanel extends JPanel
 {
 	FlatTextField groupTextField = new FlatTextField();
 	JPanel memberPanel = new JPanel();
@@ -59,7 +55,7 @@ public class PathGroup extends JPanel
 	boolean hidden = false;
 	Color color = new Color(0, 100,100);
 
-	PathGroup(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
+	GroupPanel(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
 	{
 		JPanel groupPanel = this;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -196,15 +192,31 @@ public class PathGroup extends JPanel
 		leftActions.add(expandToggle, BorderLayout.WEST);
 		leftActions.add(visibilityToggle, BorderLayout.CENTER);
 		leftActions.add(colorPicker, BorderLayout.EAST);
-
 		int actionsWidth = (leftActions.getComponentCount() * (iconSize + 5));
-
 		leftActions.setPreferredSize(new Dimension(actionsWidth, iconSize));
+
+		JButton exportButton = PanelBuildUtils.createExportButton(iconSize, iconSize, plugin.gson, panelTypeText);
+		exportButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				PanelBuildUtils.getExportButtonAction(plugin.gson, getGroupName(), groupToJson(plugin));
+			}
+		});
+
+		JPanel rightActions = new JPanel();
+		rightActions.setLayout(new BorderLayout(2, 0));
+		rightActions.setBorder(BorderFactory.createEmptyBorder(actionBorder,actionBorder,actionBorder,actionBorder));
+		rightActions.add(exportButton,  BorderLayout.CENTER);
+		actionsWidth = (rightActions.getComponentCount() * (iconSize + 10));
+		rightActions.setPreferredSize(new Dimension(actionsWidth, iconSize));
 
 		JPanel topPanel = new JPanel(new BorderLayout(0, 0));
 		topPanel.setPreferredSize(new Dimension(0, iconSize + actionBorder * 2));
 
 		topPanel.add(leftActions, BorderLayout.WEST);
+		topPanel.add(rightActions, BorderLayout.EAST);
 
 		groupTextField.setPreferredSize(new Dimension(0, 20)); // PanelBuildUtils.PANEL_WIDTH - actionsWidth
 		topPanel.add(groupTextField, BorderLayout.CENTER);
@@ -218,15 +230,39 @@ public class PathGroup extends JPanel
 		add(memberPanel);
 	}
 
+	JsonObject groupToJson(PathmakerPlugin plugin)
+	{
+		JsonObject groupJson = new JsonObject();
+		JsonObject membersJson = new JsonObject();
+		for (Component member : getPathPanels())
+		{
+			String pathName = ((PathPanel) member).getPathLabel().getText();
+			log.debug("exporting member " + pathName);
+			membersJson.add(pathName, plugin.pathToJson(pathName));
+		}
+		groupJson.add("members", membersJson);
+		groupJson.add("expanded", plugin.gson.toJsonTree(expanded, boolean.class));
+		groupJson.add("hidden", plugin.gson.toJsonTree(hidden, boolean.class));
+		groupJson.add("color", plugin.gson.toJsonTree(color, Color.class));
+		return groupJson;
+	}
+
+	void importGroupData(PathmakerPluginPanel.PathGroup group)
+	{
+		expanded = group.expanded;
+		hidden = group.hidden;
+		color = group.color;
+	}
+
 	void setColor(Color newColor)
 	{
-
-		color = new Color(newColor.getRGB(), false);
+		color = newColor;
 
 		JPanel topPanel = (JPanel) groupTextField.getParent();
-		JPanel leftActionsPanel = (JPanel) topPanel.getComponent(0);
-		leftActionsPanel.setBackground(color);
-		groupTextField.setBackground(color);
+
+		for (Component member : topPanel.getComponents())
+			member.setBackground(newColor);
+
 		topPanel.setBackground(color);
 		setBackground(color.brighter());
 		setBorder(createDefaultBorder());

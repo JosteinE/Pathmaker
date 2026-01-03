@@ -64,7 +64,7 @@ public class MouseAdapterUtils
 
 		if (topPanel != null)
 		{
-			if(topPanel instanceof PathGroup)
+			if(topPanel instanceof GroupPanel)
 			{
 				outerBorder = BorderFactory.createMatteBorder(0, 0, thickness, 0, color);
 				topPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, topPanel.getBorder()));
@@ -79,7 +79,7 @@ public class MouseAdapterUtils
 
 		if (bottomPanel != null)
 		{
-			if(bottomPanel instanceof PathGroup)
+			if(bottomPanel instanceof GroupPanel)
 			{
 				outerBorder = BorderFactory.createMatteBorder(thickness, 0, 0, 0, color);
 				bottomPanel.setBorder(BorderFactory.createCompoundBorder(outerBorder, bottomPanel.getBorder()));
@@ -146,9 +146,9 @@ public class MouseAdapterUtils
 				return trueIndex;
 			}
 
-			if (comp instanceof PathGroup)
+			if (comp instanceof GroupPanel)
 			{
-				trueIndex += ((PathGroup)comp).getPathPanelCount();
+				trueIndex += ((GroupPanel)comp).getPathPanelCount();
 			}
 			else
 			{
@@ -167,13 +167,13 @@ public class MouseAdapterUtils
 		{
 			Component comp = parentPanel.getComponent(i);
 
-			if (comp instanceof PathGroup)
+			if (comp instanceof GroupPanel)
 			{
-				if (trueIndex >= index && trueIndex < index + ((PathGroup) comp).getPathPanelCount())
+				if (trueIndex >= index && trueIndex < index + ((GroupPanel) comp).getPathPanelCount())
 				{
 					return i;
 				}
-				index += ((PathGroup)comp).getPathPanelCount();
+				index += ((GroupPanel)comp).getPathPanelCount();
 			}
 			else if (index == trueIndex)
 			{
