@@ -143,6 +143,7 @@ public class PathGroup extends JPanel
 				}
 			}
 		});
+
 		add(groupTextField);
 
 		memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));

@@ -249,15 +249,17 @@ public class PathmakerPlugin extends Plugin
 			return null;
 		}
 
+		PathmakerPath path = paths.get(pathName);
+
 		//String pathJson;
-		Set<Integer> regionIds = paths.get(pathName).getRegionIDs();
+		Set<Integer> regionIds = path.getRegionIDs();
 		JsonObject pathJson = new JsonObject();
 
 		JsonObject regionsJson = new JsonObject();
 		for (int regionId : regionIds)
 		{
 			JsonArray regionJson = new JsonArray();
-			for (PathPoint point : paths.get(pathName).getPointsInRegion(regionId))
+			for (PathPoint point : path.getPointsInRegion(regionId))
 			{
 				JsonObject pointJson = gson.toJsonTree(point, point instanceof PathPointObject ? PathPointObject.class : PathPoint.class).getAsJsonObject();
 
@@ -291,10 +293,11 @@ public class PathmakerPlugin extends Plugin
 		}
 
 		pathJson.add("regions", regionsJson);
-		pathJson.add("color", gson.toJsonTree(paths.get(pathName).color, Color.class));
-		pathJson.add("looped", gson.toJsonTree(paths.get(pathName).loopPath, boolean.class));
-		pathJson.add("pathDrawOffset", gson.toJsonTree(paths.get(pathName).pathDrawOffset, int.class));
-		pathJson.add("panelExpanded", gson.toJsonTree(paths.get(pathName).panelExpanded, boolean.class));
+		pathJson.add("color", gson.toJsonTree(path.color, Color.class));
+		pathJson.add("looped", gson.toJsonTree(path.loopPath, boolean.class));
+		pathJson.add("pathDrawOffset", gson.toJsonTree(path.pathDrawOffset, int.class));
+		pathJson.add("panelExpanded", gson.toJsonTree(path.panelExpanded, boolean.class));
+		pathJson.add("pathGroup", gson.toJsonTree(path.pathGroup, String.class));
 
 		//log.debug("Saved path: {}", pathName);
 		return pathJson;
@@ -380,6 +383,8 @@ public class PathmakerPlugin extends Plugin
 			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
 		if (pathJson.has("panelExpanded"))
 			paths.get(pathName).panelExpanded = gson.fromJson(pathJson.get("panelExpanded"), boolean.class);
+		if (pathJson.has("pathGroup"))
+			paths.get(pathName).pathGroup = gson.fromJson(pathJson.get("pathGroup"), String.class);
 		//log.debug("Loaded path json: {}", pathName);
 	}
 

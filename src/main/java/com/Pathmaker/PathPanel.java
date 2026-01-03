@@ -107,11 +107,8 @@ public class PathPanel extends JPanel
     private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
     private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
-    //private final int MAX_LABEL_LENGTH = 15;
-
     static
     {
-        final int MAX_LABEL_LENGTH = 15;
         BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
         COLLAPSE_ICON = new ImageIcon(upArrowImage);
         EXPAND_ICON = new ImageIcon(ImageUtil.flipImage(upArrowImage, false, true));
