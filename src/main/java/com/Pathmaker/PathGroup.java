@@ -57,7 +57,7 @@ public class PathGroup extends JPanel
 	boolean beingDragged = false;
 	boolean expanded = true;
 	boolean hidden = false;
-	Color color = Color.BLUE;
+	Color color = new Color(0, 100,100);
 
 	PathGroup(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
 	{
@@ -220,12 +220,15 @@ public class PathGroup extends JPanel
 
 	void setColor(Color newColor)
 	{
-		color = newColor;
+
+		color = new Color(newColor.getRGB(), false);
+
 		JPanel topPanel = (JPanel) groupTextField.getParent();
 		JPanel leftActionsPanel = (JPanel) topPanel.getComponent(0);
 		leftActionsPanel.setBackground(color);
 		groupTextField.setBackground(color);
-		setBackground(new Color(color.getRGB(), false));
+		topPanel.setBackground(color);
+		setBackground(color.brighter());
 		setBorder(createDefaultBorder());
 		repaint();
 	}
