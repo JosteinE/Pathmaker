@@ -387,7 +387,6 @@ public class PathmakerPluginPanel extends PluginPanel
 						validGroup = groupName;
 						PathGroup group = new PathGroup();
 						pathGroups.put(groupName, group);
-
 						GroupPanel groupPanel = new GroupPanel(plugin, pathView, pathEntry, groupName, i);
 						groupPanel.importGroupData(group);
 						pathView.add(groupPanel);

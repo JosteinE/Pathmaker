@@ -201,7 +201,7 @@ public class PathmakerPlugin extends Plugin
     void saveAll()
     {
         configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
-
+		JsonObject saveJson = new JsonObject();
 
 		if(!paths.isEmpty())
 		{
@@ -210,9 +210,25 @@ public class PathmakerPlugin extends Plugin
 			{
 				pathsJson.add(pathName, pathToJson(pathName));
 			}
+			saveJson.add("paths", pathsJson);
 
+			if (!pluginPanel.pathGroups.isEmpty())
+			{
+				JsonObject groupsJson = new JsonObject();
+				for (String groupName : pluginPanel.pathGroups.keySet())
+				{
+					JsonObject groupJson = new JsonObject();
+					PathmakerPluginPanel.PathGroup group = pluginPanel.pathGroups.get(groupName);
+					groupJson.add("expanded", gson.toJsonTree(group.expanded, boolean.class));
+					groupJson.add("hidden", gson.toJsonTree(group.hidden, boolean.class));
+					groupJson.add("color", gson.toJsonTree(group.color, Color.class));
+					groupsJson.add(groupName, groupJson);
+				}
+
+				saveJson.add("groups", groupsJson);
+			}
 			//String json = gson.toJson(paths);
-			configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, pathsJson);
+			configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, saveJson);
 		}
         configManager.sendConfig();
     }
@@ -401,14 +417,32 @@ public class PathmakerPlugin extends Plugin
 
         try
         {
-			JsonObject loadedPaths = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
+			JsonObject loadJson = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
 
-			if (loadedPaths.isJsonNull()) return;
+			if (loadJson.isJsonNull()) return;
 
-			for (String pathName : loadedPaths.keySet())
+			if(!loadJson.has("paths")) return;
+
+			JsonObject pathsJson = loadJson.get("paths").getAsJsonObject();
+
+			for (String pathName : pathsJson.keySet())
 			{
 				//log.debug("Loading path: {}", pathName);
-				loadPathFromJson(loadedPaths.get(pathName).getAsJsonObject(), pathName);
+				loadPathFromJson(pathsJson.get(pathName).getAsJsonObject(), pathName);
+			}
+
+			if(!loadJson.has("groups")) return;
+
+			JsonObject groupsJson = loadJson.get("groups").getAsJsonObject();
+
+			for (String groupName : groupsJson.keySet())
+			{
+				JsonObject groupJson = groupsJson.getAsJsonObject(groupName);
+				PathmakerPluginPanel.PathGroup group = new PathmakerPluginPanel.PathGroup();
+				group.expanded = gson.fromJson(groupJson.get("expanded"), boolean.class);
+				group.hidden = gson.fromJson(groupJson.get("hidden"), boolean.class);
+				group.color =  gson.fromJson(groupJson.get("color"), Color.class);
+				pluginPanel.pathGroups.put(groupName, group);
 			}
         }
         catch (IllegalStateException | JsonSyntaxException ignore)
