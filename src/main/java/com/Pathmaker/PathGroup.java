@@ -24,8 +24,11 @@
 
 package com.Pathmaker;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Panel;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
@@ -37,10 +40,14 @@ import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.components.FlatTextField;
+import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
+import net.runelite.client.util.ImageUtil;
 
 @Slf4j
 public class PathGroup extends JPanel
@@ -48,19 +55,23 @@ public class PathGroup extends JPanel
 	FlatTextField groupTextField = new FlatTextField();
 	JPanel memberPanel = new JPanel();
 	boolean beingDragged = false;
+	boolean expanded = true;
+	boolean hidden = false;
+	Color color = Color.BLUE;
 
 	PathGroup(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
 	{
 		JPanel groupPanel = this;
-
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setBackground(Color.BLUE);
+		//setBackground(Color.BLUE);
 
 		groupTextField.setText(groupName);
+		//groupTextField.setPreferredSize(new Dimension(100, 20));
 		groupTextField.getTextField().setEnabled(false);
 		setBorder(createDefaultBorder());
-		groupTextField.setBackground(Color.BLUE);
+		//groupTextField.setBackground(Color.BLUE);
 
+		// Drag & Drop panel margin
 		int PANEL_MARGIN = 20;
 		// Add drag and drop adapters, but also extra logic to allow for renaming on click.
 		MouseMotionAdapter dragAdapter = new DragAdapter(parentPanel, groupPanel, PANEL_MARGIN);
@@ -85,7 +96,6 @@ public class PathGroup extends JPanel
 				log.debug("mouse clicked");
 				groupTextField.getTextField().setEnabled(true);
 				groupTextField.requestFocusInWindow();
-				groupTextField.getTextField().selectAll();
 				groupTextField.setBackground(Color.DARK_GRAY);
 				beingDragged = false;
 			}
@@ -144,18 +154,76 @@ public class PathGroup extends JPanel
 			}
 		});
 
-		add(groupTextField);
+		JPanel leftActions =  new JPanel();
+
+		int iconSize = PanelBuildUtils.ICON_SIZE;
+		String panelTypeText = "group";
+
+		JButton expandToggle = PanelBuildUtils.createExpandToggleButton(memberPanel, expanded, iconSize, iconSize, panelTypeText);
+		expandToggle.addActionListener(actionEvent ->
+		{
+			expanded = !expanded;
+			PanelBuildUtils.getExpandToggleAction(memberPanel, expandToggle, expanded, panelTypeText);
+		});
+
+		JButton visibilityToggle = PanelBuildUtils.createVisibilityToggleButton(hidden, iconSize, iconSize, panelTypeText);
+		visibilityToggle.addActionListener(actionEvent ->
+		{
+			hidden = !hidden;
+			PanelBuildUtils.getVisibilityAction(visibilityToggle, hidden, panelTypeText);
+		});
+		JButton colorPicker = PanelBuildUtils.createColorPickerButton(iconSize, iconSize, color, panelTypeText);
+		colorPicker.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				super.mousePressed(e);
+				RuneliteColorPicker cPicker = PanelBuildUtils.getColorPicker(plugin.getColorPickerManager(), color, groupPanel, colorPicker, panelTypeText);
+				cPicker.setOnColorChange(newColor ->
+				{
+					setColor(newColor);
+					colorPicker.setIcon(PanelBuildUtils.getRecoloredBrushIcon(newColor));
+				});
+				cPicker.setVisible(true);
+			}
+		});
+
+		leftActions.add(expandToggle, BorderLayout.WEST);
+		leftActions.add(visibilityToggle, BorderLayout.CENTER);
+		leftActions.add(colorPicker, BorderLayout.EAST);
+
+		JPanel topPanel = new JPanel(new BorderLayout(0, 0));
+		topPanel.add(leftActions, BorderLayout.WEST);
+
+		groupTextField.setPreferredSize(new Dimension(PanelBuildUtils.PANEL_WIDTH - (leftActions.getComponentCount() * (iconSize + 10)), 20));
+		topPanel.add(groupTextField, BorderLayout.CENTER);
+
+		setColor(color);
+
+		add(topPanel);
 
 		memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
-		memberPanel.setBackground(Color.BLUE);
+		//memberPanel.setBackground(Color.BLUE);
 		memberPanel.add(firstPathEntry);
 		add(memberPanel);
+	}
+
+	void setColor(Color newColor)
+	{
+		color = newColor;
+		JPanel topPanel = (JPanel) groupTextField.getParent();
+		JPanel leftActionsPanel = (JPanel) topPanel.getComponent(0);
+		leftActionsPanel.setBackground(color);
+		groupTextField.setBackground(color);
+		this.setBackground(color);
+		setBorder(createDefaultBorder());
 	}
 
 	private void finalizeEditing()
 	{
 		groupTextField.getTextField().setEnabled(false);
-		groupTextField.setBackground(Color.BLUE);
+		groupTextField.setBackground(color);
 	}
 
 	Border createDefaultBorder()
