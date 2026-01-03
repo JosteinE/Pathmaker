@@ -36,8 +36,14 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -45,7 +51,10 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.PluginPanel;
@@ -254,6 +263,8 @@ public class PathmakerPluginPanel extends PluginPanel
 		if (object.has("color"))
 			group.color = plugin.gson.fromJson(object.get("color"), Color.class);
 
+		log.debug("Hidden is: " + group.hidden);
+
 		pathGroups.put(groupName, group);
 
 		plugin.rebuildPanel(true);
@@ -326,11 +337,11 @@ public class PathmakerPluginPanel extends PluginPanel
 	void rebuild()
 	{
 		pathView.removeAll();
-		pathGroups.clear();
-
 
 		ArrayList<String> pathKeys = new ArrayList<>(plugin.getStoredPaths().keySet());
+		ArrayList<String> validGroups = new ArrayList<>();
 		String validGroup = null;
+
 		for (int i = 0;  i < pathKeys.size(); i++)
 		{
 			String pathLabel = pathKeys.get(i);
@@ -385,19 +396,38 @@ public class PathmakerPluginPanel extends PluginPanel
 					else // Group is valid, create it
 					{
 						validGroup = groupName;
-						PathGroup group = new PathGroup();
-						pathGroups.put(groupName, group);
+						validGroups.add(validGroup);
+
 						GroupPanel groupPanel = new GroupPanel(plugin, pathView, pathEntry, groupName, i);
-						groupPanel.importGroupData(group);
-						pathView.add(groupPanel);
+						if (!pathGroups.containsKey(groupName))
+						{
+							pathGroups.put(groupName, new PathGroup());
+						}
+						else
+						{
+							groupPanel.importGroupData(pathGroups.get(groupName));
+						}
+						pathView.add(groupName, groupPanel);
+						groupPanel.groupTextField.getTextField().addKeyListener(addOnGroupNameChangedListener(groupName, groupPanel));
 					}
 				}
 				else // Last component is a valid group which this path belongs to
 				{
-					((GroupPanel) pathView.getComponent(pathView.getComponentCount()-1)).addPathPanel(pathEntry);
+					GroupPanel lastGroupPanel = ((GroupPanel) pathView.getComponent(pathView.getComponentCount()-1));
+					lastGroupPanel.addPathPanel(pathEntry);
+
+					if (i == pathKeys.size() - 1 || !groupName.equals(plugin.getStoredPaths().get(pathKeys.get(i+1)).pathGroup))
+						lastGroupPanel.importGroupData(pathGroups.get(groupName));
+
 				}
 			}
 		}
+
+		// Delete invalid groups (ones with less than 2 group members next to each other)
+		pathGroups = (HashMap<String, PathGroup>) pathGroups.entrySet().stream().filter(
+			e -> validGroups.contains(e.getKey())).collect(Collectors.toMap(
+				Map.Entry::getKey,
+				Map.Entry::getValue));
 
 		boolean empty = pathView.getComponentCount() == 0;
 		noPathPanel.setVisible(empty);
@@ -419,5 +449,45 @@ public class PathmakerPluginPanel extends PluginPanel
 			}
 		}
 		return groupName;
+	}
+
+	KeyAdapter addOnGroupNameChangedListener(String groupName, GroupPanel groupPanel)
+	{
+		JTextField textField = groupPanel.groupTextField.getTextField();
+		return new KeyAdapter()
+		{
+			@Override
+			public void keyPressed(KeyEvent e)
+			{
+				super.keyPressed(e);
+
+				if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
+				{
+					textField.setText(groupName);
+					groupPanel.finalizeEditing();
+				}
+
+				if (e.getKeyCode() == KeyEvent.VK_ENTER)
+				{
+					// If name changed: rename entries group name
+					if (!textField.getText().equals(groupName))
+					{
+						//log.debug("finalizeEditing: group name changed from {} to {}", groupName, groupTextField.getText());
+						for (Component c : groupPanel.memberPanel.getComponents())
+						{
+							String pathLabel = ((PathPanel) c).getPathLabel().getText();
+							plugin.getStoredPaths().get(pathLabel).pathGroup = textField.getText();
+						}
+
+						PathGroup group = pathGroups.remove(groupName);
+						pathGroups.put(groupPanel.getGroupName(), group);
+						plugin.rebuildPanel(true);
+						return;
+					}
+
+					groupPanel.finalizeEditing();
+				}
+			}
+		};
 	}
 }

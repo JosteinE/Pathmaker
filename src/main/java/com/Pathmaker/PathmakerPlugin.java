@@ -171,9 +171,8 @@ public class PathmakerPlugin extends Plugin
 
         overlayManager.add(overlay);
         //overlayManager.add(panelOverlay);
-
-		reload(client.getTopLevelWorldView());
 		pluginPanel = new PathmakerPluginPanel(client, this);
+		reload(client.getTopLevelWorldView());
 
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), ICON_FILE);
 		navButton = NavigationButton.builder()
@@ -186,6 +185,7 @@ public class PathmakerPlugin extends Plugin
 
 		if (!paths.isEmpty())
 			pluginPanel.activePath.setText(paths.keySet().iterator().next());
+		rebuildPanel(true);
 	}
 
 	@Override
@@ -217,8 +217,9 @@ public class PathmakerPlugin extends Plugin
 				JsonObject groupsJson = new JsonObject();
 				for (String groupName : pluginPanel.pathGroups.keySet())
 				{
-					JsonObject groupJson = new JsonObject();
 					PathmakerPluginPanel.PathGroup group = pluginPanel.pathGroups.get(groupName);
+					JsonObject groupJson = new JsonObject();
+					//log.debug("Saving group {}, with e: {}, h: {}, c: {}", groupName, group.expanded, group.hidden, group.color);
 					groupJson.add("expanded", gson.toJsonTree(group.expanded, boolean.class));
 					groupJson.add("hidden", gson.toJsonTree(group.hidden, boolean.class));
 					groupJson.add("color", gson.toJsonTree(group.color, Color.class));
@@ -408,6 +409,8 @@ public class PathmakerPlugin extends Plugin
     private void reload(WorldView wv)
     {
         paths.clear();
+		pluginPanel.pathGroups.clear();
+
         String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
 
         if (Strings.isNullOrEmpty(json))
@@ -419,21 +422,19 @@ public class PathmakerPlugin extends Plugin
         {
 			JsonObject loadJson = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
 
-			if (loadJson.isJsonNull()) return;
+			if (loadJson.isJsonNull() || !loadJson.has("paths")) return;
 
-			if(!loadJson.has("paths")) return;
-
-			JsonObject pathsJson = loadJson.get("paths").getAsJsonObject();
+			JsonObject pathsJson = loadJson.getAsJsonObject("paths");
 
 			for (String pathName : pathsJson.keySet())
 			{
 				//log.debug("Loading path: {}", pathName);
-				loadPathFromJson(pathsJson.get(pathName).getAsJsonObject(), pathName);
+				loadPathFromJson(pathsJson.getAsJsonObject(pathName), pathName);
 			}
 
 			if(!loadJson.has("groups")) return;
 
-			JsonObject groupsJson = loadJson.get("groups").getAsJsonObject();
+			JsonObject groupsJson = loadJson.getAsJsonObject("groups");
 
 			for (String groupName : groupsJson.keySet())
 			{

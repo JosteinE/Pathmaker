@@ -141,7 +141,7 @@ public class PanelBuildUtils
 		JButton colorPickerButton = new JButton();
 		colorPickerButton.setPreferredSize(new Dimension(width, height));
 		colorPickerButton.setIcon(new ImageIcon(ImageUtil.recolorImage(BRUSH_IMAGE, currentColor)));
-		colorPickerButton.setToolTipText("Pick " + panelTypeText + " color");
+		colorPickerButton.setToolTipText("Choose " + panelTypeText + " color");
 		return colorPickerButton;
 	}
 

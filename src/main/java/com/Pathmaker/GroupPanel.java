@@ -36,11 +36,18 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.Document;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
@@ -50,16 +57,21 @@ public class GroupPanel extends JPanel
 {
 	FlatTextField groupTextField = new FlatTextField();
 	JPanel memberPanel = new JPanel();
+	JButton visibilityToggle;
+	JButton colorPicker;
+	PathmakerPluginPanel.PathGroup group = new PathmakerPluginPanel.PathGroup();
+	JButton expandToggle;
 	boolean beingDragged = false;
-	boolean expanded = true;
-	boolean hidden = false;
-	Color color = new Color(0, 100,100);
+//	boolean expanded = true;
+//	boolean hidden = false;
+//	Color color = new Color(0, 100,100);
 
 	GroupPanel(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
 	{
 		JPanel groupPanel = this;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
+		((AbstractDocument) groupTextField.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(20));
 		groupTextField.setText(groupName);
 		groupTextField.getTextField().setEnabled(false);
 		setBorder(createDefaultBorder());
@@ -86,7 +98,6 @@ public class GroupPanel extends JPanel
 			public void mouseClicked(MouseEvent e)
 			{
 				super.mouseClicked(e);
-				log.debug("mouse clicked");
 				groupTextField.getTextField().setEnabled(true);
 				groupTextField.requestFocusInWindow();
 				groupTextField.setBackground(Color.DARK_GRAY);
@@ -114,74 +125,38 @@ public class GroupPanel extends JPanel
 				finalizeEditing();
 			}
 		});
-		groupTextField.getTextField().addKeyListener(new KeyAdapter()
-		{
-			@Override
-			public void keyPressed(KeyEvent e)
-			{
-				super.keyPressed(e);
-
-				if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
-				{
-					groupTextField.getTextField().setText(groupName);
-					finalizeEditing();
-				}
-
-				if (e.getKeyCode() == KeyEvent.VK_ENTER)
-				{
-					// If name changed: rename entries group name
-					if (!groupTextField.getText().equals(groupName))
-					{
-						log.debug("finalizeEditing: group name changed from {} to {}", groupName, groupTextField.getText());
-						for (Component c : memberPanel.getComponents())
-						{
-							String pathLabel = ((PathPanel) c).getPathLabel().getText();
-							plugin.getStoredPaths().get(pathLabel).pathGroup = groupTextField.getTextField().getText();
-						}
-						plugin.rebuildPanel(true);
-						return;
-					}
-
-					finalizeEditing();
-				}
-			}
-		});
 
 		int iconSize = PanelBuildUtils.ICON_SIZE;
 		String panelTypeText = "group";
 
-		JButton expandToggle = PanelBuildUtils.createExpandToggleButton(memberPanel, expanded, iconSize, iconSize, panelTypeText);
+		expandToggle = PanelBuildUtils.createExpandToggleButton(memberPanel, group.expanded, iconSize, iconSize, panelTypeText);
 		expandToggle.addActionListener(actionEvent ->
 		{
-			expanded = !expanded;
-			PanelBuildUtils.getExpandToggleAction(memberPanel, expandToggle, expanded, panelTypeText);
+			setExpanded(!group.expanded);
+			plugin.saveAll();
 		});
 
-		JButton visibilityToggle = PanelBuildUtils.createVisibilityToggleButton(hidden, iconSize, iconSize, panelTypeText);
+		visibilityToggle = PanelBuildUtils.createVisibilityToggleButton(group.hidden, iconSize, iconSize, panelTypeText);
 		visibilityToggle.addActionListener(actionEvent ->
 		{
-			hidden = !hidden;
-			PanelBuildUtils.getVisibilityAction(visibilityToggle, hidden, panelTypeText);
-
-			for (Component panel : memberPanel.getComponents())
-			{
-				((PathPanel) panel).setVisibility(hidden);
-			}
+			setHidden(!group.hidden);
+			plugin.saveAll();
 		});
-		JButton colorPicker = PanelBuildUtils.createColorPickerButton(iconSize, iconSize, color, panelTypeText);
+		colorPicker = PanelBuildUtils.createColorPickerButton(iconSize, iconSize, group.color, panelTypeText);
 		colorPicker.addMouseListener(new MouseAdapter()
 		{
 			@Override
 			public void mousePressed(MouseEvent e)
 			{
 				super.mousePressed(e);
-				RuneliteColorPicker cPicker = PanelBuildUtils.getColorPicker(plugin.getColorPickerManager(), color, groupPanel, colorPicker, panelTypeText);
+				RuneliteColorPicker cPicker = PanelBuildUtils.getColorPicker(plugin.getColorPickerManager(), group.color, groupPanel, colorPicker, panelTypeText);
 				cPicker.setOnColorChange(newColor ->
 				{
 					setColor(newColor);
 					colorPicker.setIcon(PanelBuildUtils.getRecoloredBrushIcon(newColor));
 				});
 				cPicker.setVisible(true);
+				cPicker.setOnClose(c -> {plugin.saveAll();});
 			}
 		});
 
@@ -201,7 +176,7 @@ public class GroupPanel extends JPanel
 			@Override
 			public void mousePressed(MouseEvent mouseEvent)
 			{
-				PanelBuildUtils.getExportButtonAction(plugin.gson, getGroupName(), groupToJson(plugin));
+				PanelBuildUtils.getExportButtonAction(plugin.gson, getGroupName(), groupToExportJson(plugin));
 			}
 		});
 
@@ -221,7 +196,7 @@ public class GroupPanel extends JPanel
 		groupTextField.setPreferredSize(new Dimension(0, 20)); // PanelBuildUtils.PANEL_WIDTH - actionsWidth
 		topPanel.add(groupTextField, BorderLayout.CENTER);
 
-		setColor(color);
+		setColor(group.color);
 
 		add(topPanel);
 
@@ -230,7 +205,7 @@ public class GroupPanel extends JPanel
 		add(memberPanel);
 	}
 
-	JsonObject groupToJson(PathmakerPlugin plugin)
+	JsonObject groupToExportJson(PathmakerPlugin plugin)
 	{
 		JsonObject groupJson = new JsonObject();
 		JsonObject membersJson = new JsonObject();
@@ -241,38 +216,58 @@ public class GroupPanel extends JPanel
 			membersJson.add(pathName, plugin.pathToJson(pathName));
 		}
 		groupJson.add("members", membersJson);
-		groupJson.add("expanded", plugin.gson.toJsonTree(expanded, boolean.class));
-		groupJson.add("hidden", plugin.gson.toJsonTree(hidden, boolean.class));
-		groupJson.add("color", plugin.gson.toJsonTree(color, Color.class));
+		groupJson.add("expanded", plugin.gson.toJsonTree(group.expanded, boolean.class));
+		groupJson.add("hidden", plugin.gson.toJsonTree(group.hidden, boolean.class));
+		groupJson.add("color", plugin.gson.toJsonTree(group.color, Color.class));
 		return groupJson;
 	}
 
 	void importGroupData(PathmakerPluginPanel.PathGroup group)
 	{
-		expanded = group.expanded;
-		hidden = group.hidden;
-		color = group.color;
+		this.group = group;
+		setExpanded(this.group.expanded);
+		setHidden(this.group.hidden);
+		setColor(this.group.color);
 	}
 
 	void setColor(Color newColor)
 	{
-		color = newColor;
+		group.color = newColor;
 
 		JPanel topPanel = (JPanel) groupTextField.getParent();
 
 		for (Component member : topPanel.getComponents())
 			member.setBackground(newColor);
 
-		topPanel.setBackground(color);
-		setBackground(color.brighter());
+		colorPicker.setIcon(PanelBuildUtils.getRecoloredBrushIcon(this.group.color));
+
+		topPanel.setBackground(group.color);
+		setBackground(group.color.brighter());
 		setBorder(createDefaultBorder());
 		repaint();
 	}
 
-	private void finalizeEditing()
+	void setHidden(boolean hidden)
+	{
+		group.hidden = hidden;
+		PanelBuildUtils.getVisibilityAction(visibilityToggle, hidden, "group");
+
+		for (Component panel : memberPanel.getComponents())
+		{
+			((PathPanel) panel).setVisibility(hidden);
+		}
+	}
+
+	void setExpanded(boolean expanded)
+	{
+		group.expanded = expanded;
+		PanelBuildUtils.getExpandToggleAction(memberPanel, expandToggle, expanded, "group");
+	}
+
+	void finalizeEditing()
 	{
 		groupTextField.getTextField().setEnabled(false);
-		groupTextField.setBackground(color);
+		groupTextField.setBackground(group.color);
 	}
 
 	Border createDefaultBorder()
