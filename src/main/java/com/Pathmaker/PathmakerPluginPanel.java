@@ -284,8 +284,19 @@ public class PathmakerPluginPanel extends PluginPanel
 
 			int PANEL_MARGIN = 10;
 
-			// NOTE: Sending in pathView.getComponentCount() as index. Might be bad if you want to pull elements out of groups
-			pathEntry.getPathLabel().addMouseListener(new DropAdapter(plugin, groupNames, pathView, pathEntry, i, pathLabel, PANEL_MARGIN));
+			// Injecting an available group name whenever a PathPanel is dropped, to avoid passing the entire groupNames array
+			DropAdapter dropAdapter = new DropAdapter(plugin, pathView, pathEntry, i, pathLabel, PANEL_MARGIN);
+			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
+			{
+				@Override
+				public void mouseReleased(MouseEvent e)
+				{
+					super.mouseReleased(e);
+					dropAdapter.setAvailableGroupName(getAvailableGroupName());
+					dropAdapter.mouseReleased(e);
+					dropAdapter.setAvailableGroupName(null);
+				}
+			});
 
 			pathEntry.getPathLabel().addMouseMotionListener(new DragAdapter(pathView, pathEntry, PANEL_MARGIN));
 
@@ -314,7 +325,7 @@ public class PathmakerPluginPanel extends PluginPanel
 					else // Group is valid, create it
 					{
 						validGroup = groupName;
-						PathGroup group = new PathGroup(plugin, pathView, pathEntry, groupNames, groupName, i);
+						PathGroup group = new PathGroup(plugin, pathView, pathEntry, groupName, i);
 						groupNames.add(groupName);
 						pathView.add(group);
 					}
@@ -331,5 +342,20 @@ public class PathmakerPluginPanel extends PluginPanel
 
 		repaint();
 		revalidate();
+	}
+
+	String getAvailableGroupName()
+	{
+		String groupName = "group 1";
+		if (!groupNames.isEmpty())
+		{
+			int num = 1;
+			while (groupNames.contains(groupName))
+			{
+				num++;
+				groupName = "group " + num;
+			}
+		}
+		return groupName;
 	}
 }

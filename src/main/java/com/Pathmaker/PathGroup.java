@@ -8,6 +8,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import javax.swing.BorderFactory;
@@ -24,7 +25,7 @@ public class PathGroup extends JPanel
 	JPanel memberPanel = new JPanel();
 	boolean beingDragged = false;
 
-	PathGroup(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, ArrayList<String> groupNames,  String groupName, int parentPanelIndex)
+	PathGroup(PathmakerPlugin plugin, JPanel parentPanel, PathPanel firstPathEntry, String groupName, int parentPanelIndex)
 	{
 		JPanel groupPanel = this;
 
@@ -49,7 +50,8 @@ public class PathGroup extends JPanel
 				dragAdapter.mouseDragged(e);
 			}
 		});
-		MouseAdapter dropAdapter = new DropAdapter(plugin, groupNames, parentPanel, groupPanel, parentPanelIndex, null, PANEL_MARGIN);
+
+		DropAdapter dropAdapter = new DropAdapter(plugin, parentPanel, groupPanel, parentPanelIndex, null, PANEL_MARGIN);
 		groupTextField.getTextField().addMouseListener(new MouseAdapter()
 		{
 			@Override
