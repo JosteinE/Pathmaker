@@ -153,7 +153,7 @@ public class PathPanel extends JPanel
         visibilityToggle.setToolTipText((path.hidden ? "Show" : "Hide") + " path");
         visibilityToggle.addActionListener(actionEvent ->
         {
-            toggleVisibility();
+            setVisibility(!path.hidden);
         });
 
         JButton colorPickerButton = new JButton();
@@ -388,9 +388,9 @@ public class PathPanel extends JPanel
         expandToggle.setToolTipText((path.panelExpanded ? "Collapse" : "Expand") + " path");
     }
 
-    private void toggleVisibility()
+    void setVisibility(boolean hidden)
     {
-        path.hidden = !path.hidden;
+        path.hidden = hidden;
 
         visibilityToggle.setIcon(path.hidden ? EYE_CLOSED_ICON : EYE_OPEN_ICON);
         visibilityToggle.setToolTipText((path.hidden ? "Show" : "Hide") + " path");

@@ -63,13 +63,10 @@ public class PathGroup extends JPanel
 	{
 		JPanel groupPanel = this;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		//setBackground(Color.BLUE);
 
 		groupTextField.setText(groupName);
-		//groupTextField.setPreferredSize(new Dimension(100, 20));
 		groupTextField.getTextField().setEnabled(false);
 		setBorder(createDefaultBorder());
-		//groupTextField.setBackground(Color.BLUE);
 
 		// Drag & Drop panel margin
 		int PANEL_MARGIN = 20;
@@ -154,8 +151,6 @@ public class PathGroup extends JPanel
 			}
 		});
 
-		JPanel leftActions =  new JPanel();
-
 		int iconSize = PanelBuildUtils.ICON_SIZE;
 		String panelTypeText = "group";
 
@@ -171,6 +166,11 @@ public class PathGroup extends JPanel
 		{
 			hidden = !hidden;
 			PanelBuildUtils.getVisibilityAction(visibilityToggle, hidden, panelTypeText);
+
+			for (Component panel : memberPanel.getComponents())
+			{
+				((PathPanel) panel).setVisibility(hidden);
+			}
 		});
 		JButton colorPicker = PanelBuildUtils.createColorPickerButton(iconSize, iconSize, color, panelTypeText);
 		colorPicker.addMouseListener(new MouseAdapter()
@@ -189,14 +189,24 @@ public class PathGroup extends JPanel
 			}
 		});
 
+		int actionBorder = 5;
+		JPanel leftActions =  new JPanel();
+		leftActions.setLayout(new BorderLayout(2,0));
+		leftActions.setBorder(BorderFactory.createEmptyBorder(actionBorder,actionBorder,actionBorder,actionBorder));
 		leftActions.add(expandToggle, BorderLayout.WEST);
 		leftActions.add(visibilityToggle, BorderLayout.CENTER);
 		leftActions.add(colorPicker, BorderLayout.EAST);
 
+		int actionsWidth = (leftActions.getComponentCount() * (iconSize + 5));
+
+		leftActions.setPreferredSize(new Dimension(actionsWidth, iconSize));
+
 		JPanel topPanel = new JPanel(new BorderLayout(0, 0));
+		topPanel.setPreferredSize(new Dimension(0, iconSize + actionBorder * 2));
+
 		topPanel.add(leftActions, BorderLayout.WEST);
 
-		groupTextField.setPreferredSize(new Dimension(PanelBuildUtils.PANEL_WIDTH - (leftActions.getComponentCount() * (iconSize + 10)), 20));
+		groupTextField.setPreferredSize(new Dimension(0, 20)); // PanelBuildUtils.PANEL_WIDTH - actionsWidth
 		topPanel.add(groupTextField, BorderLayout.CENTER);
 
 		setColor(color);
@@ -204,7 +214,6 @@ public class PathGroup extends JPanel
 		add(topPanel);
 
 		memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
-		//memberPanel.setBackground(Color.BLUE);
 		memberPanel.add(firstPathEntry);
 		add(memberPanel);
 	}
@@ -216,8 +225,9 @@ public class PathGroup extends JPanel
 		JPanel leftActionsPanel = (JPanel) topPanel.getComponent(0);
 		leftActionsPanel.setBackground(color);
 		groupTextField.setBackground(color);
-		this.setBackground(color);
+		setBackground(new Color(color.getRGB(), false));
 		setBorder(createDefaultBorder());
+		repaint();
 	}
 
 	private void finalizeEditing()
