@@ -212,7 +212,7 @@ public class GroupPanel extends JPanel
 		for (Component member : getPathPanels())
 		{
 			String pathName = ((PathPanel) member).getPathLabel().getText();
-			log.debug("exporting member " + pathName);
+			//log.debug("exporting member " + pathName);
 			membersJson.add(pathName, plugin.pathToJson(pathName));
 		}
 		groupJson.add("members", membersJson);

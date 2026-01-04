@@ -263,8 +263,6 @@ public class PathmakerPluginPanel extends PluginPanel
 		if (object.has("color"))
 			group.color = plugin.gson.fromJson(object.get("color"), Color.class);
 
-		log.debug("Hidden is: " + group.hidden);
-
 		pathGroups.put(groupName, group);
 
 		plugin.rebuildPanel(true);
