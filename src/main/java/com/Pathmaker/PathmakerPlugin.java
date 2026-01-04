@@ -27,11 +27,14 @@ package com.Pathmaker;
 import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
@@ -186,6 +189,8 @@ public class PathmakerPlugin extends Plugin
 		if (!paths.isEmpty())
 			pluginPanel.activePath.setText(paths.keySet().iterator().next());
 		rebuildPanel(true);
+
+		//log.debug("Pathmaker plugin loaded {} paths", paths.size());
 	}
 
 	@Override
@@ -217,13 +222,7 @@ public class PathmakerPlugin extends Plugin
 				JsonObject groupsJson = new JsonObject();
 				for (String groupName : pluginPanel.pathGroups.keySet())
 				{
-					PathmakerPluginPanel.PathGroup group = pluginPanel.pathGroups.get(groupName);
-					JsonObject groupJson = new JsonObject();
-					//log.debug("Saving group {}, with e: {}, h: {}, c: {}", groupName, group.expanded, group.hidden, group.color);
-					groupJson.add("expanded", gson.toJsonTree(group.expanded, boolean.class));
-					groupJson.add("hidden", gson.toJsonTree(group.hidden, boolean.class));
-					groupJson.add("color", gson.toJsonTree(group.color, Color.class));
-					groupsJson.add(groupName, groupJson);
+					groupsJson.add(groupName, groupToJson(groupName));
 				}
 
 				saveJson.add("groups", groupsJson);
@@ -234,30 +233,76 @@ public class PathmakerPlugin extends Plugin
         configManager.sendConfig();
     }
 
-	// TODO: make method that saves only a single path at a time
-//	void save(String pathName)
-//	{
-//		String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
-//
-//		if (Strings.isNullOrEmpty(json))
-//		{
-//			return;
-//		}
-//
-//		JsonObject loadedPaths = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
-//
-//		try
-//		{
-//
-//			if (loadedPaths.isJsonNull() || !loadedPaths.has(pathName))
-//			{
-//				loadedPaths.add(pathName, pathToJson(pathName));
-//			}
-//		} catch (JsonSyntaxException ignored){}
-//
-//		configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
-//		configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, loadedPaths);
-//	}
+	JsonObject groupToJson(String groupName)
+	{
+		PathmakerPluginPanel.PathGroup group = pluginPanel.pathGroups.get(groupName);
+		JsonObject groupJson = new JsonObject();
+		//log.debug("Saving group {}, with e: {}, h: {}, c: {}", groupName, group.expanded, group.hidden, group.color);
+		groupJson.add("expanded", gson.toJsonTree(group.expanded, boolean.class));
+		groupJson.add("hidden", gson.toJsonTree(group.hidden, boolean.class));
+		groupJson.add("color", gson.toJsonTree(group.color, Color.class));
+		return groupJson;
+	}
+
+	// Save group or path by copying everything else as-is, and replacing the entry for the specified property by the current version
+	void saveProperty(String propertyType, String propertyName)
+	{
+		String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+		if (Strings.isNullOrEmpty(json)) return;
+
+		JsonObject loadJSON = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
+		if (loadJSON == null) return;
+
+		JsonObject loadedPropertyJSON = loadJSON.getAsJsonObject(propertyType + "s");
+		JsonObject savePropertyJSON = new JsonObject();
+
+		// Lambda (consumer) expression
+		Consumer<JsonObject> addProperty = (inJson) ->
+		{
+			switch (propertyType)
+			{
+				case "group":  inJson.add(propertyName, groupToJson(propertyName)); break;
+				case "path": inJson.add(propertyName, pathToJson(propertyName)); break;
+			}
+		};
+
+		try
+		{
+			if (loadedPropertyJSON.isJsonNull())
+			{
+				addProperty.accept(savePropertyJSON);
+			}
+			else if (!loadedPropertyJSON.has(propertyName))
+			{
+				savePropertyJSON = loadedPropertyJSON;
+				addProperty.accept(savePropertyJSON);
+			}
+			// Copy everything except for the specified path from the current save,
+			// and replace the specified path with the latest version
+			else
+			{
+				for (String pName : loadedPropertyJSON.keySet())
+				{
+					if (pName.equals(propertyName))
+					{
+						addProperty.accept(savePropertyJSON);
+					}
+					else
+						savePropertyJSON.add(pName, loadedPropertyJSON.get(pName));
+				}
+			}
+		} catch (JsonSyntaxException ignored){}
+
+		if (savePropertyJSON.size() ==  loadedPropertyJSON.size() || savePropertyJSON.size() == loadedPropertyJSON.size() + 1)
+		{
+			loadJSON.remove(propertyType + "s");
+			loadJSON.add(propertyType + "s", savePropertyJSON);
+		}
+		else return;
+
+		configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
+		configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, loadJSON);
+	}
 
 	JsonObject pathToJson(String pathName)
 	{
@@ -284,7 +329,7 @@ public class PathmakerPlugin extends Plugin
 				pointJson.remove("pathOwner");
 				regionJson.add(gson.toJsonTree(pointJson));
 
-				// Todo: Implement a save JSON that uses fewer symbols
+				// Todo: Implement a save JSON that uses fewer symbols, but keep logic for legacy JSON
 //				JsonObject pointJson = new JsonObject();
 //
 //				pointJson.addProperty("drawIndex", point.getDrawIndex());
@@ -422,9 +467,9 @@ public class PathmakerPlugin extends Plugin
         {
 			JsonObject loadJson = gson.fromJson(json, new TypeToken<JsonObject>(){}.getType());
 
-			if (loadJson.isJsonNull() || !loadJson.has("paths")) return;
+			if (loadJson.isJsonNull()) return;
 
-			JsonObject pathsJson = loadJson.getAsJsonObject("paths");
+			JsonObject pathsJson = loadJson.has("paths") ? loadJson.getAsJsonObject("paths") : loadJson;
 
 			for (String pathName : pathsJson.keySet())
 			{
@@ -797,7 +842,7 @@ public class PathmakerPlugin extends Plugin
 		PathmakerPath path = paths.get(pathName);
 		client.getMenu().createMenuEntry(-1)
 			.setOption(path.loopPath ? "Unloop" : "Loop")
-			.setTarget(pathName)
+			.setTarget(ColorUtil.wrapWithColorTag(Text.removeTags(pathName), path.color))
 			.setType(MenuAction.RUNELITE)
 			.onClick(e ->
 			{
@@ -814,7 +859,9 @@ public class PathmakerPlugin extends Plugin
 				}
 
 				path.loopPath = !path.loopPath;
-				rebuildPanel(true);
+
+				saveProperty("path", pathName);
+				rebuildPanel(false);
 			});
 	}
 
