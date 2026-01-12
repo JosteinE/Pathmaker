@@ -4,6 +4,13 @@ Draw lines between tiles marked by shift+right-click.
 
 Intuitively construct paths using plugin's side panel. New "Active Path" names will construct new paths.
 
+
+**Barracuda Trial import strings**
+Tempor Tantrum: https://pastebin.com/raw/P1KXTkiD
+Jubbly Jive: https://pastebin.com/raw/iarFaXsB
+Gwenith Glide: https://pastebin.com/raw/FZMCEKkV
+
+
 ### **Additional features:**
 
 #### In the plugin panel:
