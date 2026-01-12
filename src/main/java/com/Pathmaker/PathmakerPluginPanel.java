@@ -41,7 +41,10 @@ import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -75,7 +78,7 @@ public class PathmakerPluginPanel extends PluginPanel
 	private static final ImageIcon EXPORT_ICON;
 
 	private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
-	private final JPanel pathView = new JPanel();
+	final JPanel pathView = new JPanel();
 	HashMap<String, PathGroup> pathGroups = new HashMap<>();
 
 	Client client;
@@ -343,19 +346,20 @@ public class PathmakerPluginPanel extends PluginPanel
 		for (int i = 0;  i < pathKeys.size(); i++)
 		{
 			String pathLabel = pathKeys.get(i);
+
 			PathPanel pathEntry = new PathPanel(plugin, pathLabel);
 
 			// Set as active path on label click
-			pathEntry.getPathLabel().addActionListener(actionEvent ->
+			pathEntry.getPathLabelButton().addActionListener(actionEvent ->
 			{
-				activePath.setText(pathEntry.getPathLabel().getText());
+				activePath.setText(pathEntry.getPathLabel());
 			});
 
 			int PANEL_MARGIN = 10;
 
 			// Injecting an available group name whenever a PathPanel is dropped, to avoid passing the entire groupNames array
 			DropAdapter dropAdapter = new DropAdapter(plugin, pathView, pathEntry, i, pathLabel, PANEL_MARGIN);
-			pathEntry.getPathLabel().addMouseListener(new MouseAdapter()
+			pathEntry.getPathLabelButton().addMouseListener(new MouseAdapter()
 			{
 				@Override
 				public void mouseReleased(MouseEvent e)
@@ -367,7 +371,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				}
 			});
 
-			pathEntry.getPathLabel().addMouseMotionListener(new DragAdapter(pathView, pathEntry, PANEL_MARGIN));
+			pathEntry.getPathLabelButton().addMouseMotionListener(new DragAdapter(pathView, pathEntry, PANEL_MARGIN));
 
 			String groupName = plugin.getStoredPaths().get(pathLabel).pathGroup;
 
@@ -458,7 +462,7 @@ public class PathmakerPluginPanel extends PluginPanel
 						//log.debug("finalizeEditing: group name changed from {} to {}", groupName, groupTextField.getText());
 						for (Component c : groupPanel.memberPanel.getComponents())
 						{
-							String pathLabel = ((PathPanel) c).getPathLabel().getText();
+							String pathLabel = ((PathPanel) c).getPathLabel();
 							plugin.getStoredPaths().get(pathLabel).pathGroup = textField.getText();
 						}
 

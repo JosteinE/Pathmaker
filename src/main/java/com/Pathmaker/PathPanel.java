@@ -140,12 +140,12 @@ public class PathPanel extends JPanel
         label.setPreferredSize(new Dimension(122, 20)); // Client.PANEL_WIDTH = 225. (18x6 buttons, 5 margin
         labelPanel.add(label, BorderLayout.CENTER);
 
-        expandToggle = new JButton(path.panelExpanded ? COLLAPSE_ICON : EXPAND_ICON);
-        expandToggle.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-        expandToggle.setToolTipText((path.panelExpanded ? "Expand" : "Collapse") + " path");
+        expandToggle = PanelBuildUtils.createExpandToggleButton(path.panelExpanded, ICON_WIDTH, 0, "path");
         expandToggle.addActionListener(actionEvent ->
         {
             toggleCollapsed();
+			plugin.savePath(getPathLabel());
+			plugin.rebuildPanel(false);
         });
 
         visibilityToggle = new JButton(path.hidden ? EYE_CLOSED_ICON : EYE_OPEN_ICON);
@@ -156,10 +156,7 @@ public class PathPanel extends JPanel
             setVisibility(!path.hidden);
         });
 
-        JButton colorPickerButton = new JButton();
-        colorPickerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-        colorPickerButton.setIcon(new ImageIcon(ImageUtil.recolorImage(brushImage, path.color)));
-        colorPickerButton.setToolTipText("Choose path color");
+        JButton colorPickerButton = PanelBuildUtils.createColorPickerButton(ICON_WIDTH, 0, path.color, "path");
         colorPickerButton.addMouseListener(new MouseAdapter()
         {
             @Override
@@ -183,42 +180,42 @@ public class PathPanel extends JPanel
         leftActionPanel.add(colorPickerButton, BorderLayout.EAST);
         labelPanel.add(leftActionPanel, BorderLayout.WEST);
 
-        JButton deletePathButton = new JButton();
-        deletePathButton.setIcon(new ImageIcon(ImageUtil.recolorImage(crossImage, Color.RED)));
-        deletePathButton.setToolTipText("Delete path");
-        deletePathButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-        String warningMsg = "Are you sure you want to permanently delete path: " + label.getText() + "?";
-        deletePathButton.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent mouseEvent) {
-                int confirm = JOptionPane.showConfirmDialog(PathPanel.this,
-                        warningMsg,
-                        "Warning", JOptionPane.OK_CANCEL_OPTION);
-
-                if (confirm == 0)
-                {
-                    plugin.removePath(label.getText());
-                    plugin.rebuildPanel(true);
-                }
-            }
-        });
+        JButton deletePathButton = PanelBuildUtils.createDeleteButton(plugin, ICON_WIDTH, 0 , this, getPathLabel(),"path",true);
+//        deletePathButton.setIcon(new ImageIcon(ImageUtil.recolorImage(crossImage, Color.RED)));
+//        deletePathButton.setToolTipText("Delete path");
+//        deletePathButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+//        String warningMsg = "Are you sure you want to permanently delete path: " + label.getText() + "?";
+//        deletePathButton.addMouseListener(new MouseAdapter()
+//        {
+//            @Override
+//            public void mousePressed(MouseEvent mouseEvent) {
+//                int confirm = JOptionPane.showConfirmDialog(PathPanel.this,
+//                        warningMsg,
+//                        "Warning", JOptionPane.OK_CANCEL_OPTION);
+//
+//                if (confirm == 0)
+//                {
+//                    plugin.removePath(label.getText());
+//                    plugin.rebuildPanel(true);
+//                }
+//            }
+//        });
 
         // Add loop button
-        JButton loopButton = new JButton();
-        loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
-        loopButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-        loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
-        loopButton.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent mouseEvent)
-            {
-                path.loopPath = !path.loopPath;
-                loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
-                loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
-            }
-        });
+//        JButton loopButton = new JButton();
+//        loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+//        loopButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+//        loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
+//        loopButton.addMouseListener(new MouseAdapter()
+//        {
+//            @Override
+//            public void mousePressed(MouseEvent mouseEvent)
+//            {
+//                path.loopPath = !path.loopPath;
+//                loopButton.setToolTipText((path.loopPath ? "disable" :  "enable") + " path loop");
+//                loopButton.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+//            }
+//        });
 
 		// Add offset button
 		JButton offsetButton = new JButton();
@@ -281,73 +278,87 @@ public class PathPanel extends JPanel
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
 
-
         pathContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         pathContainer.add(labelPanel, BorderLayout.CENTER);
 
-        for (int i = pathSize - 1; i >= 0; i--)
-        {
-			PathPoint point = drawOrder.get(i);
-            JPanel pointContainer = new JPanel(new BorderLayout());
-            pointContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
-            pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-            //
-            FlatTextField pointLabel = new FlatTextField();
-            String label = "";// = "Point";
-            label = (point.getLabel() != null && !point.getLabel().isEmpty()) ? point.getLabel() : label;
-            pointLabel.setText(label);
-            pointLabel.setForeground(Color.WHITE);
-            pointLabel.setBackground(Color.DARK_GRAY);
-            pointLabel.setPreferredSize(new Dimension(150, 20));
-            pointLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            ((AbstractDocument) pointLabel.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(plugin.MAX_POINT_LABEL_LENGTH));
-            pointLabel.getDocument().addDocumentListener(new DocumentListener()
-            {
-                public void insertUpdate(DocumentEvent e) {point.setLabel(pointLabel.getText());}
-                public void removeUpdate(DocumentEvent e) {point.setLabel(pointLabel.getText());}
-                public void changedUpdate(DocumentEvent e) {}
-            });
-
-            pointContainer.add(pointLabel, BorderLayout.WEST);
-
-            // Add spinner box for optionally assigning a new point index.
-            JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
-            indexSpinner.setToolTipText("point index");
-            indexSpinner.addChangeListener(ce ->
-            {
-                path.setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
-                plugin.rebuildPanel(true);
-            });
-			SpinnerNumberModel model = (SpinnerNumberModel) indexSpinner.getModel();
-			// indexSpinner.getComponents()[0].getName() == "Spinner.nextButton"
-			// indexSpinner.getComponents()[1].getName() == "Spinner.previousButton"
-			indexSpinner.getComponents()[0].setEnabled(!model.getMaximum().equals(model.getValue()));
-			indexSpinner.getComponents()[1].setEnabled(!model.getMinimum().equals(model.getValue()));
-
-            pointContainer.add(indexSpinner, BorderLayout.CENTER);
-
-            JButton deletePathPointButton = new JButton();
-            deletePathPointButton.setIcon(new ImageIcon(crossImage));
-            deletePathPointButton.setToolTipText("Delete point");
-            deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-            deletePathPointButton.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent mouseEvent) {
-                    plugin.removePoint(getPathLabel().getText(), point);
-                    // Rebuilding in removePoint (because of the in-game shift+click dropdown menu)
-                }
-            });
-            pointContainer.add(deletePathPointButton, BorderLayout.EAST);
-
-			if(i > 0 || path.drawToPlayer != drawFromPlayerMode.NEVER.ordinal())
+		if (path.panelExpanded)
+		{
+			for (int i = pathSize - 1; i >= 0; i--)
 			{
-				pointContainer.add(addDrawToLastButton(point), BorderLayout.SOUTH);
-			}
+				PathPoint point = drawOrder.get(i);
+				JPanel pointContainer = new JPanel(new BorderLayout());
+				pointContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
+				pointContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-            pointContainer.setVisible(path.panelExpanded);
-            pathContainer.add(pointContainer);
-        }
+				//
+				FlatTextField pointLabel = new FlatTextField();
+				String label = "";// = "Point";
+				label = (point.getLabel() != null && !point.getLabel().isEmpty()) ? point.getLabel() : label;
+				pointLabel.setText(label);
+				pointLabel.setForeground(Color.WHITE);
+				pointLabel.setBackground(Color.DARK_GRAY);
+				pointLabel.setPreferredSize(new Dimension(150, 20));
+				pointLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+				((AbstractDocument) pointLabel.getTextField().getDocument()).setDocumentFilter(new MaxLengthFilter(plugin.MAX_POINT_LABEL_LENGTH));
+				pointLabel.getDocument().addDocumentListener(new DocumentListener()
+				{
+					public void insertUpdate(DocumentEvent e)
+					{
+						point.setLabel(pointLabel.getText());
+					}
+
+					public void removeUpdate(DocumentEvent e)
+					{
+						point.setLabel(pointLabel.getText());
+					}
+
+					public void changedUpdate(DocumentEvent e)
+					{
+					}
+				});
+
+				pointContainer.add(pointLabel, BorderLayout.WEST);
+
+				// Add spinner box for optionally assigning a new point index.
+				JSpinner indexSpinner = new JSpinner(new SpinnerNumberModel(point.getDrawIndex() + 1, 1, pathSize, 1));
+				indexSpinner.setToolTipText("point index");
+				indexSpinner.addChangeListener(ce ->
+				{
+					path.setNewIndex(point, (Integer) indexSpinner.getValue() - 1);
+					plugin.rebuildPanel(true);
+				});
+				SpinnerNumberModel model = (SpinnerNumberModel) indexSpinner.getModel();
+				// indexSpinner.getComponents()[0].getName() == "Spinner.nextButton"
+				// indexSpinner.getComponents()[1].getName() == "Spinner.previousButton"
+				indexSpinner.getComponents()[0].setEnabled(!model.getMaximum().equals(model.getValue()));
+				indexSpinner.getComponents()[1].setEnabled(!model.getMinimum().equals(model.getValue()));
+
+				pointContainer.add(indexSpinner, BorderLayout.CENTER);
+
+				JButton deletePathPointButton = new JButton();
+				deletePathPointButton.setIcon(new ImageIcon(crossImage));
+				deletePathPointButton.setToolTipText("Delete point");
+				deletePathPointButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+				deletePathPointButton.addMouseListener(new MouseAdapter()
+				{
+					@Override
+					public void mousePressed(MouseEvent mouseEvent)
+					{
+						plugin.removePoint(getPathLabel(), point);
+						// Rebuilding in removePoint (because of the in-game shift+click dropdown menu)
+					}
+				});
+				pointContainer.add(deletePathPointButton, BorderLayout.EAST);
+
+				if (i > 0 || path.drawToPlayer != drawFromPlayerMode.NEVER.ordinal())
+				{
+					pointContainer.add(addDrawToLastButton(point), BorderLayout.SOUTH);
+				}
+
+				pointContainer.setVisible(path.panelExpanded);
+				pathContainer.add(pointContainer);
+			}
+		}
         add(pathContainer);
     }
 
@@ -401,9 +412,14 @@ public class PathPanel extends JPanel
         this.label.setText(label);
     }
 
-    JButton getPathLabel()
+	JButton getPathLabelButton()
+	{
+		return label;
+	}
+
+    String getPathLabel()
     {
-        return label;
+        return label.getText();
     }
 
 	JPanel getLabelPanel()

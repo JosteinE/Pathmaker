@@ -27,20 +27,19 @@ package com.Pathmaker;
 import com.google.common.base.Strings;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
-import java.awt.Menu;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.DecorativeObject;
 import net.runelite.api.GameObject;
@@ -77,11 +76,12 @@ import net.runelite.api.events.WorldViewLoaded;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.awt.Polygon;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.chatbox.ChatboxPanelManager;
@@ -113,7 +113,7 @@ public class PathmakerPlugin extends Plugin
     public final int  TILE_SIZE_HALF = TILE_SIZE / 2;
 
     private final LinkedHashMap<String, PathmakerPath> paths = new LinkedHashMap<>();
-    private PathmakerPluginPanel pluginPanel;
+    PathmakerPluginPanel pluginPanel;
     private NavigationButton navButton;
 
     boolean hotKeyPressed = false;
@@ -164,6 +164,9 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private ChatboxPanelManager chatboxPanelManager;
 
+	@Inject
+	private ChatMessageManager chatMessageManager;
+
     @Provides
     PathmakerConfig provideConfig(ConfigManager configManager)
     {
@@ -190,7 +193,14 @@ public class PathmakerPlugin extends Plugin
 		clientToolbar.addNavigation(navButton);
 
 		if (!paths.isEmpty())
-			pluginPanel.activePath.setText(paths.keySet().iterator().next());
+		{
+			Iterator<String> iterator = paths.keySet().iterator();
+			String lastPath = iterator.next();
+			while (iterator.hasNext())
+				lastPath = iterator.next();
+
+			pluginPanel.activePath.setText(lastPath);
+		}
 		rebuildPanel(true);
 
 		//log.debug("Pathmaker plugin loaded {} paths", paths.size());
@@ -250,7 +260,6 @@ public class PathmakerPlugin extends Plugin
 	void savePath(String pathName)
 	{
 		saveProperty("path", pathName);
-		log.debug("Saved path: {}", pathName);
 	}
 
 	void saveGroup(String groupName)
@@ -633,7 +642,7 @@ public class PathmakerPlugin extends Plugin
     public void onMenuEntryAdded(final MenuEntryAdded event)
     {
         // Only add menu option if shift is being held
-        MenuAction menuAction = event.getMenuEntry().getType();
+		MenuAction menuAction = event.getMenuEntry().getType();
         hotKeyPressed = client.isKeyPressed(KeyCode.KC_SHIFT);
 
         if (!hotKeyPressed || (menuAction != MenuAction.WALK && menuAction != MenuAction.SET_HEADING &&
@@ -642,6 +651,8 @@ public class PathmakerPlugin extends Plugin
         {
             return;
         }
+
+		int startingMenuOptionCount = client.getMenu().getMenuEntries().length;
 
         // Fetch game world
         int worldId = event.getMenuEntry().getWorldViewId();
@@ -731,8 +742,6 @@ public class PathmakerPlugin extends Plugin
 			worldPoint.getRegionY(),
 			worldPoint.getPlane());
 
-
-
         // If tile is not previously marked by this path, add the "add" option.
         if (pathPoint == null)
         {
@@ -742,7 +751,7 @@ public class PathmakerPlugin extends Plugin
 				paths.get(getActivePathName()).getSize() > 1)
 			{
 				String optionString = (paths.get(getActivePathName()).loopPath ? "Unloop " : "Loop ") + getActiveOrDefaultPathColorString(getActivePathName());
-				addMenuOption(getLoopMenuEntryMethod(getActivePathName(), pathPoint), optionString);
+				addMenuOption(-1, getLoopMenuEntryMethod(getActivePathName(), pathPoint), optionString);
 			}
 
             // Skip if the entityID has already been registered
@@ -764,7 +773,7 @@ public class PathmakerPlugin extends Plugin
             }
 
 			String optionString = "Add " + targetEntityString + " to " + targetPathName;
-			addMenuOption(getAddPointMenuEntryMethod(getActivePathName(), pathPoint, targetEntityString), optionString);
+			addMenuOption(-1, getAddPointMenuEntryMethod(getActivePathName(), pathPoint, targetEntityString), optionString);
         }
 
         // On existing POINTS
@@ -784,12 +793,12 @@ public class PathmakerPlugin extends Plugin
 					pathPoint.getDrawIndex() == 0))
 				{
 					String optionString = (paths.get(activePathName).loopPath ? "Unloop " : "Loop ") + getActiveOrDefaultPathColorString(activePathName);
-					addMenuOption(getLoopMenuEntryMethod(activePathName, pathPoint), optionString);
+					addMenuOption(-1, getLoopMenuEntryMethod(activePathName, pathPoint), optionString);
 				}
 
 				// Add label rename option
 				String optionString = "Set " + targetEntityString + " label";
-				addMenuOption(getLabelRenameMenuEntryMethod(pathPoint, targetEntityString), optionString);
+				addMenuOption(-1, getLabelRenameMenuEntryMethod(pathPoint, targetEntityString), optionString);
 			}
         }
 
@@ -806,33 +815,78 @@ public class PathmakerPlugin extends Plugin
 					ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) +
 					" from " + ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
 
-				addMenuOption(getRemovePointMenuEntryMethod(pathName, point), optionString);
+				addMenuOption(-1, getRemovePointMenuEntryMethod(pathName, point), optionString);
 			}
 		}
 
 		// Add create new path option regardless
-		String newPathName = getAvailableName(paths, "unnamed");
-		String optionString = "Create new path with " + getActiveOrDefaultPathColorString(Text.removeTags(targetEntityString));
-		addMenuOption(getAddPointMenuEntryMethod(newPathName, pathPoint, targetEntityString), optionString);
+		if (!paths.isEmpty())
+		{
+			String newPathName = getAvailableName(paths, "unnamed");
+			String optionString = "Start new path at " + ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), config.pathColor());
+			addMenuOption(startingMenuOptionCount, getNewPathEntry(newPathName, pathPoint, targetEntityString), optionString);
+		}
     }
 
-	void addMenuOption(Consumer<MenuEntry> entryMethod, String optionString)
+	void addMenuOption(int index, Consumer<MenuEntry> entryMethod, String optionString)
 	{
-		client.getMenu().createMenuEntry(-1)
+		client.getMenu().createMenuEntry(index)
 			.setOption(optionString)
 			.setType(MenuAction.RUNELITE)
 			.onClick(entryMethod);
 	}
 
-	Consumer<MenuEntry> getAddPointMenuEntryMethod(String pathName, PathPoint point, String targetEntityString)
+	Runnable getAddPointMethod(String pathName, PathPoint point, String targetEntityString)
 	{
-		return menuEntry -> {
+		return () -> {
 			createOrAddToPath(Text.removeTags(pathName), point); // Also sets the created path as the active path
 			String targetLabel = Text.removeTags(targetEntityString);
 			if (!targetLabel.equals("Tile"))
 				point.setLabel(targetLabel);
-			rebuildPanel(false);
 			savePath(getActivePathName());
+			rebuildPanel(false);
+		};
+	}
+
+	Consumer<MenuEntry> getAddPointMenuEntryMethod(String pathName, PathPoint point, String targetEntityString)
+	{
+		return menuEntry ->
+		{
+			getAddPointMethod(pathName, point, targetEntityString).run();
+		};
+	}
+
+	Runnable getNewPathEntryMethod(String prompt, String pathName, PathPoint point, String targetEntityString)
+	{
+		return () ->
+		{
+			chatboxPanelManager.openTextInput(prompt)
+				.value(pathName)
+				.onDone(label ->
+				{
+					if (label.length() > pluginPanel.MAX_PATH_NAME_LENGTH)
+						label = label.substring(0, pluginPanel.MAX_PATH_NAME_LENGTH);
+
+					if (!paths.isEmpty() && paths.containsKey(label))
+					{
+						String chatMessage =  ColorUtil.wrapWithColorTag(Text.removeTags("Path name \"" + label + "\" is already in use!"), Color.RED);
+						chatMessageManager.queue(QueuedMessage.builder()
+							.type(ChatMessageType.GAMEMESSAGE)
+							.runeLiteFormattedMessage(chatMessage)
+							.build());
+					}
+					else
+						getAddPointMethod(label, point, targetEntityString).run();
+
+				}).build();
+		};
+	}
+
+	Consumer<MenuEntry> getNewPathEntry(String pathName, PathPoint point, String targetEntityString)
+	{
+		return menuEntry ->
+		{
+			getNewPathEntryMethod("Path name", pathName, point, targetEntityString).run();
 		};
 	}
 
@@ -859,8 +913,6 @@ public class PathmakerPlugin extends Plugin
 		PathmakerPath path = paths.get(pathName);
 		return menuEntry ->
 		{
-				//(point == null && path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() && path.getSize() > 1)
-
 				// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
 				if (path.loopPath &&
 					(point != null && point.getDrawIndex() == path.getSize() - 2) ||

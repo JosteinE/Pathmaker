@@ -129,11 +129,12 @@ public class GroupPanel extends JPanel
 		int iconSize = PanelBuildUtils.ICON_SIZE;
 		String panelTypeText = "group";
 
-		expandToggle = PanelBuildUtils.createExpandToggleButton(memberPanel, group.expanded, iconSize, iconSize, panelTypeText);
+		expandToggle = PanelBuildUtils.createExpandToggleButton(group.expanded, iconSize, iconSize, panelTypeText);
 		expandToggle.addActionListener(actionEvent ->
 		{
 			setExpanded(!group.expanded);
-			plugin.saveAll();
+			plugin.saveGroup(groupName);
+			plugin.rebuildPanel(false);
 		});
 
 		visibilityToggle = PanelBuildUtils.createVisibilityToggleButton(group.hidden, iconSize, iconSize, panelTypeText);
@@ -167,7 +168,7 @@ public class GroupPanel extends JPanel
 		leftActions.add(expandToggle, BorderLayout.WEST);
 		leftActions.add(visibilityToggle, BorderLayout.CENTER);
 		leftActions.add(colorPicker, BorderLayout.EAST);
-		int actionsWidth = (leftActions.getComponentCount() * (iconSize + 5));
+		int actionsWidth = (leftActions.getComponentCount() * (iconSize + 6));
 		leftActions.setPreferredSize(new Dimension(actionsWidth, iconSize));
 
 		JButton exportButton = PanelBuildUtils.createExportButton(iconSize, iconSize, plugin.gson, panelTypeText);
@@ -180,11 +181,15 @@ public class GroupPanel extends JPanel
 			}
 		});
 
+		JButton deleteButton = PanelBuildUtils.createDeleteButton(plugin, iconSize, iconSize, this, groupName, "group", true);
+
+
 		JPanel rightActions = new JPanel();
 		rightActions.setLayout(new BorderLayout(2, 0));
 		rightActions.setBorder(BorderFactory.createEmptyBorder(actionBorder,actionBorder,actionBorder,actionBorder));
-		rightActions.add(exportButton,  BorderLayout.CENTER);
-		actionsWidth = (rightActions.getComponentCount() * (iconSize + 10));
+		rightActions.add(exportButton,  BorderLayout.WEST);
+		rightActions.add(deleteButton,  BorderLayout.EAST);
+		actionsWidth = (rightActions.getComponentCount() * (iconSize + 6));
 		rightActions.setPreferredSize(new Dimension(actionsWidth, iconSize));
 
 		JPanel topPanel = new JPanel(new BorderLayout(0, 0));
@@ -211,7 +216,7 @@ public class GroupPanel extends JPanel
 		JsonObject membersJson = new JsonObject();
 		for (Component member : getPathPanels())
 		{
-			String pathName = ((PathPanel) member).getPathLabel().getText();
+			String pathName = ((PathPanel) member).getPathLabel();
 			//log.debug("exporting member " + pathName);
 			membersJson.add(pathName, plugin.pathToJson(pathName));
 		}
@@ -233,16 +238,17 @@ public class GroupPanel extends JPanel
 	void setColor(Color newColor)
 	{
 		group.color = newColor;
+		Color backgroundColor = newColor.darker().darker().darker();
 
 		JPanel topPanel = (JPanel) groupTextField.getParent();
 
 		for (Component member : topPanel.getComponents())
-			member.setBackground(newColor);
+			member.setBackground(backgroundColor);
 
 		colorPicker.setIcon(PanelBuildUtils.getRecoloredBrushIcon(this.group.color));
 
-		topPanel.setBackground(group.color);
-		setBackground(group.color.brighter());
+		topPanel.setBackground(backgroundColor);
+		setBackground(newColor);
 		setBorder(createDefaultBorder());
 		repaint();
 	}

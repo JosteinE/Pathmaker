@@ -35,13 +35,17 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
 
 public class PanelBuildUtils
 {
@@ -53,6 +57,7 @@ public class PanelBuildUtils
 //	private static final ImageIcon LOOP_OFF_ICON;
 	private static final ImageIcon EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
 	private static final ImageIcon EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
+	private static final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 //	private static final ImageIcon OFFSET_LEFT_ICON;
 //	private static final ImageIcon OFFSET_MIDDLE_ICON;
 //	private static final ImageIcon OFFSET_RIGHT_ICON;
@@ -72,7 +77,7 @@ public class PanelBuildUtils
 
 	// EXPAND
 
-	static JButton createExpandToggleButton(JPanel expandPanel, boolean expanded, int width, int height, String panelTypeText)
+	static JButton createExpandToggleButton(boolean expanded, int width, int height, String panelTypeText)
 	{
 		width = width < 0 ? ICON_SIZE : width;
 		height = height < 0 ? ICON_SIZE : height;
@@ -143,6 +148,59 @@ public class PanelBuildUtils
 		colorPickerButton.setIcon(new ImageIcon(ImageUtil.recolorImage(BRUSH_IMAGE, currentColor)));
 		colorPickerButton.setToolTipText("Choose " + panelTypeText + " color");
 		return colorPickerButton;
+	}
+
+	static JButton createDeleteButton(PathmakerPlugin plugin, int width, int height, JPanel panel, String itemName, String typeString, boolean redCross)
+	{
+		JButton deletePathButton = new JButton();
+		ImageIcon crossIcon = redCross ? new ImageIcon(ImageUtil.recolorImage(crossImage, Color.RED)) : new ImageIcon(crossImage);
+		deletePathButton.setIcon(crossIcon);
+		deletePathButton.setToolTipText("Delete " + typeString);
+		deletePathButton.setPreferredSize(new Dimension(width, height));
+		String warningMsg = "Are you sure you want to permanently delete " + typeString + ": " + itemName + "?";
+		Runnable deleteRunnable = getDeleteButtonRunnable(plugin, typeString, itemName);
+		deletePathButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent) {
+				int confirm = JOptionPane.showConfirmDialog(panel,
+					warningMsg + (typeString.equals("group") ? "\n\nWARNING: This will also delete ALL of the paths within." : ""),
+					"Warning", JOptionPane.OK_CANCEL_OPTION);
+
+				if (confirm == 0)
+				{
+					deleteRunnable.run();
+					plugin.rebuildPanel(true);
+				}
+			}
+		});
+		return deletePathButton;
+	}
+
+	static private Runnable getDeleteButtonRunnable(PathmakerPlugin plugin, String typeString, String itemName)
+	{
+		switch (typeString)
+		{
+			case "group":
+			{
+				return () -> {
+					for (Component panel : plugin.pluginPanel.pathView.getComponents())
+					{
+						if (panel instanceof GroupPanel &&  ((GroupPanel) panel).getGroupName().equals(itemName))
+						{
+							for (Component memberPanel : ((GroupPanel) panel).getPathPanels())
+							{
+								plugin.removePath(((PathPanel) memberPanel).getPathLabel());
+							}
+						}
+					}
+				};
+			}
+			default: // Path
+			{
+				return () -> plugin.removePath(itemName);
+			}
+		}
 	}
 
 	static RuneliteColorPicker getColorPicker(ColorPickerManager colorPickerManager, Color color, JPanel owner, Component relativeTo, String panelTypeText)
