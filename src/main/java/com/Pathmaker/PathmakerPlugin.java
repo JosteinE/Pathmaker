@@ -31,7 +31,9 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.Color;
+import java.awt.Menu;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -46,6 +48,7 @@ import net.runelite.api.GroundObject;
 import net.runelite.api.ItemLayer;
 import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Point;
@@ -242,6 +245,17 @@ public class PathmakerPlugin extends Plugin
 		groupJson.add("hidden", gson.toJsonTree(group.hidden, boolean.class));
 		groupJson.add("color", gson.toJsonTree(group.color, Color.class));
 		return groupJson;
+	}
+
+	void savePath(String pathName)
+	{
+		saveProperty("path", pathName);
+		log.debug("Saved path: {}", pathName);
+	}
+
+	void saveGroup(String groupName)
+	{
+		saveProperty("group", groupName);
 	}
 
 	// Save group or path by copying everything else as-is, and replacing the entry for the specified property by the current version
@@ -455,7 +469,7 @@ public class PathmakerPlugin extends Plugin
     {
         paths.clear();
 		pluginPanel.pathGroups.clear();
-
+		//if (true) return;
         String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
 
         if (Strings.isNullOrEmpty(json))
@@ -697,8 +711,7 @@ public class PathmakerPlugin extends Plugin
                     worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
                 }
             }
-            else // Note "toLocalInstance"
-				// https://github.com/runelite/runelite/blob/ebe56b9a3b817476658981c46d7fad003daaf523/runelite-client/src/main/java/net/runelite/client/plugins/groundmarkers/GroundMarkerPlugin.java#L208
+            else
             {
                 worldPoint = WorldPoint.fromLocalInstance(client, selectedSceneTile.getLocalLocation());
             }
@@ -718,6 +731,8 @@ public class PathmakerPlugin extends Plugin
 			worldPoint.getRegionY(),
 			worldPoint.getPlane());
 
+
+
         // If tile is not previously marked by this path, add the "add" option.
         if (pathPoint == null)
         {
@@ -725,9 +740,10 @@ public class PathmakerPlugin extends Plugin
 				paths.containsKey(getActivePathName()) &&
 				paths.get(getActivePathName()).drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() &&
 				paths.get(getActivePathName()).getSize() > 1)
-				addLoopMenuOption(getActivePathName(), null);
-
-            final PathPoint newPoint;
+			{
+				String optionString = (paths.get(getActivePathName()).loopPath ? "Unloop " : "Loop ") + getActiveOrDefaultPathColorString(getActivePathName());
+				addMenuOption(getLoopMenuEntryMethod(getActivePathName(), pathPoint), optionString);
+			}
 
             // Skip if the entityID has already been registered
             if (menuAction == MenuAction.EXAMINE_NPC || menuAction == MenuAction.EXAMINE_OBJECT)
@@ -735,30 +751,20 @@ public class PathmakerPlugin extends Plugin
 				int entityID = event.getIdentifier();
                 final boolean isNpc = menuAction == MenuAction.EXAMINE_NPC;
 
-                newPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
+                pathPoint = new PathPointObject(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
                         worldPoint.getRegionY(), worldPoint.getPlane(), entityID, trueEntityId, isNpc);
 
                 if(toCenterVec != null)
-                    ((PathPointObject) newPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
+                    ((PathPointObject) pathPoint).setToCenterVector(toCenterVec.getX(), toCenterVec.getY());
             }
             else
             {
-                newPoint = new PathPoint(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
+				pathPoint = new PathPoint(getActivePathName(), worldPoint.getRegionID(), worldPoint.getRegionX(),
                         worldPoint.getRegionY(), worldPoint.getPlane());
             }
 
-            client.getMenu().createMenuEntry(-1)
-                    .setOption("Add " + targetEntityString + " to")
-                    .setTarget(targetPathName)
-                    .setType(MenuAction.RUNELITE)
-                    .onClick(e ->
-					{
-						createOrAddToPath(Text.removeTags(targetPathName), newPoint);
-						String targetLabel = Text.removeTags(targetEntityString);
-						if (!targetLabel.equals("Tile"))
-							newPoint.setLabel(targetLabel);
-						rebuildPanel(true);
-					});
+			String optionString = "Add " + targetEntityString + " to " + targetPathName;
+			addMenuOption(getAddPointMenuEntryMethod(getActivePathName(), pathPoint, targetEntityString), optionString);
         }
 
         // On existing POINTS
@@ -774,48 +780,16 @@ public class PathmakerPlugin extends Plugin
 				if (paths.get(activePathName).getSize() > 2 &&
 					(pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2 &&
 					paths.get(activePathName).loopPath) ||
-					(paths.get(getActivePathName()).drawToPlayer == PathPanel.drawFromPlayerMode.NEVER.ordinal() &&
+					(paths.get(activePathName).drawToPlayer == PathPanel.drawFromPlayerMode.NEVER.ordinal() &&
 					pathPoint.getDrawIndex() == 0))
 				{
-					addLoopMenuOption(getActivePathName(), pathPoint);
-//					client.getMenu().createMenuEntry(-1)
-//						.setOption(paths.get(activePathName).loopPath ? "Unloop" : "Loop")
-//						.setTarget(targetPathName)
-//						.setType(MenuAction.RUNELITE)
-//						.onClick(e ->
-//						{
-//							// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
-//							if (pathPoint.getDrawIndex() == paths.get(activePathName).getSize() - 2)
-//							{
-//								paths.get(activePathName).setNewIndex(paths.get(activePathName).getPointAtDrawIndex(paths.get(activePathName).getSize() - 1), 0);
-//								paths.get(activePathName).reverseDrawOrder();
-//							}
-//
-//							paths.get(activePathName).loopPath = !paths.get(activePathName).loopPath;
-//							rebuildPanel(true);
-//						});
+					String optionString = (paths.get(activePathName).loopPath ? "Unloop " : "Loop ") + getActiveOrDefaultPathColorString(activePathName);
+					addMenuOption(getLoopMenuEntryMethod(activePathName, pathPoint), optionString);
 				}
 
 				// Add label rename option
-				client.getMenu().createMenuEntry(-1)
-					.setOption("Set " + targetEntityString + " label")
-					.setTarget(targetPathName)
-					.setType(MenuAction.RUNELITE)
-					.onClick(e ->
-					{
-						String currentLabel = pathPoint.getLabel() == null ? "" : pathPoint.getLabel();
-
-						chatboxPanelManager.openTextInput(targetEntityString + " label")
-							.value(currentLabel)
-							.onDone(label ->
-							{
-								if (label.length() > MAX_POINT_LABEL_LENGTH)
-									label = label.substring(0, MAX_POINT_LABEL_LENGTH);
-								pathPoint.setLabel(label); // From
-								rebuildPanel(true);
-							})
-							.build();
-					});
+				String optionString = "Set " + targetEntityString + " label";
+				addMenuOption(getLabelRenameMenuEntryMethod(pathPoint, targetEntityString), optionString);
 			}
         }
 
@@ -828,24 +802,63 @@ public class PathmakerPlugin extends Plugin
 			// Eliminate double entries when a point is both the position of an entity and entity tile
 			if(!(point instanceof PathPointObject) || (!Text.removeTags(targetEntityString).equals("Tile")))
 			{
-				// Adding delete options, regardless of belonging path
-				addRemoveMenuOption(pathName, point, "Remove " +
-						ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) +
-						" from",
-					ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color));
+				String optionString = "Remove " +
+					ColorUtil.wrapWithColorTag(Text.removeTags(targetEntityString), paths.get(pathName).color) +
+					" from " + ColorUtil.wrapWithColorTag(Text.removeTags(pathName), paths.get(pathName).color);
+
+				addMenuOption(getRemovePointMenuEntryMethod(pathName, point), optionString);
 			}
 		}
+
+		// Add create new path option regardless
+		String newPathName = getAvailableName(paths, "unnamed");
+		String optionString = "Create new path with " + getActiveOrDefaultPathColorString(Text.removeTags(targetEntityString));
+		addMenuOption(getAddPointMenuEntryMethod(newPathName, pathPoint, targetEntityString), optionString);
     }
 
-	void addLoopMenuOption(String pathName, PathPoint point)
+	void addMenuOption(Consumer<MenuEntry> entryMethod, String optionString)
+	{
+		client.getMenu().createMenuEntry(-1)
+			.setOption(optionString)
+			.setType(MenuAction.RUNELITE)
+			.onClick(entryMethod);
+	}
+
+	Consumer<MenuEntry> getAddPointMenuEntryMethod(String pathName, PathPoint point, String targetEntityString)
+	{
+		return menuEntry -> {
+			createOrAddToPath(Text.removeTags(pathName), point); // Also sets the created path as the active path
+			String targetLabel = Text.removeTags(targetEntityString);
+			if (!targetLabel.equals("Tile"))
+				point.setLabel(targetLabel);
+			rebuildPanel(false);
+			savePath(getActivePathName());
+		};
+	}
+
+	Consumer<MenuEntry> getLabelRenameMenuEntryMethod(PathPoint point, String targetEntityString)
+	{
+		return menuEntry -> {
+			String currentLabel = point.getLabel() == null ? "" : point.getLabel();
+
+			chatboxPanelManager.openTextInput(targetEntityString + " label")
+				.value(currentLabel)
+				.onDone(label ->
+				{
+					if (label.length() > MAX_POINT_LABEL_LENGTH)
+						label = label.substring(0, MAX_POINT_LABEL_LENGTH);
+					point.setLabel(label); // From
+					rebuildPanel(true);
+				})
+				.build();
+		};
+	}
+
+	Consumer<MenuEntry> getLoopMenuEntryMethod(String pathName, PathPoint point)
 	{
 		PathmakerPath path = paths.get(pathName);
-		client.getMenu().createMenuEntry(-1)
-			.setOption(path.loopPath ? "Unloop" : "Loop")
-			.setTarget(ColorUtil.wrapWithColorTag(Text.removeTags(pathName), path.color))
-			.setType(MenuAction.RUNELITE)
-			.onClick(e ->
-			{
+		return menuEntry ->
+		{
 				//(point == null && path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() && path.getSize() > 1)
 
 				// Reverse and unloop if target point is second to last in draw order (this preserves the path structure)
@@ -862,17 +875,15 @@ public class PathmakerPlugin extends Plugin
 
 				saveProperty("path", pathName);
 				rebuildPanel(false);
-			});
+			};
 	}
 
-    void addRemoveMenuOption(String pathName, PathPoint pathPoint, String optionString, String target)
+	Consumer<MenuEntry> getRemovePointMenuEntryMethod(String pathName, PathPoint pathPoint)
     {
-        // Add remove option regardless of belonging path
-        client.getMenu().createMenuEntry(-1)
-                .setOption(optionString)
-                .setTarget(target)
-                .setType(MenuAction.RUNELITE)
-                .onClick(e -> removePoint(pathName, pathPoint));
+		return menuEntry ->
+		{
+			removePoint(pathName, pathPoint);
+		};
     }
 
 
@@ -969,6 +980,7 @@ public class PathmakerPlugin extends Plugin
             path = new PathmakerPath(point);
             path.color = getDefaultPathColor();
             paths.put(pathName, path);
+			pluginPanel.activePath.setText(pathName);
         }
     }
 
@@ -1166,4 +1178,19 @@ public class PathmakerPlugin extends Plugin
         lp = lp.dx(inradius); lp = lp.dy(inradius);
         return lp;
     }
+
+	String getAvailableName(Map<?,?> map, String prefix)
+	{
+		String groupName = prefix + " 1";
+		if (!map.isEmpty())
+		{
+			int num = 1;
+			while (map.containsKey(groupName))
+			{
+				num++;
+				groupName = prefix + " " + num;
+			}
+		}
+		return groupName;
+	}
 }

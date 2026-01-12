@@ -361,7 +361,7 @@ public class PathmakerPluginPanel extends PluginPanel
 				public void mouseReleased(MouseEvent e)
 				{
 					super.mouseReleased(e);
-					dropAdapter.setAvailableGroupName(getAvailableGroupName());
+					dropAdapter.setAvailableGroupName(plugin.getAvailableName(pathGroups,"group"));
 					dropAdapter.mouseReleased(e);
 					dropAdapter.setAvailableGroupName(null);
 				}
@@ -432,21 +432,6 @@ public class PathmakerPluginPanel extends PluginPanel
 
 		repaint();
 		revalidate();
-	}
-
-	String getAvailableGroupName()
-	{
-		String groupName = "group 1";
-		if (!pathGroups.isEmpty())
-		{
-			int num = 1;
-			while (pathGroups.containsKey(groupName))
-			{
-				num++;
-				groupName = "group " + num;
-			}
-		}
-		return groupName;
 	}
 
 	KeyAdapter addOnGroupNameChangedListener(String groupName, GroupPanel groupPanel)
