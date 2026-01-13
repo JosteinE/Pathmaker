@@ -31,22 +31,13 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.geom.Point2D;
 import java.util.Collection;
-import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.swing.text.html.parser.Entity;
-import net.runelite.api.Constants;
-import net.runelite.api.GameObject;
 import net.runelite.api.MenuEntry;
-import net.runelite.api.ObjectComposition;
-import net.runelite.api.Player;
 import net.runelite.api.Client;
-import java.awt.geom.Point2D.Float;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
-import net.runelite.api.Scene;
-import net.runelite.api.SceneTileModel;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
@@ -58,21 +49,16 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import lombok.extern.slf4j.Slf4j; // https://projectlombok.org/features/log
-import net.runelite.client.config.RuneLiteConfig;
-import net.runelite.client.plugins.Plugin;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
-import net.runelite.http.api.worlds.World;
 
 
 @Slf4j
 public class PathmakerOverlay extends Overlay
 {
-    private static final int MAX_DRAW_DISTANCE = 32;
-
     private final Client client;
     private final PathmakerPlugin plugin;
     private final PathmakerConfig config;
@@ -103,11 +89,7 @@ public class PathmakerOverlay extends Overlay
 		// Fetch player position
         // Doing getWorldLocation instead of getLocalLocation, because world loc. is server-side.
 		WorldView pWv = client.getLocalPlayer().getWorldView();
-
-        final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
-		LocalPoint playerPosLocal = playerPos == null ? null : LocalPoint.fromWorld(pWv, new WorldPoint(playerPos.getX(), playerPos.getY(), playerPos.getPlane()));
-
-		startPoint = LocalPoint.fromWorld(pWv,client.getLocalPlayer().getWorldLocation());//playerPosLocal == null ? startPoint : playerPosLocal;
+		startPoint = LocalPoint.fromWorld(pWv,client.getLocalPlayer().getWorldLocation());
 
         // Current tile
         if (config.highlightPlayerTile())
@@ -117,11 +99,6 @@ public class PathmakerOverlay extends Overlay
 
 			highlightTile(graphics, pWv, startPoint, trueTileColor, config.playerTileBorderWidth(), trueTileFillColor);
         }
-
-//        // Fetch hovered tile and if successful, assign it to endPoint
-//        WorldView wv = client.getTopLevelWorldView();//getLocalPlayer().getWorldView();
-
-//		wv = client.getTopLevelWorldView();
 
         // Highlight tiles marked by the right-click menu and draw lines between them
         if(!plugin.getStoredPaths().isEmpty())
@@ -254,7 +231,6 @@ public class PathmakerOverlay extends Overlay
         HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
 		ArrayList<Integer> loadedRegions = new ArrayList<>();
 
-		// Todo: inject the reverse lookup map here
 		ArrayList<String> pathsToLoad = new ArrayList<>();
 
 		for (int regionId : client.getTopLevelWorldView().getMapRegions())
@@ -276,13 +252,14 @@ public class PathmakerOverlay extends Overlay
 			//log.debug("playerRegion: {}, BaseInstanceReg: {}", playerRegion, baseInstancePoint.getRegionID());
 		}
 
-		// Retrieve relevant paths for the loaded regions, via the reverse lookup map
+		// Retrieve relevant paths for the loaded regions via the reverse lookup map
 		for(int regionId : loadedRegions)
 		{
 			if (plugin.getReversePathLookup().containsKey(regionId))
 			{
 				for (String pathName : plugin.getReversePathLookup().get(regionId))
 				{
+					// skip duplicates
 					if (!pathsToLoad.contains(pathName))
 					{
 						pathsToLoad.add(pathName);
@@ -317,7 +294,6 @@ public class PathmakerOverlay extends Overlay
 			ArrayList<WorldView> lineWVs = new ArrayList<>();
 			ArrayList<Boolean> drawToPrevious = new ArrayList<>();
 
-			int pathSize = path.getSize();
 			ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
 
 			if (drawOrder.isEmpty()) continue; // Continue if the path does not have any points within the loaded regions
@@ -370,8 +346,6 @@ public class PathmakerOverlay extends Overlay
 							}
 
 							localP = toEntityCenter((PathPointObject) point, localP);
-//							localP = localP.dx(((PathPointObject) point).getToCenterVectorX());
-//							localP = localP.dy(((PathPointObject) point).getToCenterVectorY());
 						}
 
 						drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
@@ -384,7 +358,6 @@ public class PathmakerOverlay extends Overlay
 						// Draw non-entity tile highlights
 						if(config.drawPathPoints())
 							highlightTile(graphics, wv, localP, pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
-						//drawLabel(graphics, wv, point, path.color);
 					}
 
                     // Only draw line if the previous point had a draw index that was directly behind this.
@@ -414,34 +387,6 @@ public class PathmakerOverlay extends Overlay
 				line.add(line.get(0));
 				lineWVs.add(lineWVs.get(0));
 				drawToPrevious.add(true);
-//                // Making sure both ends are loaded
-//                if(path.isPointInRegions(path.getPointAtDrawIndex(path.getSize() -1), loadedRegions) &&
-//                        path.isPointInRegions(path.getPointAtDrawIndex(0), loadedRegions))
-//                {
-//					PathPoint startP = path.getPointAtDrawIndex(0);
-//
-//					WorldPoint startWp = toLocalInstance(startP.getWorldPoint(), loadedRegions);
-//					WorldView startWv;
-//					if(startWp != null)
-//						startWv = client.getLocalPlayer().getWorldView();
-//					else
-//					{
-//						startWv = client.getTopLevelWorldView();
-//						//startWp = startP.getWorldPoint();
-//					}
-//
-//					LocalPoint startLp = getCurrentEntityPosition(startWv, startP, false);
-//
-//					if(startP instanceof PathPointObject)
-//						startLp = toEntityCenter((PathPointObject) startP, startLp);
-//
-//					//WorldView startWv = client.getWorldView(startP.getWorldViewId());
-//					//LocalPoint startLp = pathPointToLocal(wv, path.getPointAtDrawIndex(0));
-//
-////                    PathPoint lastP = path.getPointAtDrawIndex(path.getSize() - 1);
-//
-//                    drawLine(graphics, lastLocalP, startLp, lastWv, startWv, path.color, (float) config.pathLineWidth());
-//                }
             }
 
 			if (line.size() > 1)
@@ -561,11 +506,6 @@ public class PathmakerOverlay extends Overlay
 		return localPoint;
 	}
 
-//	int correctPlaneForSailing(WorldView wv)
-//	{
-//		return wv.isTopLevel() ? wv.getPlane() : 0;
-//	}
-
     // Convert PathPoint (region point) to local
     LocalPoint pathPointToLocal(WorldView wv, PathPoint point)
     {
@@ -604,16 +544,6 @@ public class PathmakerOverlay extends Overlay
         return true;
     }
 
-//    private void drawLine(final Graphics2D graphics, final WorldView wv, final PathPoint startPoint, final PathPoint endPoint, final Color color, float lineWidth)
-//    {
-//        LocalPoint lineStart = pathPointToLocal(wv, startPoint);
-//        LocalPoint lineEnd = pathPointToLocal(wv, endPoint);
-//
-//		// Correct for sailing tiles
-//
-//        drawLine(graphics, lineStart, lineEnd, wv, color, lineWidth);
-//    }
-
     // Draw a line between the provided start and end points
     private void drawLine(final Graphics2D graphics, final LocalPoint startLoc, final LocalPoint endLoc, WorldView startWv, WorldView endWv, final Color color, float lineWidth){ //, int counter) {
         if (startLoc == null || endLoc == null)
@@ -642,8 +572,6 @@ public class PathmakerOverlay extends Overlay
     // 0 tileObject, 1 npc
     void drawOutline(WorldView wv, LocalPoint lp, Boolean isNpc, int entityId, int width, Color color, int feather)
     {
-//        if (point == null) {return;}
-
         if(isNpc)
         {
             NPC npc = wv.npcs().byIndex(entityId);
@@ -767,82 +695,6 @@ public class PathmakerOverlay extends Overlay
 
 		addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
 	}
-
-//    void drawLabel(Graphics2D graphics, WorldView wv, PathPoint point, Color pathColor)//ArrayList<PathPoint> drawOrder, Color pathColor)
-//    {
-//		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
-//
-//		LocalPoint lp = pathPointToLocal(wv, point);
-//		if(lp == null) return;
-//
-//		if(point instanceof PathPointObject)
-//		{
-//			lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-//			lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-//		}
-//
-//		drawLabel(graphics, wv, lp, point.getDrawIndex(), point.getLabel(), pathColor);
-
-		// Draw label. Yes the split of loops here is intentional. More performant? Hopefully
-//            switch (config.pathPointLabelModeSelect()) {
-//                case INDEX: {
-//                    for (PathPoint point : drawOrder)
-//                    {
-//                        LocalPoint lp = pathPointToLocal(wv, point);
-//						if(lp == null) continue;
-//
-//                        if(point instanceof PathPointObject)
-//                        {
-//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());//plugin.getEntityCenter(((PathPointObject) point).getInradius(), lp);
-//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-//                        }
-//
-//                        addLabel(graphics, wv, lp, config.labelZOffset(), "p" + (point.getDrawIndex() + 1), color);
-//                    }
-//                    break;
-//                }
-//                case LABEL: {
-//                    for (PathPoint point : drawOrder)
-//                    {
-//                        LocalPoint lp = pathPointToLocal(wv, point);
-//						if(lp == null) continue;
-//
-//                        if(point instanceof PathPointObject)
-//                        {
-//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-//                        }
-//
-//                        if (point.getLabel() != null && !point.getLabel().isEmpty())
-//                            addLabel(graphics, wv, lp, config.labelZOffset(), point.getLabel(), color);
-//                    }
-//                    break;
-//                }
-//                case BOTH:
-//                {
-//                    for (PathPoint point : drawOrder)
-//                    {
-//                        LocalPoint lp = pathPointToLocal(wv, point);
-//						if(lp == null) continue;
-//
-//                        if(point instanceof PathPointObject)
-//                        {
-//                            lp = lp.dx(((PathPointObject) point).getToCenterVectorX());
-//                            lp = lp.dy(((PathPointObject) point).getToCenterVectorY());
-//                        }
-//
-//                        String label = "p" + (point.getDrawIndex() + 1);
-//                        if (point.getLabel() != null && !point.getLabel().isEmpty())
-//                            label += ", " + point.getLabel();
-//
-//                        addLabel(graphics, wv, lp, config.labelZOffset() * 10, label, color);
-//                    }
-//                    break;
-//                }
-//                default:
-//                    break;
-//            }
-//    }
 
 	WorldPoint toLocalInstance(WorldPoint wp, ArrayList<Integer> loadedRegions)
 	{
