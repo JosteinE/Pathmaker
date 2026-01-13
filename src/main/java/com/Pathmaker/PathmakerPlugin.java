@@ -40,7 +40,6 @@ import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.DecorativeObject;
 import net.runelite.api.GameObject;
@@ -68,13 +67,11 @@ import java.awt.Polygon;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
-import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.chatbox.ChatboxPanelManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -184,7 +181,12 @@ public class PathmakerPlugin extends Plugin
 		}
 		rebuildPanel(true);
 
-		//log.debug("Pathmaker plugin loaded {} paths", paths.size());
+		log.debug("Pathmaker plugin loaded {} paths", paths.size());
+
+		for (String path : paths.keySet())
+		{
+			log.debug(path);
+		}
 	}
 
 	@Override
@@ -240,16 +242,16 @@ public class PathmakerPlugin extends Plugin
 
 	void savePath(String pathName)
 	{
-		saveProperty("path", pathName);
+		saveProperty("path", pathName, false);
 	}
 
 	void saveGroup(String groupName)
 	{
-		saveProperty("group", groupName);
+		saveProperty("group", groupName, false);
 	}
 
 	// Save group or path by copying everything else as-is, and replacing the entry for the specified property by the current version
-	void saveProperty(String propertyType, String propertyName)
+	private void saveProperty(String propertyType, String propertyName, boolean removed)
 	{
 		String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
 		if (Strings.isNullOrEmpty(json)) return;
@@ -282,13 +284,18 @@ public class PathmakerPlugin extends Plugin
 				addProperty.accept(savePropertyJSON);
 			}
 			// Copy everything except for the specified path from the current save,
-			// and replace the specified path with the latest version
+			// and replace the specified path with the latest version (unless it was removed)
 			else
 			{
 				for (String pName : loadedPropertyJSON.keySet())
 				{
 					if (pName.equals(propertyName))
 					{
+						if(removed)
+						{
+							continue;
+						}
+
 						addProperty.accept(savePropertyJSON);
 					}
 					else
@@ -297,7 +304,7 @@ public class PathmakerPlugin extends Plugin
 			}
 		} catch (JsonSyntaxException ignored){}
 
-		if (savePropertyJSON.size() ==  loadedPropertyJSON.size() || savePropertyJSON.size() == loadedPropertyJSON.size() + 1)
+		if (savePropertyJSON.size() == loadedPropertyJSON.size() || savePropertyJSON.size() == loadedPropertyJSON.size() + 1 || (removed && savePropertyJSON.size() == loadedPropertyJSON.size() - 1))
 		{
 			loadJSON.remove(propertyType + "s");
 			loadJSON.add(propertyType + "s", savePropertyJSON);
@@ -937,26 +944,44 @@ public class PathmakerPlugin extends Plugin
 		// Check if the path still has points within the region
 		if(!path.hasPointsInRegion(regionID))
 		{
-			ArrayList<String> regionPaths = reversePathsLookup.get(regionID);
-
-			// Remove the name of the path from the reverse lookup map for the region
-			if(regionPaths.size() > 1)
-				regionPaths.remove(pathName);
-			else // Delete region key if no paths have points within it
-				reversePathsLookup.remove(regionID);
+			removePathReverseLookupRegion(regionID, pathName);
 		}
 
         if (path.getSize() == 0)
         {
             removePath(pathName);
         }
-        rebuildPanel(true);
+		else
+			savePath(pathName);
+
+        rebuildPanel(false);
     }
 
     void removePath(String pathName)
     {
-        paths.remove(pathName);
+        PathmakerPath path = paths.remove(pathName);
+
+		saveProperty("path", pathName, true);
+
+		if(!path.getRegionIDs().isEmpty())
+		{
+			for (Integer integer : path.getRegionIDs())
+			{
+				removePathReverseLookupRegion(integer, pathName);
+			}
+		}
     }
+
+	void removePathReverseLookupRegion(int regionId, String pathName)
+	{
+		ArrayList<String> regionPaths = reversePathsLookup.get(regionId);
+
+		// Remove the name of the path from the reverse lookup map for the region
+		if(regionPaths.size() > 1)
+			regionPaths.remove(pathName);
+		else // Delete region key if no paths have points within it
+			reversePathsLookup.remove(regionId);
+	}
 
     String getActivePathName()
     {

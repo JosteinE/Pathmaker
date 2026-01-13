@@ -122,7 +122,7 @@ public class MenuEntryUtil
 
 			path.loopPath = !path.loopPath;
 
-			plugin.saveProperty("path", pathName);
+			plugin.savePath(pathName);
 			plugin.rebuildPanel(false);
 		};
 	}
