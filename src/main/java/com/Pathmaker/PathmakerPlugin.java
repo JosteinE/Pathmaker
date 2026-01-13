@@ -181,12 +181,11 @@ public class PathmakerPlugin extends Plugin
 		}
 		rebuildPanel(true);
 
-		log.debug("Pathmaker plugin loaded {} paths", paths.size());
-
-		for (String path : paths.keySet())
-		{
-			log.debug(path);
-		}
+//		log.debug("Pathmaker plugin loaded {} paths", paths.size());
+//		for (String path : paths.keySet())
+//		{
+//			log.debug(path);
+//		}
 	}
 
 	@Override
