@@ -164,7 +164,7 @@ public class PanelBuildUtils
 			@Override
 			public void mousePressed(MouseEvent mouseEvent) {
 				int confirm = JOptionPane.showConfirmDialog(panel,
-					warningMsg + (typeString.equals("group") ? "\n\nWARNING: This will also delete ALL of the paths within." : ""),
+					warningMsg + (typeString.equals("group") ? "\n\nWARNING: This will also delete ALL ("+ ((GroupPanel) panel).getPathPanels().length +") of the paths within." : ""),
 					"Warning", JOptionPane.OK_CANCEL_OPTION);
 
 				if (confirm == 0)

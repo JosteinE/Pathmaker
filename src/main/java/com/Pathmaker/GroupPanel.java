@@ -238,7 +238,7 @@ public class GroupPanel extends JPanel
 	void setColor(Color newColor)
 	{
 		group.color = newColor;
-		Color backgroundColor = newColor.darker().darker().darker();
+		Color backgroundColor = getBackgroundColor();
 
 		JPanel topPanel = (JPanel) groupTextField.getParent();
 
@@ -251,6 +251,11 @@ public class GroupPanel extends JPanel
 		setBackground(newColor);
 		setBorder(createDefaultBorder());
 		repaint();
+	}
+
+	Color getBackgroundColor()
+	{
+		return group.color.darker().darker().darker();
 	}
 
 	void setHidden(boolean hidden)
@@ -273,7 +278,7 @@ public class GroupPanel extends JPanel
 	void finalizeEditing()
 	{
 		groupTextField.getTextField().setEnabled(false);
-		groupTextField.setBackground(group.color);
+		groupTextField.setBackground(getBackgroundColor());
 	}
 
 	Border createDefaultBorder()
@@ -284,6 +289,7 @@ public class GroupPanel extends JPanel
 	void addPathPanel(PathPanel panel)
 	{
 		memberPanel.add(panel);
+		groupTextField.getTextField().setToolTipText(getGroupName() + ": " + memberPanel.getComponents().length + " paths");
 	}
 
 	Component[] getPathPanels()
