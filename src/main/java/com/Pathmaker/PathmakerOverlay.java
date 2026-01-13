@@ -123,11 +123,10 @@ public class PathmakerOverlay extends Overlay
 
 //		wv = client.getTopLevelWorldView();
 
-		LocalPoint lastActivePathPoint = null;
         // Highlight tiles marked by the right-click menu and draw lines between them
         if(!plugin.getStoredPaths().isEmpty())
         {
-			lastActivePathPoint = drawPath(graphics);
+			drawPath(graphics);
         }
 
 		// Draw hovered tile elements
@@ -136,7 +135,7 @@ public class PathmakerOverlay extends Overlay
 			(config.hoveredTileDrawModeSelect() == PathmakerConfig.hoveredTileDrawMode.SHIFT_DOWN &&
 				plugin.hotKeyPressed)))
 		{
-			drawHoveredTile(graphics, lastActivePathPoint);
+			drawHoveredTile(graphics);
 		}
 
         return null;
@@ -158,7 +157,7 @@ public class PathmakerOverlay extends Overlay
 		return menuEntry.getWidget() != null || option.equals("Cancel"); // STANDARD_HUD_INTERFACES.contains(widgetGroupId)
 	}
 
-    void drawHoveredTile(Graphics2D graphics, @Nullable LocalPoint lastPathPoint)
+    void drawHoveredTile(Graphics2D graphics)
     {
         // Fetch hovered tile
 		WorldView wv = client.getLocalPlayer().getWorldView();
@@ -224,17 +223,14 @@ public class PathmakerOverlay extends Overlay
                         break;
                     }
 
-					if (lastPathPoint == null)
-					{
-						lastPathPoint = pathPointToLocal(wv,lastPoint);//lastWv, lastPoint);
-						if(lastPathPoint == null) break;
+					LocalPoint lastPathPoint = pathPointToLocal(wv,lastPoint);//lastWv, lastPoint);
+					if(lastPathPoint == null) break;
 
-						//Set line origin to be in the center of objects
-						if (lastPoint instanceof PathPointObject)
-						{
-							lastPathPoint = lastPathPoint.dx(((PathPointObject) lastPoint).getToCenterVectorX());
-							lastPathPoint = lastPathPoint.dy(((PathPointObject) lastPoint).getToCenterVectorY());
-						}
+					//Set line origin to be in the center of objects
+					if (lastPoint instanceof PathPointObject)
+					{
+						lastPathPoint = lastPathPoint.dx(((PathPointObject) lastPoint).getToCenterVectorX());
+						lastPathPoint = lastPathPoint.dy(((PathPointObject) lastPoint).getToCenterVectorY());
 					}
 
                     drawLine(graphics, lastPathPoint, hoveredTile, wv, wv, hoveredTileColor, (float) config.pathLineWidth());
@@ -251,13 +247,15 @@ public class PathmakerOverlay extends Overlay
     }
 
     // Highlight tiles marked by the right-click menu and draw lines between them
-    LocalPoint drawPath(Graphics2D graphics)
+    void drawPath(Graphics2D graphics)
     {
-		if (plugin.getStoredPaths().isEmpty()) return null;
+		if (plugin.getStoredPaths().isEmpty()) return;
+
         HashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
 		ArrayList<Integer> loadedRegions = new ArrayList<>();
-		String activePathName = plugin.getActivePathName();
-		LocalPoint lastActivePathPoint = null;
+
+		// Todo: inject the reverse lookup map here
+		ArrayList<String> pathsToLoad = new ArrayList<>();
 
 		for (int regionId : client.getTopLevelWorldView().getMapRegions())
 		{
@@ -278,26 +276,54 @@ public class PathmakerOverlay extends Overlay
 			//log.debug("playerRegion: {}, BaseInstanceReg: {}", playerRegion, baseInstancePoint.getRegionID());
 		}
 
-        for (String pathName : paths.keySet())
+		// Retrieve relevant paths for the loaded regions, via the reverse lookup map
+		for(int regionId : loadedRegions)
+		{
+			if (plugin.getReversePathLookup().containsKey(regionId))
+			{
+				for (String pathName : plugin.getReversePathLookup().get(regionId))
+				{
+					if (!pathsToLoad.contains(pathName))
+					{
+						pathsToLoad.add(pathName);
+					}
+				}
+			}
+		}
+
+//		StringBuilder debug = new StringBuilder("Paths to load (" +  pathsToLoad.size() + "):");
+//		for(String pathName : pathsToLoad)
+//		{
+//			debug.append(pathName).append(", ");
+//		}
+//		log.debug(debug.toString());
+
+		if (pathsToLoad.isEmpty())
+		{
+			return;
+		}
+
+        for (String pathName : pathsToLoad)
         {
-			//LocalPoint lastLocalP = null;
-			//WorldView lastWv = client.getTopLevelWorldView();
             PathmakerPath path = paths.get(pathName);
+
+			// path should only ever be null if it was just deleted.
+			if(path == null || path.hidden)
+			{
+				continue;
+			}
+
 			ArrayList<LocalPoint> line = new ArrayList<>();
 			ArrayList<WorldView> lineWVs = new ArrayList<>();
 			ArrayList<Boolean> drawToPrevious = new ArrayList<>();
 
-            if(path.hidden)
-            {
-                continue;
-            }
-
 			int pathSize = path.getSize();
 			ArrayList<PathPoint> drawOrder = paths.get(pathName).getDrawOrder(loadedRegions);
 
+			if (drawOrder.isEmpty()) continue; // Continue if the path does not have any points within the loaded regions
+
 			if(path.drawToPlayer == PathPanel.drawFromPlayerMode.ALWAYS.ordinal() ||
 				(path.drawToPlayer == PathPanel.drawFromPlayerMode.START_ONLY.ordinal() &&
-					!drawOrder.isEmpty() &&
 					drawOrder.get(0).getDrawIndex() == 0))
 			{
 				line.add(client.getLocalPlayer().getLocalLocation());
@@ -464,9 +490,6 @@ public class PathmakerOverlay extends Overlay
 
 					for(int vis = 0; vis < drawToPrevious.size(); vis ++)
 					{
-
-//						if((vis > 0 && drawToPrevious.get(vis)) || (vis == 0 && drawToPrevious.get(vis + 1)))
-//						{
 						if((vis != 0 && drawToPrevious.get(vis) || (vis + 1 < drawToPrevious.size() && drawToPrevious.get(vis + 1))))
 						{
 						int itStart = (vis > 0 && !drawToPrevious.get(vis)) || (vis == 0 && !drawToPrevious.get(1)) ? 1 : 0;
@@ -529,7 +552,6 @@ public class PathmakerOverlay extends Overlay
 				}
 			}
         }
-		return  lastActivePathPoint;
     }
 
 	LocalPoint toEntityCenter(PathPointObject point, LocalPoint localPoint)
