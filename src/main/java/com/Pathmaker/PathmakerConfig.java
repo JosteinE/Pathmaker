@@ -284,7 +284,6 @@ public interface PathmakerConfig extends Config
             keyName = "drawPath",
             name = "Draw",
             description = "Render path lines",
-            position = 1,
             section = path
     )
     default boolean drawPath()
@@ -292,23 +291,40 @@ public interface PathmakerConfig extends Config
         return true;
     }
 
+
+	static enum pathPointMode
+	{
+		NONE,
+		TILES,
+		NPCS_AND_OBJECTS,
+		BOTH,
+	}
     @ConfigItem(
             keyName = "drawPathPoints",
             name = "Draw point tiles",
             description = "Highlight path point tiles.",
-            position = 2,
             section = path
     )
-    default boolean drawPathPoints()
+    default int drawPathPoints()
     {
-        return true;
+        return pathPointMode.BOTH.ordinal();
     }
+
+//	@ConfigItem(
+//		keyName = "objectAndNpcOutline",
+//		name = "Object and NPC outline",
+//		description = "Draw an outline on objects and NPCs",
+//		section = path
+//	)
+//	default boolean objectAndNpcOutline()
+//	{
+//		return true;
+//	}
 
     @ConfigItem(
             keyName = "pathWidth",
             name = "Path width",
             description = "Width of the path line.",
-            position = 3,
             section = path
     )
     @Range(max = 10)
@@ -322,7 +338,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathLineColor",
             name = "Default path color",
             description = "Configures the default path color.",
-            position = 4,
             section = path
     )
     default Color pathColor()
@@ -335,7 +350,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathLinePointColor",
             name = "Path point tile color",
             description = "Configures the path line point tile color.",
-            position = 6,
             section = path
     )
     default Color pathLinePointColor()
@@ -347,7 +361,6 @@ public interface PathmakerConfig extends Config
 		keyName = "pointMatchPathColor",
 		name = "Points match path color",
 		description = "Set path points to match path color.",
-		position = 7,
 		section = path
 	)
 	default boolean pointMatchPathColor()
@@ -372,7 +385,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathLinePointWidth",
             name = "Path point border width",
             description = "Width of the path line tile border.",
-            position = 8,
             section = path
     )
     @Range(min = 0, max = 10)
@@ -385,7 +397,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathZOffset",
             name = "Path draw height",
             description = "Configure the default Z offset for paths.",
-            position = 9,
             section = path
     )
     @Range(min = 0, max = 20)
@@ -405,7 +416,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathPointLabelModeSelect",
             name = "Point label",
             description = "Add point labels.",
-            position = 10,
             section = path
     )
     default pathPointLabelMode pathPointLabelModeSelect()
@@ -417,7 +427,6 @@ public interface PathmakerConfig extends Config
             keyName = "labelZOffset",
             name = "Label height offset",
             description = "Set label height offset from tile.",
-            position = 11,
             section = path
     )
     @Range(max = 20)
@@ -431,7 +440,6 @@ public interface PathmakerConfig extends Config
             keyName = "pathPointLabelColor",
             name = "Path point label color",
             description = "Configures default the color of point labels.",
-            position = 12,
             section = path
     )
     default Color pathPointLabelColor()
@@ -443,7 +451,6 @@ public interface PathmakerConfig extends Config
             keyName = "labelMatchPathColor",
             name = "label match path color",
             description = "Set labels to match path color.",
-            position = 13,
             section = path
     )
     default boolean labelMatchPathColor()
@@ -452,22 +459,9 @@ public interface PathmakerConfig extends Config
     }
 
 	@ConfigItem(
-		keyName = "objectAndNpcOutline",
-		name = "Object and NPC outline",
-		description = "Draw an outline on objects and NPCs",
-		position = 14,
-		section = path
-	)
-	default boolean objectAndNpcOutline()
-	{
-		return true;
-	}
-
-	@ConfigItem(
 		keyName = "objectAndNpcOutlineWidth",
 		name = "Outline width",
 		description = "Set the width of outlines to be drawn on objects and NPCs",
-		position = 15,
 		section = path
 	)
 	@Range(max = 10)

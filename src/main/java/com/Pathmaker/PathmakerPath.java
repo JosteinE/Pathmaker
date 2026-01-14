@@ -47,6 +47,8 @@ public class PathmakerPath
 	int pathDrawOffset = PathPanel.pathDrawOffset.OFFSET_MIDDLE.ordinal(); // PathPanel.pathDrawOffset enum
 	int drawToPlayer = PathPanel.drawFromPlayerMode.NEVER.ordinal();
 	String pathGroup = null;
+	PathmakerConfig.pathPointLabelMode labelMode = PathmakerConfig.pathPointLabelMode.BOTH;
+	PathmakerConfig.pathPointMode pointDrawMode = PathmakerConfig.pathPointMode.BOTH;
 
     PathmakerPath(PathPoint initialPathPoint)
     {

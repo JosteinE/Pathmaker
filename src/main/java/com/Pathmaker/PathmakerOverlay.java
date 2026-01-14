@@ -307,10 +307,17 @@ public class PathmakerOverlay extends Overlay
 				drawToPrevious.add(true);
 			}
 
-            if (config.drawPath() || config.drawPathPoints())
+            if (config.drawPath())
             {
 				Color pathPointColor = config.pointMatchPathColor() ? path.color : config.pathLinePointColor();
 				Color pathPointFillColor = getTileFillColor(pathPointColor);
+
+				boolean drawPointTiles = path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
+					path.pointDrawMode == PathmakerConfig.pathPointMode.TILES;
+				boolean drawPointEntities = path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
+					path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
+
+				PathmakerConfig.pathPointLabelMode labelMode = path.labelMode;
 
 				int lastDrawIndex = -1;
 
@@ -337,10 +344,10 @@ public class PathmakerOverlay extends Overlay
 
 						if(localP != null)
 						{
-							if(config.objectAndNpcOutline())
+							if(drawPointEntities)
 								drawOutline(wv, localP, isNpc, entityId, config.objectAndNpcOutlineWidth(), path.color, 200);
 
-							if (config.drawPathPoints())
+							if(drawPointTiles)
 							{
 								highlightTile(graphics, wv, plugin.getEntityPolygon(wv, localP, isNpc, entityId), pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
 							}
@@ -348,7 +355,7 @@ public class PathmakerOverlay extends Overlay
 							localP = toEntityCenter((PathPointObject) point, localP);
 						}
 
-						drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
+						//drawLabel(graphics, wv, labelMode, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     }
 					else
 					{
@@ -356,7 +363,7 @@ public class PathmakerOverlay extends Overlay
 						if (localP == null) continue;
 
 						// Draw non-entity tile highlights
-						if(config.drawPathPoints())
+						if(drawPointTiles)
 							highlightTile(graphics, wv, localP, pathPointColor, config.pathLinePointWidth(), pathPointFillColor);
 					}
 
@@ -370,7 +377,7 @@ public class PathmakerOverlay extends Overlay
 					   lastDrawIndex = point.getDrawIndex();
 				   }
 
-					drawLabel(graphics, wv, localP, point.getDrawIndex(), point.getLabel(), path.color);
+					drawLabel(graphics, wv, labelMode, localP, point.getDrawIndex(), point.getLabel(), path.color);
                     //lastLocalP = localP;
 					//lastWv = wv;
                 }
@@ -664,14 +671,14 @@ public class PathmakerOverlay extends Overlay
     }
 
 	// (point.getDrawIndex() + 1)
-	void drawLabel(Graphics2D graphics, WorldView wv, LocalPoint lp, int drawIndex, @Nullable String pointLabel, Color pathColor)
+	void drawLabel(Graphics2D graphics, WorldView wv, PathmakerConfig.pathPointLabelMode pathLabelMode, LocalPoint lp, int drawIndex, @Nullable String pointLabel, Color pathColor)
 	{
 		Color color = config.labelMatchPathColor() ? pathColor : config.pathPointLabelColor();
 
 		String label = "";
 		boolean stringEmpty = pointLabel == null || pointLabel.isEmpty();
 
-		switch (config.pathPointLabelModeSelect())
+		switch (pathLabelMode)
 		{
 			case NONE:
 				return;

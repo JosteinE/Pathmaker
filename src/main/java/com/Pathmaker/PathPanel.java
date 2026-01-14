@@ -289,7 +289,7 @@ public class PathPanel extends JPanel
 		int iconTextGap = 10;
 
 		// Rename option
-		JMenuItem renameMenuEntry = optionsMenu.add("Rename path");
+		JMenuItem renameMenuEntry = optionsMenu.add("Rename path (WIP)");
 		//renameMenuEntry.setIcon();
 		renameMenuEntry.setIconTextGap(iconTextGap);
 		renameMenuEntry.addMouseListener(new MouseAdapter()
@@ -307,35 +307,179 @@ public class PathPanel extends JPanel
 		});
 
 		// Label mode option
-		JMenu pointLabelModeSubMenu = new JMenu("Text (WIP)");
+		JMenu pointLabelModeSubMenu = new JMenu("Text");
 		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
 		optionsMenu.add(pointLabelModeSubMenu);
 
-		// todo: add functionality
-		JCheckBoxMenuItem labelOnlyModeMenuEntry = new JCheckBoxMenuItem("Label");
-		//labelOnlyModeMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
-		labelOnlyModeMenuEntry.setIconTextGap(iconTextGap);
+		JCheckBoxMenuItem indexModeMenuEntry =  new JCheckBoxMenuItem("Index");
+		indexModeMenuEntry.setIconTextGap(iconTextGap);
+		indexModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.INDEX || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
+		indexModeMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				super.mousePressed(e);
 
-		JCheckBoxMenuItem indexOnlyModeMenuEntry =  new JCheckBoxMenuItem("Index");
-		//indexOnlyModeMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
-		indexOnlyModeMenuEntry.setIconTextGap(iconTextGap);
+				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
+				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
+				PathmakerConfig.pathPointLabelMode mode = path.labelMode;
 
-		pointLabelModeSubMenu.add(labelOnlyModeMenuEntry);
-		pointLabelModeSubMenu.add(indexOnlyModeMenuEntry);
+				switch (mode)
+				{
+					case NONE:
+					{
+						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.INDEX;
+						break;
+					}
+					case INDEX:
+					{
+						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.NONE;
+						break;
+					}
+					case LABEL:
+					{
+						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.BOTH;
+						break;
+					}
+					case BOTH:
+					{
+						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.LABEL;
+						break;
+					}
+				}
+			}
+		});
+
+		JCheckBoxMenuItem labelModeMenuEntry = new JCheckBoxMenuItem("Label");
+		labelModeMenuEntry.setIconTextGap(iconTextGap);
+		labelModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.LABEL || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
+		labelModeMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				super.mousePressed(e);
+
+				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
+				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
+				PathmakerConfig.pathPointLabelMode mode = path.labelMode;
+
+				switch (mode)
+				{
+					case NONE:
+					{
+						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.LABEL;
+						break;
+					}
+					case INDEX:
+					{
+						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.BOTH;
+						break;
+					}
+					case LABEL:
+					{
+						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.NONE;
+						break;
+					}
+					case BOTH:
+					{
+						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.INDEX;
+						break;
+					}
+				}
+			}
+		});
+
+		pointLabelModeSubMenu.add(indexModeMenuEntry);
+		pointLabelModeSubMenu.add(labelModeMenuEntry);
 
 		// Highlight mode option
-		JMenu pointHighlightModeSubMenu = new JMenu("Highlight (WIP)");
+		JMenu pointHighlightModeSubMenu = new JMenu("Highlight");
 		pointHighlightModeSubMenu.setIconTextGap(iconTextGap);
 		optionsMenu.add(pointHighlightModeSubMenu);
 
-		// todo: add functionality
 		JCheckBoxMenuItem highlightTilesMenuEntry = new JCheckBoxMenuItem("Tiles");
-		//highlightTilesMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
 		highlightTilesMenuEntry.setIconTextGap(iconTextGap);
+		highlightTilesMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
+			path.pointDrawMode == PathmakerConfig.pathPointMode.TILES);
+		highlightTilesMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				super.mousePressed(e);
+
+				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
+				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
+				PathmakerConfig.pathPointMode mode = path.pointDrawMode;
+
+				switch (mode)
+				{
+					case NONE:
+					{
+						if (boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.TILES;
+						break;
+					}
+					case TILES:
+					{
+						if (!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NONE;
+						break;
+					}
+					case NPCS_AND_OBJECTS:
+					{
+						if (boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.BOTH;
+						break;
+					}
+					case BOTH:
+					{
+						if (!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
+						break;
+					}
+				}
+			}
+		});
 
 		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
-		//highlightObjectsAndNpcMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
 		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
+		highlightObjectsAndNpcMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
+			path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS);
+		highlightObjectsAndNpcMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				super.mousePressed(e);
+
+				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
+				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
+				PathmakerConfig.pathPointMode mode = path.pointDrawMode;
+
+				switch (mode)
+				{
+					case NONE:
+					{
+						if(boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
+						break;
+					}
+					case TILES:
+					{
+						if(boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.BOTH;
+						break;
+					}
+					case NPCS_AND_OBJECTS:
+					{
+						if(!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NONE;
+						break;
+					}
+					case BOTH:
+					{
+						if(!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.TILES;
+						break;
+					}
+				}
+			}
+		});
 
 		pointHighlightModeSubMenu.add(highlightTilesMenuEntry);
 		pointHighlightModeSubMenu.add(highlightObjectsAndNpcMenuEntry);
