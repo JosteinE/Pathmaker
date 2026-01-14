@@ -30,7 +30,10 @@ import com.google.gson.JsonParser;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -109,17 +112,13 @@ public class PathmakerPluginPanel extends PluginPanel
 		setLayout(new BorderLayout());
 		//setBorder(new EmptyBorder(10, 10, 10, 10));
 
-		// Create title panel
-		JPanel titlePanel = new JPanel();
-		//titlePanel.setBorder(new EmptyBorder(1, 0, 10, 0));
-
-		// Create label and add to title panel
+		// Create title
 		JLabel title = new JLabel();
 		title.setText("Pathmaker");
-		title.setPreferredSize(new Dimension(80, 20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
+		title.setPreferredSize(new Dimension(70, 20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
 		title.setForeground(Color.WHITE);
 		title.setToolTipText("by Fraph");
-		titlePanel.add(title, BorderLayout.WEST);
+		title.setFont(title.getFont().deriveFont(Font.BOLD));
 
 		// EXPORT / IMPORT
 		JButton exportButton = new JButton();
@@ -199,18 +198,18 @@ public class PathmakerPluginPanel extends PluginPanel
 			}
 		});
 
-		JPanel rightActionTitlePanel = new JPanel();
-		rightActionTitlePanel.add(importButton, BorderLayout.WEST);
-		rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
-		rightActionTitlePanel.setBorder(new EmptyBorder(0, 20, 0, 20));
-		titlePanel.add(rightActionTitlePanel, BorderLayout.CENTER);
+		JPanel centerActionTitlePanel = new JPanel();
+		centerActionTitlePanel.add(importButton, BorderLayout.WEST);
+		centerActionTitlePanel.add(exportButton, BorderLayout.EAST);
+		importButton.setBackground(centerActionTitlePanel.getBackground());
+		exportButton.setBackground(centerActionTitlePanel.getBackground());
 
 		// Config button
 		JButton configButton = new JButton();
 		configButton.setIcon(COG_ICON);
 		configButton.setToolTipText("Open plugin configuration");
 		configButton.setPreferredSize(new Dimension(18, 18));
-		configButton.setBackground(titlePanel.getBackground());
+
 		// Dummy OverlayPanel class for providing a method of getting from the plugin panel to config menu
 		class ToConfigOverlayPanel extends OverlayPanel{ToConfigOverlayPanel(PathmakerPlugin plugin){super(plugin);}}
 		configButton.addMouseListener(new MouseAdapter()
@@ -221,18 +220,22 @@ public class PathmakerPluginPanel extends PluginPanel
 				plugin.eventBus.post(new OverlayMenuClicked(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, null, null), new ToConfigOverlayPanel(plugin)));
 			}
 		});
-		titlePanel.add(configButton, BorderLayout.EAST);
+
+		JPanel rightActionTitlePanel = new JPanel();
+		rightActionTitlePanel.add(configButton, BorderLayout.CENTER);
+		configButton.setBackground(rightActionTitlePanel.getBackground());
 
 		// Create body panel and add titlePanel
 		JPanel northPanel = new JPanel(new BorderLayout());
 		northPanel.setBorder(new EmptyBorder(1, 0, 10, 0));
-		northPanel.add(titlePanel, BorderLayout.NORTH);
+		northPanel.add(title, BorderLayout.WEST);
+		northPanel.add(centerActionTitlePanel, BorderLayout.CENTER);
+		northPanel.add(rightActionTitlePanel, BorderLayout.EAST);
 
 		// Add Active Path text field
 		JLabel activePathLabel = new JLabel("Active Path: ");
 		activePathLabel.setPreferredSize(new Dimension(75, 20));
 		activePathLabel.setForeground(Color.WHITE);
-		northPanel.add(activePathLabel, BorderLayout.WEST);
 
 		activePath = new FlatTextField();
 		((AbstractDocument) activePath.getDocument()).setDocumentFilter(new MaxLengthFilter(MAX_PATH_NAME_LENGTH));
@@ -240,7 +243,11 @@ public class PathmakerPluginPanel extends PluginPanel
 		activePath.setForeground(Color.WHITE);
 		activePath.setBackground(Color.DARK_GRAY);
 
-		northPanel.add(activePath);
+		JPanel activePathPanel = new JPanel(new BorderLayout());
+		activePathPanel.add(activePathLabel, BorderLayout.WEST);
+		activePathPanel.add(activePath, BorderLayout.CENTER);
+
+		northPanel.add(activePathPanel, BorderLayout.SOUTH);
 
 		// Add panel to client panel
 		add(northPanel, BorderLayout.NORTH);
