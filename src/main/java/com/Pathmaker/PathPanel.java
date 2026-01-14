@@ -35,13 +35,21 @@ import java.awt.Component;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.function.Function;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.Border;
@@ -76,6 +84,7 @@ public class PathPanel extends JPanel
 	private static final ImageIcon PERSON_ICON;
 	private static final ImageIcon PERSON_GREEN_ICON;
 	private static final ImageIcon PERSON_GREEN_LINES_ICON;
+	private static final ImageIcon TRIPLE_DOTS_ICON;
 
 	enum pathDrawOffset
 	{
@@ -122,6 +131,7 @@ public class PathPanel extends JPanel
 		PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
 		PERSON_GREEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green.png"));
 		PERSON_GREEN_LINES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green_lines.png"));
+		TRIPLE_DOTS_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "triple_dots.png"));
     }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
@@ -239,42 +249,129 @@ public class PathPanel extends JPanel
 		ArrayList<PathPoint> drawOrder = path.getDrawOrder(null);
 
 		// Add offset button
-		JButton loopToPlayerButton = new JButton();
-		loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
-		loopToPlayerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
-		loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
-		loopToPlayerButton.addMouseListener(new MouseAdapter()
+//		JButton loopToPlayerButton = new JButton();
+//		loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
+//		loopToPlayerButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+//		loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
+//		loopToPlayerButton.addMouseListener(new MouseAdapter()
+//		{
+//			@Override
+//			public void mousePressed(MouseEvent mouseEvent)
+//			{
+//
+//				path.drawToPlayer = path.drawToPlayer + 1 > 2 ? 0 : path.drawToPlayer + 1;
+//				loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
+//				loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
+//				plugin.savePath(getPathLabel());
+//				plugin.rebuildPanel(false);
+//			}
+//		});
+
+		// Main options & menu
+		JButton optionsButton = new JButton();
+		optionsButton.setIcon(TRIPLE_DOTS_ICON);
+		optionsButton.setPreferredSize(new Dimension(ICON_WIDTH, 0));
+		optionsButton.setToolTipText("Options");
+
+		JPopupMenu optionsMenu = new JPopupMenu();
+
+		Runnable openOptionsMenu = () -> {optionsMenu.show(optionsButton, 0, labelPanel.getHeight());};
+
+		optionsButton.addMouseListener(new MouseAdapter()
 		{
 			@Override
 			public void mousePressed(MouseEvent mouseEvent)
 			{
-
-				path.drawToPlayer = path.drawToPlayer + 1 > 2 ? 0 : path.drawToPlayer + 1;
-				loopToPlayerButton.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
-				loopToPlayerButton.setToolTipText(getLoopToPlayerTooltip(path.drawToPlayer));
-//				if(path.drawToPlayer == drawFromPlayerMode.NEVER.ordinal())
-//				{
-//					pathContainer.remove(pathContainer.getComponentCount() -1);
-//				}
-//				else if (path.drawToPlayer - 1 == drawFromPlayerMode.NEVER.ordinal())
-//				{
-//					JButton drawToLastButton = addDrawToLastButton(drawOrder.get(0));
-//					pathContainer.add(addDrawToLastButton(drawOrder.get(0)),BorderLayout.CENTER);
-//					drawToLastButton.updateUI();
-//				}
-
-				plugin.rebuildPanel(true);
-				//loopToPlayerButton.setIcon(getLoopToPlayerButtonIcon(path));
-				//plugin.saveAll();
+				openOptionsMenu.run();
 			}
 		});
 
+		int iconTextGap = 10;
+
+		// Rename option
+		JMenuItem renameMenuEntry = optionsMenu.add("Rename path");
+		//renameMenuEntry.setIcon();
+		renameMenuEntry.setIconTextGap(iconTextGap);
+		renameMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseReleased(MouseEvent mouseEvent)
+			{
+				super.mouseReleased(mouseEvent);
+
+				JLabel centeredNameText = new JLabel("New path name (WIP)", JLabel.CENTER);
+				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
+				String newPathName = JOptionPane.showInputDialog(optionsButton, centeredNameText, getPathLabel());
+				// todo: rename option
+			}
+		});
+
+		// Label mode option
+		JMenu pointLabelModeSubMenu = new JMenu("Text (WIP)");
+		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
+		optionsMenu.add(pointLabelModeSubMenu);
+
+		// todo: add functionality
+		JCheckBoxMenuItem labelOnlyModeMenuEntry = new JCheckBoxMenuItem("Label");
+		//labelOnlyModeMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
+		labelOnlyModeMenuEntry.setIconTextGap(iconTextGap);
+
+		JCheckBoxMenuItem indexOnlyModeMenuEntry =  new JCheckBoxMenuItem("Index");
+		//indexOnlyModeMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
+		indexOnlyModeMenuEntry.setIconTextGap(iconTextGap);
+
+		pointLabelModeSubMenu.add(labelOnlyModeMenuEntry);
+		pointLabelModeSubMenu.add(indexOnlyModeMenuEntry);
+
+		// Highlight mode option
+		JMenu pointHighlightModeSubMenu = new JMenu("Highlight (WIP)");
+		pointHighlightModeSubMenu.setIconTextGap(iconTextGap);
+		optionsMenu.add(pointHighlightModeSubMenu);
+
+		// todo: add functionality
+		JCheckBoxMenuItem highlightTilesMenuEntry = new JCheckBoxMenuItem("Tiles");
+		//highlightTilesMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
+		highlightTilesMenuEntry.setIconTextGap(iconTextGap);
+
+		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
+		//highlightObjectsAndNpcMenuEntry.setHorizontalTextPosition(SwingConstants.LEFT);
+		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
+
+		pointHighlightModeSubMenu.add(highlightTilesMenuEntry);
+		pointHighlightModeSubMenu.add(highlightObjectsAndNpcMenuEntry);
+
+		// Loop path
+		JMenuItem loopMenuEntry = optionsMenu.add((path.loopPath ? "Unloop" : "Loop") + " path");
+		loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+		loopMenuEntry.setIconTextGap(iconTextGap);
+		loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
+		loopMenuEntry.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseReleased(MouseEvent mouseEvent)
+            {
+				super.mouseReleased(mouseEvent);
+                path.loopPath = !path.loopPath;
+				loopMenuEntry.setText((path.loopPath ? "Unloop" : "Loop") + " path");
+				loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
+				loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+
+				openOptionsMenu.run();
+            }
+        });
+
+		// Connect to player sub menu
+		JMenu connectToPlayerSubMenu = PanelBuildUtils.createDrawToPlayerMenu(plugin, path, pathLabel);
+		connectToPlayerSubMenu.setIcon(getLoopToPlayerIcon(path.drawToPlayer));
+		connectToPlayerSubMenu.setIconTextGap(iconTextGap);
+		optionsMenu.add(connectToPlayerSubMenu);
 
 		// Add button panel to the right
         JPanel rightActionPanel = new JPanel(new BorderLayout());
 		//rightActionPanel.add(loopButton, BorderLayout.WEST);
-		rightActionPanel.add(loopToPlayerButton, BorderLayout.WEST);
-        rightActionPanel.add(offsetButton, BorderLayout.CENTER);
+		//rightActionPanel.add(loopToPlayerButton, BorderLayout.WEST);
+		rightActionPanel.add(offsetButton, BorderLayout.WEST);
+		rightActionPanel.add(optionsButton, BorderLayout.CENTER);
         rightActionPanel.add(deletePathButton, BorderLayout.EAST);
         labelPanel.add(rightActionPanel, BorderLayout.EAST);
 

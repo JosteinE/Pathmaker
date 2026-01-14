@@ -35,11 +35,17 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
@@ -235,5 +241,36 @@ public class PanelBuildUtils
 		StringSelection json = new StringSelection(gson.toJson(exportPath));
 		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 		clipboard.setContents(json, null);
+	}
+
+	static JMenu createDrawToPlayerMenu(PathmakerPlugin plugin, PathmakerPath path, String pathName)
+	{
+		JMenu connectToPlayerSubMenu = new JMenu("Connect points to player");
+
+		Function<Integer, MouseAdapter> drawToPlayerAdapter = mode ->
+			new MouseAdapter()
+			{
+				@Override
+				public void mousePressed(MouseEvent mouseEvent)
+				{
+					path.drawToPlayer = mode;
+					plugin.savePath(pathName);
+					plugin.rebuildPanel(false);
+				}
+			};
+
+		JMenuItem connectNoPointsToPlayer = new JMenuItem("No points");
+		connectNoPointsToPlayer.addMouseListener(drawToPlayerAdapter.apply(PathPanel.drawFromPlayerMode.NEVER.ordinal()));
+
+		JMenuItem connectFirstPointToPlayer = new JMenuItem("First point only");
+		connectFirstPointToPlayer.addMouseListener(drawToPlayerAdapter.apply(PathPanel.drawFromPlayerMode.START_ONLY.ordinal()));
+
+		JMenuItem connectAllPointsToPlayer = new JMenuItem("All points");
+		connectAllPointsToPlayer.addMouseListener(drawToPlayerAdapter.apply(PathPanel.drawFromPlayerMode.ALWAYS.ordinal()));
+
+		connectToPlayerSubMenu.add(connectNoPointsToPlayer);
+		connectToPlayerSubMenu.add(connectFirstPointToPlayer);
+		connectToPlayerSubMenu.add(connectAllPointsToPlayer);
+		return connectToPlayerSubMenu;
 	}
 }
