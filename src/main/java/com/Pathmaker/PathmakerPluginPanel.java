@@ -38,13 +38,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -56,13 +51,15 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 import net.runelite.client.ui.components.PluginErrorPanel;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.util.ImageUtil;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.event.MouseAdapter;
@@ -76,6 +73,7 @@ public class PathmakerPluginPanel extends PluginPanel
 {
 	private static final ImageIcon IMPORT_ICON;
 	private static final ImageIcon EXPORT_ICON;
+	private static final ImageIcon COG_ICON;
 
 	private final PluginErrorPanel noPathPanel = new PluginErrorPanel();
 	final JPanel pathView = new JPanel();
@@ -92,6 +90,7 @@ public class PathmakerPluginPanel extends PluginPanel
 	{
 		IMPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "import.png"));
 		EXPORT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "export.png"));
+		COG_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "cog.png"));
 	}
 
 	static class PathGroup
@@ -120,7 +119,7 @@ public class PathmakerPluginPanel extends PluginPanel
 		title.setPreferredSize(new Dimension(80, 20)); //getGraphics().getFontMetrics().stringWidth(title.getText()) + 10
 		title.setForeground(Color.WHITE);
 		title.setToolTipText("by Fraph");
-		titlePanel.add(title, BorderLayout.CENTER);
+		titlePanel.add(title, BorderLayout.WEST);
 
 		// EXPORT / IMPORT
 		JButton exportButton = new JButton();
@@ -203,7 +202,26 @@ public class PathmakerPluginPanel extends PluginPanel
 		JPanel rightActionTitlePanel = new JPanel();
 		rightActionTitlePanel.add(importButton, BorderLayout.WEST);
 		rightActionTitlePanel.add(exportButton, BorderLayout.EAST);
-		titlePanel.add(rightActionTitlePanel, BorderLayout.EAST);
+		rightActionTitlePanel.setBorder(new EmptyBorder(0, 20, 0, 20));
+		titlePanel.add(rightActionTitlePanel, BorderLayout.CENTER);
+
+		// Config button
+		JButton configButton = new JButton();
+		configButton.setIcon(COG_ICON);
+		configButton.setToolTipText("Open plugin configuration");
+		configButton.setPreferredSize(new Dimension(18, 18));
+		configButton.setBackground(titlePanel.getBackground());
+		// Dummy OverlayPanel class for providing a method of getting from the plugin panel to config menu
+		class ToConfigOverlayPanel extends OverlayPanel{ToConfigOverlayPanel(PathmakerPlugin plugin){super(plugin);}}
+		configButton.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent mouseEvent)
+			{
+				plugin.eventBus.post(new OverlayMenuClicked(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, null, null), new ToConfigOverlayPanel(plugin)));
+			}
+		});
+		titlePanel.add(configButton, BorderLayout.EAST);
 
 		// Create body panel and add titlePanel
 		JPanel northPanel = new JPanel(new BorderLayout());

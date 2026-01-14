@@ -119,12 +119,12 @@ public class PathmakerPlugin extends Plugin
     @Inject
     private PathmakerOverlay overlay;
 
-	// Previously used to display movement speed (tiles per tick)
-	// @Inject
-	// private PathmakerPanelOverlay panelOverlay;
+	//Previously used to display movement speed (tiles per tick)
+	//@Inject
+	//PathmakerPanelOverlay panelOverlay;
 
     @Inject
-    private EventBus eventBus;
+    EventBus eventBus;
 
     @Inject
     private ClientToolbar clientToolbar;
