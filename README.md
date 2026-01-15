@@ -8,7 +8,7 @@ Intuitively construct paths using plugin's side panel. New "Active Path" names w
 Simply open a link and copy all of the text to your clipboard, then click the import button in the Pathmaker sidebar panel on Runelite<br><br>
 Tempor Tantrum<pre>https://pastebin.com/raw/P1KXTkiD</pre>
 Jubbly Jive<pre>https://pastebin.com/raw/iarFaXsB</pre>
-Gwenith Glide<pre>https://pastebin.com/raw/FZMCEKkV</pre>
+Gwenith Glide<pre>https://pastebin.com/raw/8my21rys</pre>
 
 
 ### **Additional features:**
