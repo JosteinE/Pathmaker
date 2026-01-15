@@ -304,11 +304,7 @@ public class PathPanel extends JPanel
 			}
 		});
 
-		// Label mode option
-		JMenu pointLabelModeSubMenu = new JMenu("Text");
-		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
-		optionsMenu.add(pointLabelModeSubMenu);
-
+		// Adapter for path highlight and label mode selection
 		Function<String, MouseAdapter> checkBoxModeAdapter = modeType ->
 			new MouseAdapter()
 			{
@@ -371,6 +367,11 @@ public class PathPanel extends JPanel
 					plugin.savePath(pathLabel);
 				}
 			};
+
+		// Label mode option
+		JMenu pointLabelModeSubMenu = new JMenu("Text");
+		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
+		optionsMenu.add(pointLabelModeSubMenu);
 
 		JCheckBoxMenuItem indexModeMenuEntry =  new JCheckBoxMenuItem("Index");
 		indexModeMenuEntry.setIconTextGap(iconTextGap);
