@@ -399,7 +399,7 @@ public class PathPanel extends JPanel
 							if (boxState)
 							{
 								if (relativeToType == 1) modeOrdinal = 1;	// Returning INDEX or TILES
-								else modeOrdinal = 2; 						// Returning LABEL or NPCS_AND_OBJECTS
+								else modeOrdinal = 2; 						// Returning LABEL or ENTITIES
 							}
 							break;
 						}
@@ -419,7 +419,7 @@ public class PathPanel extends JPanel
 						{
 							if (!boxState)
 							{
-								if (relativeToType == 1) modeOrdinal = 2;	// Returning LABEL or NPCS_AND_OBJECTS
+								if (relativeToType == 1) modeOrdinal = 2;	// Returning LABEL or ENTITIES
 								else modeOrdinal = 1;						// Returning INDEX or TILES
 							}
 							break;
@@ -477,7 +477,7 @@ public class PathPanel extends JPanel
 		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
 		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
 		highlightObjectsAndNpcMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
-			path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS);
+			path.pointDrawMode == PathmakerConfig.pathPointMode.ENTITIES);
 		highlightObjectsAndNpcMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointHighlightModeSubMenu));
 
 		pointHighlightModeSubMenu.add(highlightTilesMenuEntry);
@@ -704,7 +704,7 @@ public class PathPanel extends JPanel
 		switch (mode)
 		{
 			case TILES: return HIGHLIGHT_MODE_TILES_ICON;
-			case NPCS_AND_OBJECTS: return HIGHLIGHT_MODE_OBJECTS_AND_NPCS_ICON;
+			case ENTITIES: return HIGHLIGHT_MODE_OBJECTS_AND_NPCS_ICON;
 			case BOTH: return HIGHLIGHT_MODE_BOTH_ICON;
 			default: return DISABLED_ICON;
 		}

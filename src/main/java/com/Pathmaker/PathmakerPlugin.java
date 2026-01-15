@@ -925,9 +925,12 @@ public class PathmakerPlugin extends Plugin
         }
         else
         {
-            // Initialize new path with the initial point
+            // Initialize new path with the initial point and default values
             path = new PathmakerPath(point);
             path.color = getDefaultPathColor();
+			path.labelMode = config.pathPointLabelMode();
+			path.pointDrawMode = config.drawPathPointsMode();
+
             paths.put(pathName, path);
 			pluginPanel.activePath.setText(pathName);
         }

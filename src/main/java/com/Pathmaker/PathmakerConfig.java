@@ -274,7 +274,7 @@ public interface PathmakerConfig extends Config
     // Path Line Section
     //------------------------------------------------------------//
     @ConfigSection(
-            name = "Path",
+            name = "Path defaults",
             description = "Path configuration.",
             position = 1
     )
@@ -292,22 +292,22 @@ public interface PathmakerConfig extends Config
     }
 
 
-	static enum pathPointMode
+	enum pathPointMode
 	{
 		NONE,
 		TILES,
-		NPCS_AND_OBJECTS,
+		ENTITIES,
 		BOTH,
 	}
     @ConfigItem(
             keyName = "drawPathPoints",
-            name = "Draw point tiles",
-            description = "Highlight path point tiles.",
+            name = "Draw points",
+            description = "Highlight path points mode.",
             section = path
     )
-    default int drawPathPoints()
+    default pathPointMode drawPathPointsMode()
     {
-        return pathPointMode.BOTH.ordinal();
+        return pathPointMode.BOTH;
     }
 
 //	@ConfigItem(
@@ -414,11 +414,11 @@ public interface PathmakerConfig extends Config
     }
     @ConfigItem(
             keyName = "pathPointLabelModeSelect",
-            name = "Point label",
-            description = "Add point labels.",
+            name = "Point text",
+            description = "Set path point text mode.",
             section = path
     )
-    default pathPointLabelMode pathPointLabelModeSelect()
+    default pathPointLabelMode pathPointLabelMode()
     {
         return pathPointLabelMode.BOTH;
     }

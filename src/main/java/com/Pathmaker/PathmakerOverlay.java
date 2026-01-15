@@ -315,7 +315,7 @@ public class PathmakerOverlay extends Overlay
 				boolean drawPointTiles = path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 					path.pointDrawMode == PathmakerConfig.pathPointMode.TILES;
 				boolean drawPointEntities = path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
-					path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
+					path.pointDrawMode == PathmakerConfig.pathPointMode.ENTITIES;
 
 				PathmakerConfig.pathPointLabelMode labelMode = path.labelMode;
 
