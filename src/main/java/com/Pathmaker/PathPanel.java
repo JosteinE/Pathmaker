@@ -24,8 +24,6 @@
 
 package com.Pathmaker;
 
-
-import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -33,10 +31,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.Component;
-
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -76,19 +72,36 @@ public class PathPanel extends JPanel
             BorderFactory.createMatteBorder(0, 0, 1, 0, ColorScheme.DARK_GRAY_COLOR),
             BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_COLOR));
 
-    private static final ImageIcon EXPAND_ICON;
-    private static final ImageIcon COLLAPSE_ICON;
-    private static final ImageIcon LOOP_ON_ICON;
-    private static final ImageIcon LOOP_OFF_ICON;
-    private static final ImageIcon EYE_OPEN_ICON;
-	private static final ImageIcon EYE_CLOSED_ICON;
-	private static final ImageIcon OFFSET_LEFT_ICON;
-	private static final ImageIcon OFFSET_MIDDLE_ICON;
-	private static final ImageIcon OFFSET_RIGHT_ICON;
-	private static final ImageIcon PERSON_ICON;
-	private static final ImageIcon PERSON_GREEN_ICON;
-	private static final ImageIcon PERSON_GREEN_LINES_ICON;
-	private static final ImageIcon TRIPLE_DOTS_ICON;
+	private static final BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
+	private static final ImageIcon COLLAPSE_ICON = new ImageIcon(upArrowImage);
+    private static final ImageIcon EXPAND_ICON = new ImageIcon(ImageUtil.flipImage(upArrowImage, false, true));
+    private static final ImageIcon LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
+    private static final ImageIcon LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
+    private static final ImageIcon EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
+	private static final ImageIcon EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
+	private static final ImageIcon OFFSET_LEFT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_left.png"));
+	private static final ImageIcon OFFSET_MIDDLE_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_middle.png"));
+	private static final ImageIcon OFFSET_RIGHT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_right.png"));
+	//private static final ImageIcon PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
+	private static final ImageIcon PERSON_GREEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green.png"));
+	private static final ImageIcon PERSON_GREEN_LINES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green_lines.png"));
+	private static final ImageIcon TRIPLE_DOTS_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "triple_dots.png"));
+
+	private static final ImageIcon DISABLED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "disabled.png"));
+
+	private static final ImageIcon HIGHLIGHT_MODE_BOTH_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "highlight_mode_both.png"));
+	private static final ImageIcon HIGHLIGHT_MODE_OBJECTS_AND_NPCS_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "highlight_mode_objects_and_npcs.png"));
+	private static final ImageIcon HIGHLIGHT_MODE_TILES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "highlight_mode_tiles.png"));
+	//private static final ImageIcon HIGHLIGHT_MODE_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "highlight_mode_off.png"));
+
+	private static final ImageIcon LABEL_MODE_BOTH_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "label_mode_both.png"));
+	private static final ImageIcon LABEL_MODE_LABEL_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "label_mode_label.png"));
+	private static final ImageIcon LABEL_MODE_POINT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "label_mode_point.png"));
+
+	private static final ImageIcon TRIPLE_DOTS_HORIZONTAL_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "triple_dots_horizontal.png"));
+
+	private static final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
+	private static final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
 
 	enum pathDrawOffset
 	{
@@ -116,27 +129,6 @@ public class PathPanel extends JPanel
     //private boolean panelExpanded = true;
     private final JButton expandToggle;
     private final JButton visibilityToggle;
-
-    private final BufferedImage brushImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "brush.png");
-    private final BufferedImage crossImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "cross.png");
-
-    static
-    {
-        BufferedImage upArrowImage = ImageUtil.loadImageResource(PathmakerPlugin.class, "up_arrow.png");
-        COLLAPSE_ICON = new ImageIcon(upArrowImage);
-        EXPAND_ICON = new ImageIcon(ImageUtil.flipImage(upArrowImage, false, true));
-        LOOP_ON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_on.png"));
-        LOOP_OFF_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "loop_off.png"));
-		OFFSET_LEFT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_left.png"));
-		OFFSET_MIDDLE_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_middle.png"));
-		OFFSET_RIGHT_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "offset_right.png"));
-        EYE_OPEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_open.png"));
-        EYE_CLOSED_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "eye_closed.png"));
-		PERSON_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person.png"));
-		PERSON_GREEN_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green.png"));
-		PERSON_GREEN_LINES_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "person_green_lines.png"));
-		TRIPLE_DOTS_ICON = new ImageIcon(ImageUtil.loadImageResource(PathmakerPlugin.class, "triple_dots.png"));
-    }
 
     PathPanel(PathmakerPlugin plugin, String pathLabel)
     {
@@ -294,7 +286,7 @@ public class PathPanel extends JPanel
 
 		// Rename option
 		JMenuItem renameMenuEntry = optionsMenu.add("Rename path");
-		//renameMenuEntry.setIcon();
+		renameMenuEntry.setIcon(TRIPLE_DOTS_HORIZONTAL_ICON);
 		renameMenuEntry.setIconTextGap(iconTextGap);
 		renameMenuEntry.addMouseListener(new MouseAdapter()
 		{
@@ -361,65 +353,91 @@ public class PathPanel extends JPanel
 			}
 		});
 
+		// Loop path
+		JMenuItem loopMenuEntry = optionsMenu.add((path.loopPath ? "Unloop" : "Loop") + " path");
+		loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+		loopMenuEntry.setIconTextGap(iconTextGap);
+		loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
+		loopMenuEntry.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseReleased(MouseEvent mouseEvent)
+			{
+				super.mouseReleased(mouseEvent);
+				path.loopPath = !path.loopPath;
+				loopMenuEntry.setText((path.loopPath ? "Unloop" : "Loop") + " path");
+				loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
+				loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
+
+				openOptionsMenu.run();
+			}
+		});
+
 		// Adapter for path highlight and label mode selection
-		Function<String, MouseAdapter> checkBoxModeAdapter = modeType ->
+		Function<JMenu, MouseAdapter> checkBoxModeAdapter = parentMenu ->
 			new MouseAdapter()
 			{
 				@Override
-				public void mousePressed(MouseEvent e)
+				public void mouseReleased(MouseEvent e)
 				{
-					super.mousePressed(e);
+					super.mouseReleased(e);
 
-					JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
-					boolean boxState = !checkBox.getState(); // (getState() changes after this is called)
+					JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getSource();
+					boolean boxState = checkBox.getState(); // (getState() changes after this is called)
 					int relativeToType = checkBox.getText().equals("Tiles") || checkBox.getText().equals("Index") ? 1 : 2;
-					int currentModeIndex;
+					int modeOrdinal;
 
-					if(modeType.equals("Label"))
-						currentModeIndex = path.labelMode.ordinal();
+					if(parentMenu.getText().equals("Text"))
+						modeOrdinal = path.labelMode.ordinal();
 					else
-						currentModeIndex = path.pointDrawMode.ordinal();
+						modeOrdinal = path.pointDrawMode.ordinal();
 
-					int newMode = currentModeIndex;
-
-					switch (currentModeIndex)
+					switch (modeOrdinal)
 					{
 						case 0: // NONE
 						{
 							if (boxState)
 							{
-								if (relativeToType == 1) newMode = 1;	// Returning INDEX or TILES
-								else newMode = 2; 						// Returning LABEL or NPCS_AND_OBJECTS
+								if (relativeToType == 1) modeOrdinal = 1;	// Returning INDEX or TILES
+								else modeOrdinal = 2; 						// Returning LABEL or NPCS_AND_OBJECTS
 							}
 							break;
 						}
 						case 1: // INDEX or TILES
 						{
-							if (!boxState && relativeToType == 1) newMode = 0;		// Returning NONE
-							else if (boxState && relativeToType == 2) newMode = 3;	// Returning BOTH
+							if (!boxState && relativeToType == 1) modeOrdinal = 0;		// Returning NONE
+							else if (boxState && relativeToType == 2) modeOrdinal = 3;	// Returning BOTH
 							break;
 						}
 						case 2: // LABEL or NPCS_AND_OBJECTS
 						{
-							if (boxState && relativeToType == 1) newMode = 3;		// Returning BOTH
-							else if (!boxState && relativeToType == 2) newMode = 0;	// Returning NONE
+							if (boxState && relativeToType == 1) modeOrdinal = 3;		// Returning BOTH
+							else if (!boxState && relativeToType == 2) modeOrdinal = 0;	// Returning NONE
 							break;
 						}
 						case 3: // BOTH
 						{
 							if (!boxState)
 							{
-								if (relativeToType == 1) newMode = 2;	// Returning LABEL or NPCS_AND_OBJECTS
-								else newMode = 1;						// Returning INDEX or TILES
+								if (relativeToType == 1) modeOrdinal = 2;	// Returning LABEL or NPCS_AND_OBJECTS
+								else modeOrdinal = 1;						// Returning INDEX or TILES
 							}
 							break;
 						}
 					}
 
-					if(modeType.equals("Label"))
-						path.labelMode = PathmakerConfig.pathPointLabelMode.values()[newMode];
+					if(parentMenu.getText().equals("Text"))
+					{
+						PathmakerConfig.pathPointLabelMode newMode = PathmakerConfig.pathPointLabelMode.values()[modeOrdinal];
+						parentMenu.setIcon(getLabelModeIcon(newMode));
+						path.labelMode = newMode;
+					}
 					else
-						path.pointDrawMode = PathmakerConfig.pathPointMode.values()[newMode];
+					{
+						PathmakerConfig.pathPointMode newMode = PathmakerConfig.pathPointMode.values()[modeOrdinal];
+						parentMenu.setIcon(getHighlightModeIcon(newMode));
+						path.pointDrawMode = newMode;
+					}
 
 					plugin.savePath(pathLabel);
 				}
@@ -427,24 +445,26 @@ public class PathPanel extends JPanel
 
 		// Label mode option
 		JMenu pointLabelModeSubMenu = new JMenu("Text");
+		pointLabelModeSubMenu.setIcon(getLabelModeIcon(path.labelMode));
 		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
 		optionsMenu.add(pointLabelModeSubMenu);
 
 		JCheckBoxMenuItem indexModeMenuEntry =  new JCheckBoxMenuItem("Index");
 		indexModeMenuEntry.setIconTextGap(iconTextGap);
 		indexModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.INDEX || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
-		indexModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Label"));
+		indexModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointLabelModeSubMenu));
 
 		JCheckBoxMenuItem labelModeMenuEntry = new JCheckBoxMenuItem("Label");
 		labelModeMenuEntry.setIconTextGap(iconTextGap);
 		labelModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.LABEL || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
-		labelModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Label"));
+		labelModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointLabelModeSubMenu));
 
 		pointLabelModeSubMenu.add(indexModeMenuEntry);
 		pointLabelModeSubMenu.add(labelModeMenuEntry);
 
 		// Highlight mode option
 		JMenu pointHighlightModeSubMenu = new JMenu("Highlight");
+		pointHighlightModeSubMenu.setIcon(getHighlightModeIcon(path.pointDrawMode));
 		pointHighlightModeSubMenu.setIconTextGap(iconTextGap);
 		optionsMenu.add(pointHighlightModeSubMenu);
 
@@ -452,36 +472,16 @@ public class PathPanel extends JPanel
 		highlightTilesMenuEntry.setIconTextGap(iconTextGap);
 		highlightTilesMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 			path.pointDrawMode == PathmakerConfig.pathPointMode.TILES);
-		highlightTilesMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Highlight"));
+		highlightTilesMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointHighlightModeSubMenu));
 
 		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
 		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
 		highlightObjectsAndNpcMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 			path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS);
-		highlightObjectsAndNpcMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Highlight"));
+		highlightObjectsAndNpcMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointHighlightModeSubMenu));
 
 		pointHighlightModeSubMenu.add(highlightTilesMenuEntry);
 		pointHighlightModeSubMenu.add(highlightObjectsAndNpcMenuEntry);
-
-		// Loop path
-		JMenuItem loopMenuEntry = optionsMenu.add((path.loopPath ? "Unloop" : "Loop") + " path");
-		loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
-		loopMenuEntry.setIconTextGap(iconTextGap);
-		loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
-		loopMenuEntry.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mouseReleased(MouseEvent mouseEvent)
-            {
-				super.mouseReleased(mouseEvent);
-                path.loopPath = !path.loopPath;
-				loopMenuEntry.setText((path.loopPath ? "Unloop" : "Loop") + " path");
-				loopMenuEntry.setToolTipText((path.loopPath ? "Disable" :  "Enable") + " path loop");
-				loopMenuEntry.setIcon(path.loopPath ? LOOP_ON_ICON : LOOP_OFF_ICON);
-
-				openOptionsMenu.run();
-            }
-        });
 
 		// Connect to player sub menu
 		JMenu connectToPlayerSubMenu = PanelBuildUtils.createDrawToPlayerMenu(plugin, path, pathLabel);
@@ -663,7 +663,7 @@ public class PathPanel extends JPanel
 		{
 			case START_ONLY: return PERSON_GREEN_ICON;
 			case ALWAYS: return PERSON_GREEN_LINES_ICON;
-			default: return PERSON_ICON;
+			default: return DISABLED_ICON;
 		}
 	}
 
@@ -687,4 +687,26 @@ public class PathPanel extends JPanel
         colorPicker.setLocationRelativeTo(relativeTo);
         return colorPicker;
     }
+
+	private ImageIcon getLabelModeIcon(PathmakerConfig.pathPointLabelMode mode)
+	{
+		switch (mode)
+		{
+			case INDEX: return LABEL_MODE_POINT_ICON;
+			case LABEL: return LABEL_MODE_LABEL_ICON;
+			case BOTH: return LABEL_MODE_BOTH_ICON;
+			default: return DISABLED_ICON;
+		}
+	}
+
+	private ImageIcon getHighlightModeIcon(PathmakerConfig.pathPointMode mode)
+	{
+		switch (mode)
+		{
+			case TILES: return HIGHLIGHT_MODE_TILES_ICON;
+			case NPCS_AND_OBJECTS: return HIGHLIGHT_MODE_OBJECTS_AND_NPCS_ICON;
+			case BOTH: return HIGHLIGHT_MODE_BOTH_ICON;
+			default: return DISABLED_ICON;
+		}
+	}
 }
