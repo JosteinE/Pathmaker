@@ -474,7 +474,7 @@ public class PathPanel extends JPanel
 			path.pointDrawMode == PathmakerConfig.pathPointMode.TILES);
 		highlightTilesMenuEntry.addMouseListener(checkBoxModeAdapter.apply(pointHighlightModeSubMenu));
 
-		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
+		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Entities");
 		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
 		highlightObjectsAndNpcMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 			path.pointDrawMode == PathmakerConfig.pathPointMode.ENTITIES);
