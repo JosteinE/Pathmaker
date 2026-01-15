@@ -297,7 +297,7 @@ public class PathPanel extends JPanel
 			{
 				super.mouseReleased(mouseEvent);
 
-				JLabel centeredNameText = new JLabel("New path name (WIP)", JLabel.CENTER);
+				JLabel centeredNameText = new JLabel("(WIP!) For now: export then reimport to rename a path", JLabel.CENTER); // "New path name"
 				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
 				String newPathName = JOptionPane.showInputDialog(optionsButton, centeredNameText, getPathLabel());
 				// todo: rename option
@@ -320,16 +320,16 @@ public class PathPanel extends JPanel
 					JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
 					boolean boxState = !checkBox.getState(); // (getState() changes after this is called)
 					int relativeToType = checkBox.getText().equals("Tiles") || checkBox.getText().equals("Index") ? 1 : 2;
-					int currentMode;
+					int currentModeIndex;
 
 					if(modeType.equals("Label"))
-						currentMode = path.labelMode.ordinal();
+						currentModeIndex = path.labelMode.ordinal();
 					else
-						currentMode = path.pointDrawMode.ordinal();
+						currentModeIndex = path.pointDrawMode.ordinal();
 
-					int newMode = currentMode;
+					int newMode = currentModeIndex;
 
-					switch (currentMode)
+					switch (currentModeIndex)
 					{
 						case 0: // NONE
 						{
@@ -367,6 +367,8 @@ public class PathPanel extends JPanel
 						path.labelMode = PathmakerConfig.pathPointLabelMode.values()[newMode];
 					else
 						path.pointDrawMode = PathmakerConfig.pathPointMode.values()[newMode];
+
+					plugin.savePath(pathLabel);
 				}
 			};
 

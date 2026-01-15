@@ -370,6 +370,8 @@ public class PathmakerPlugin extends Plugin
 		pathJson.add("pathDrawOffset", gson.toJsonTree(path.pathDrawOffset, int.class));
 		pathJson.add("panelExpanded", gson.toJsonTree(path.panelExpanded, boolean.class));
 		pathJson.add("pathGroup", gson.toJsonTree(path.pathGroup, String.class));
+		pathJson.add("labelMode", gson.toJsonTree(path.labelMode.ordinal(), int.class));
+		pathJson.add("pointDrawMode", gson.toJsonTree(path.pointDrawMode.ordinal(), int.class));
 
 		//log.debug("Saved path: {}", pathName);
 		return pathJson;
@@ -447,18 +449,24 @@ public class PathmakerPlugin extends Plugin
 			}
 		}
 
+		PathmakerPath path = paths.get(pathName);
+
 		if (pathJson.has("color"))
-			paths.get(pathName).color = gson.fromJson(pathJson.get("color"), Color.class);
+			path.color = gson.fromJson(pathJson.get("color"), Color.class);
 		if (pathJson.has("looped"))
-			paths.get(pathName).loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
+			path.loopPath = gson.fromJson(pathJson.get("looped"), Boolean.class);
 		if (pathJson.has("pathDrawOffset"))
-			paths.get(pathName).pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
+			path.pathDrawOffset = gson.fromJson(pathJson.get("pathDrawOffset"), int.class);
 		if (pathJson.has("panelExpanded"))
-			paths.get(pathName).panelExpanded = gson.fromJson(pathJson.get("panelExpanded"), boolean.class);
+			path.panelExpanded = gson.fromJson(pathJson.get("panelExpanded"), boolean.class);
 		if (pathJson.has("pathGroup"))
-			paths.get(pathName).pathGroup = gson.fromJson(pathJson.get("pathGroup"), String.class);
-		//log.debug("Loaded path json: {}", pathName);
-		return paths.get(pathName);
+			path.pathGroup = gson.fromJson(pathJson.get("pathGroup"), String.class);
+		if (pathJson.has("labelMode"))
+			path.labelMode = PathmakerConfig.pathPointLabelMode.values()[gson.fromJson(pathJson.get("labelMode"), int.class)];
+		if (pathJson.has("pointDrawMode"))
+			path.pointDrawMode = PathmakerConfig.pathPointMode.values()[gson.fromJson(pathJson.get("pointDrawMode"), int.class)];
+
+		return path;
 	}
 
     private void reload(WorldView wv)
