@@ -297,7 +297,7 @@ public class PathPanel extends JPanel
 			{
 				super.mouseReleased(mouseEvent);
 
-				JLabel centeredNameText = new JLabel("(WIP!) For now: export then reimport to rename a path", JLabel.CENTER); // "New path name"
+				JLabel centeredNameText = new JLabel("(WIP) THIS DOES NOTHING! For now: export then reimport to rename a path", JLabel.CENTER); // "New path name"
 				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
 				String newPathName = JOptionPane.showInputDialog(optionsButton, centeredNameText, getPathLabel());
 				// todo: rename option
