@@ -34,7 +34,6 @@ import java.awt.image.BufferedImage;
 import java.awt.Component;
 
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.function.Function;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -47,7 +46,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
-import javax.swing.JToggleButton;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -311,85 +309,76 @@ public class PathPanel extends JPanel
 		pointLabelModeSubMenu.setIconTextGap(iconTextGap);
 		optionsMenu.add(pointLabelModeSubMenu);
 
+		Function<String, MouseAdapter> checkBoxModeAdapter = modeType ->
+			new MouseAdapter()
+			{
+				@Override
+				public void mousePressed(MouseEvent e)
+				{
+					super.mousePressed(e);
+
+					JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
+					boolean boxState = !checkBox.getState(); // (getState() changes after this is called)
+					int relativeToType = checkBox.getText().equals("Tiles") || checkBox.getText().equals("Index") ? 1 : 2;
+					int currentMode;
+
+					if(modeType.equals("Label"))
+						currentMode = path.labelMode.ordinal();
+					else
+						currentMode = path.pointDrawMode.ordinal();
+
+					int newMode = currentMode;
+
+					switch (currentMode)
+					{
+						case 0: // NONE
+						{
+							if (boxState)
+							{
+								if (relativeToType == 1) newMode = 1;	// Returning INDEX or TILES
+								else newMode = 2; 						// Returning LABEL or NPCS_AND_OBJECTS
+							}
+							break;
+						}
+						case 1: // INDEX or TILES
+						{
+							if (!boxState && relativeToType == 1) newMode = 0;		// Returning NONE
+							else if (boxState && relativeToType == 2) newMode = 3;	// Returning BOTH
+							break;
+						}
+						case 2: // LABEL or NPCS_AND_OBJECTS
+						{
+							if (boxState && relativeToType == 1) newMode = 3;		// Returning BOTH
+							else if (!boxState && relativeToType == 2) newMode = 0;	// Returning NONE
+							break;
+						}
+						case 3: // BOTH
+						{
+							if (!boxState)
+							{
+								if (relativeToType == 1) newMode = 2;	// Returning LABEL or NPCS_AND_OBJECTS
+								else newMode = 1;						// Returning INDEX or TILES
+							}
+							break;
+						}
+					}
+
+					if(modeType.equals("Label"))
+						path.labelMode = PathmakerConfig.pathPointLabelMode.values()[newMode];
+					else
+						path.pointDrawMode = PathmakerConfig.pathPointMode.values()[newMode];
+				}
+			};
+
 		JCheckBoxMenuItem indexModeMenuEntry =  new JCheckBoxMenuItem("Index");
 		indexModeMenuEntry.setIconTextGap(iconTextGap);
 		indexModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.INDEX || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
-		indexModeMenuEntry.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				super.mousePressed(e);
-
-				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
-				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
-				PathmakerConfig.pathPointLabelMode mode = path.labelMode;
-
-				switch (mode)
-				{
-					case NONE:
-					{
-						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.INDEX;
-						break;
-					}
-					case INDEX:
-					{
-						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.NONE;
-						break;
-					}
-					case LABEL:
-					{
-						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.BOTH;
-						break;
-					}
-					case BOTH:
-					{
-						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.LABEL;
-						break;
-					}
-				}
-			}
-		});
+		indexModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Label"));
 
 		JCheckBoxMenuItem labelModeMenuEntry = new JCheckBoxMenuItem("Label");
 		labelModeMenuEntry.setIconTextGap(iconTextGap);
 		labelModeMenuEntry.setState(path.labelMode == PathmakerConfig.pathPointLabelMode.LABEL || path.labelMode == PathmakerConfig.pathPointLabelMode.BOTH);
-		labelModeMenuEntry.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				super.mousePressed(e);
-
-				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
-				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
-				PathmakerConfig.pathPointLabelMode mode = path.labelMode;
-
-				switch (mode)
-				{
-					case NONE:
-					{
-						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.LABEL;
-						break;
-					}
-					case INDEX:
-					{
-						if (boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.BOTH;
-						break;
-					}
-					case LABEL:
-					{
-						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.NONE;
-						break;
-					}
-					case BOTH:
-					{
-						if (!boxState) path.labelMode = PathmakerConfig.pathPointLabelMode.INDEX;
-						break;
-					}
-				}
-			}
-		});
+		labelModeMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Label"));
 
 		pointLabelModeSubMenu.add(indexModeMenuEntry);
 		pointLabelModeSubMenu.add(labelModeMenuEntry);
@@ -403,83 +392,13 @@ public class PathPanel extends JPanel
 		highlightTilesMenuEntry.setIconTextGap(iconTextGap);
 		highlightTilesMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 			path.pointDrawMode == PathmakerConfig.pathPointMode.TILES);
-		highlightTilesMenuEntry.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				super.mousePressed(e);
-
-				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
-				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
-				PathmakerConfig.pathPointMode mode = path.pointDrawMode;
-
-				switch (mode)
-				{
-					case NONE:
-					{
-						if (boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.TILES;
-						break;
-					}
-					case TILES:
-					{
-						if (!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NONE;
-						break;
-					}
-					case NPCS_AND_OBJECTS:
-					{
-						if (boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.BOTH;
-						break;
-					}
-					case BOTH:
-					{
-						if (!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
-						break;
-					}
-				}
-			}
-		});
+		highlightTilesMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Highlight"));
 
 		JCheckBoxMenuItem highlightObjectsAndNpcMenuEntry = new JCheckBoxMenuItem("Object and NPCs");
 		highlightObjectsAndNpcMenuEntry.setIconTextGap(iconTextGap);
 		highlightObjectsAndNpcMenuEntry.setState(path.pointDrawMode == PathmakerConfig.pathPointMode.BOTH ||
 			path.pointDrawMode == PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS);
-		highlightObjectsAndNpcMenuEntry.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mousePressed(MouseEvent e)
-			{
-				super.mousePressed(e);
-
-				JCheckBoxMenuItem checkBox = (JCheckBoxMenuItem) e.getComponent();
-				boolean boxState = !checkBox.getState(); // (getState updates after this is called)
-				PathmakerConfig.pathPointMode mode = path.pointDrawMode;
-
-				switch (mode)
-				{
-					case NONE:
-					{
-						if(boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NPCS_AND_OBJECTS;
-						break;
-					}
-					case TILES:
-					{
-						if(boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.BOTH;
-						break;
-					}
-					case NPCS_AND_OBJECTS:
-					{
-						if(!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.NONE;
-						break;
-					}
-					case BOTH:
-					{
-						if(!boxState) path.pointDrawMode = PathmakerConfig.pathPointMode.TILES;
-						break;
-					}
-				}
-			}
-		});
+		highlightObjectsAndNpcMenuEntry.addMouseListener(checkBoxModeAdapter.apply("Highlight"));
 
 		pointHighlightModeSubMenu.add(highlightTilesMenuEntry);
 		pointHighlightModeSubMenu.add(highlightObjectsAndNpcMenuEntry);
