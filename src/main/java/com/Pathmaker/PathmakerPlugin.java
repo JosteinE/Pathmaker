@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import lombok.Getter;
@@ -241,16 +242,21 @@ public class PathmakerPlugin extends Plugin
 
 	void savePath(String pathName)
 	{
-		saveProperty("path", pathName, false);
+		savePath(pathName, null);
+	}
+
+	void savePath(String pathName, @Nullable String newName)
+	{
+		saveProperty("path", pathName, pathToJson(pathName), newName);
 	}
 
 	void saveGroup(String groupName)
 	{
-		saveProperty("group", groupName, false);
+		saveProperty("group", groupName, groupToJson(groupName), null);
 	}
 
 	// Save group or path by copying everything else as-is, and replacing the entry for the specified property by the current version
-	private void saveProperty(String propertyType, String propertyName, boolean removed)
+	private void saveProperty(String propertyType, String propertyName, @Nullable JsonObject propertyJson, @Nullable String newName)
 	{
 		String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
 		if (Strings.isNullOrEmpty(json)) return;
@@ -261,26 +267,16 @@ public class PathmakerPlugin extends Plugin
 		JsonObject loadedPropertyJSON = loadJSON.getAsJsonObject(propertyType + "s");
 		JsonObject savePropertyJSON = new JsonObject();
 
-		// Lambda (consumer) expression
-		Consumer<JsonObject> addProperty = (inJson) ->
-		{
-			switch (propertyType)
-			{
-				case "group":  inJson.add(propertyName, groupToJson(propertyName)); break;
-				case "path": inJson.add(propertyName, pathToJson(propertyName)); break;
-			}
-		};
-
 		try
 		{
-			if (loadedPropertyJSON.isJsonNull())
+			if (loadedPropertyJSON.isJsonNull() && propertyJson != null)
 			{
-				addProperty.accept(savePropertyJSON);
+				savePropertyJSON.add(propertyName, propertyJson);
 			}
-			else if (!loadedPropertyJSON.has(propertyName))
+			else if (!loadedPropertyJSON.has(propertyName) && propertyJson != null)
 			{
 				savePropertyJSON = loadedPropertyJSON;
-				addProperty.accept(savePropertyJSON);
+				savePropertyJSON.add(propertyName, propertyJson);
 			}
 			// Copy everything except for the specified path from the current save,
 			// and replace the specified path with the latest version (unless it was removed)
@@ -290,12 +286,12 @@ public class PathmakerPlugin extends Plugin
 				{
 					if (pName.equals(propertyName))
 					{
-						if(removed)
+						if(propertyJson == null) // Property was deleted
 						{
 							continue;
 						}
 
-						addProperty.accept(savePropertyJSON);
+						savePropertyJSON.add(newName == null ? pName : newName, propertyJson);
 					}
 					else
 						savePropertyJSON.add(pName, loadedPropertyJSON.get(pName));
@@ -303,7 +299,10 @@ public class PathmakerPlugin extends Plugin
 			}
 		} catch (JsonSyntaxException ignored){}
 
-		if (savePropertyJSON.size() == loadedPropertyJSON.size() || savePropertyJSON.size() == loadedPropertyJSON.size() + 1 || (removed && savePropertyJSON.size() == loadedPropertyJSON.size() - 1))
+		// Validate that the new save is the expected size
+		if (savePropertyJSON.size() == loadedPropertyJSON.size() ||
+			savePropertyJSON.size() == loadedPropertyJSON.size() + 1 ||
+			(propertyJson == null && savePropertyJSON.size() == loadedPropertyJSON.size() - 1))
 		{
 			loadJSON.remove(propertyType + "s");
 			loadJSON.add(propertyType + "s", savePropertyJSON);
@@ -312,6 +311,8 @@ public class PathmakerPlugin extends Plugin
 
 		configManager.unsetConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
 		configManager.setConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY, loadJSON);
+
+
 	}
 
 	JsonObject pathToJson(String pathName)
@@ -472,6 +473,7 @@ public class PathmakerPlugin extends Plugin
     private void reload(WorldView wv)
     {
         paths.clear();
+		reversePathsLookup.clear();
 		pluginPanel.pathGroups.clear();
 		//if (true) return;
         String json = configManager.getConfiguration(PathmakerConfig.CONFIG_GROUP, CONFIG_KEY);
@@ -968,7 +970,7 @@ public class PathmakerPlugin extends Plugin
     {
         PathmakerPath path = paths.remove(pathName);
 
-		saveProperty("path", pathName, true);
+		saveProperty("path", pathName, null, null);
 
 		if(!path.getRegionIDs().isEmpty())
 		{

@@ -25,6 +25,7 @@
 package com.Pathmaker;
 
 
+import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -34,6 +35,11 @@ import java.awt.image.BufferedImage;
 import java.awt.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -287,7 +293,7 @@ public class PathPanel extends JPanel
 		int iconTextGap = 10;
 
 		// Rename option
-		JMenuItem renameMenuEntry = optionsMenu.add("Rename path (WIP)");
+		JMenuItem renameMenuEntry = optionsMenu.add("Rename path");
 		//renameMenuEntry.setIcon();
 		renameMenuEntry.setIconTextGap(iconTextGap);
 		renameMenuEntry.addMouseListener(new MouseAdapter()
@@ -297,10 +303,61 @@ public class PathPanel extends JPanel
 			{
 				super.mouseReleased(mouseEvent);
 
-				JLabel centeredNameText = new JLabel("(WIP) THIS DOES NOTHING! For now: export then reimport to rename a path", JLabel.CENTER); // "New path name"
+				int MAX_PATH_NAME_LENGTH = plugin.pluginPanel.MAX_PATH_NAME_LENGTH;
+
+				JLabel centeredNameText = new JLabel("Enter new path name (max " + MAX_PATH_NAME_LENGTH + " characters)", JLabel.CENTER); // "New path name"
 				centeredNameText.setHorizontalTextPosition(SwingConstants.CENTER);
-				String newPathName = JOptionPane.showInputDialog(optionsButton, centeredNameText, getPathLabel());
-				// todo: rename option
+
+				String newPathName = getPathLabel();
+				LinkedHashMap<String, PathmakerPath> paths = plugin.getStoredPaths();
+
+				while (paths.containsKey(newPathName))
+				{
+					if (!newPathName.equals(pathLabel))
+						centeredNameText.setText("The name \"" + newPathName + "\" already exist");
+					newPathName = JOptionPane.showInputDialog(optionsButton, centeredNameText, newPathName);
+
+					// Return if the OptionPane was cancelled
+					if (newPathName == null) return;
+
+					newPathName = newPathName.length() > MAX_PATH_NAME_LENGTH ?
+						newPathName.substring(0, MAX_PATH_NAME_LENGTH) : newPathName;
+
+					if  (newPathName.equals(pathLabel)) return;
+				}
+
+				// Replace entries in the reversePathLookup map
+				Set<Integer> regionIds = path.getRegionIDs();
+				HashMap<Integer, ArrayList<String>> reversePathLookup = plugin.getReversePathLookup();
+				for (int regionId : regionIds)
+				{
+					ArrayList<String> regionPaths = reversePathLookup.get(regionId);
+					int pathIndex = regionPaths.indexOf(pathLabel);
+					regionPaths.remove(pathIndex);
+					regionPaths.add(pathIndex, newPathName);
+				}
+
+				// Update save BEFORE paths is updated to make sure the old name is properly replaced
+				plugin.savePath(pathLabel, newPathName);
+
+				LinkedHashMap<String, PathmakerPath> pathsCopy = new LinkedHashMap<>(paths);
+				paths.clear();
+
+				// Insert the new key at the position of the old key in the iteration
+				for (Map.Entry<String, PathmakerPath> entry : pathsCopy.entrySet())
+				{
+					if (entry.getKey().equals(pathLabel))
+					{
+						for (PathPoint point : entry.getValue().getDrawOrder(null))
+							point.setPathOwnerName(newPathName);
+
+						paths.put(newPathName, entry.getValue());
+					} else {
+						paths.put(entry.getKey(), entry.getValue());
+					}
+				}
+
+				plugin.rebuildPanel(false);
 			}
 		});
 
