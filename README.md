@@ -1,5 +1,5 @@
 <H1>Pathmaker</H1>
-Draw lines between tiles marked by shift+right-click.
+Draw lines between tiles marked by the in-game shift+right-click menu.
 Intuitively construct paths using plugin's side panel. New "Active Path" names will construct new paths.
 
 <H3>Starter import strings for barracuda trials</H4>
