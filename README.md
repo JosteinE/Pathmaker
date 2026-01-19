@@ -3,7 +3,7 @@ Draw lines between tiles marked by the in-game shift+right-click menu.
 Intuitively construct paths using plugin's side panel. New "Active Path" names will construct new paths.
 
 <H3>Starter import strings for barracuda trials</H4>
-Simply copy any of the JSON strings below to clipboard, then click the import button on the Pathmaker sidebar panel in Runelite<br><br>
+Simply copy any of the JSON strings below to your clipboard, then click the import button in the Pathmaker sidebar panel on Runelite<br><br>
 
 <H4>Tempor Tantrum</H4>
 <pre><code>
